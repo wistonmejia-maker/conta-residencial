@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, Building2, X, Loader2, Upload, User, Wallet, Settings, LayoutGrid } from 'lucide-react'
-import { getProviders, uploadFile } from '../lib/api'
+import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile } from '../lib/api'
 import type { Provider } from '../lib/api'
 
-const API_BASE = '/api'
+// Unit interface is not exported from api.ts, so we'll keep it here or match api.ts if it exists there.
+// Looking at api.ts content previously viewed, createUnit/updateUnit etc take args but don't export a 'Unit' interface for the full object return.
+// However, api.ts functions return `res.json()`.
+// Let's define the interface locally to match what the API returns, or inspect api.ts again to see if we can export it.
+// For now, fast fix: keep interface but use imported functions.
 
 interface Unit {
     id: string
@@ -23,33 +27,6 @@ interface Unit {
     accountantId?: string
     adminId?: string
     fiscalRevisorId?: string
-}
-
-async function getUnits(): Promise<{ units: Unit[] }> {
-    const res = await fetch(`${API_BASE}/units`)
-    return res.json()
-}
-
-async function createUnit(data: Omit<Unit, 'id'>): Promise<Unit> {
-    const res = await fetch(`${API_BASE}/units`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    return res.json()
-}
-
-async function updateUnit(id: string, data: Partial<Unit>): Promise<Unit> {
-    const res = await fetch(`${API_BASE}/units/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    return res.json()
-}
-
-async function deleteUnit(id: string): Promise<void> {
-    await fetch(`${API_BASE}/units/${id}`, { method: 'DELETE' })
 }
 
 export default function UnitsPage() {
@@ -186,9 +163,8 @@ export default function UnitsPage() {
                             {unit.address && (
                                 <p className="mt-3 text-sm text-gray-500 pl-15">{unit.address}</p>
                             )}
-                            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+                            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center text-xs text-gray-400">
                                 <span>Consecutivo: CE-{unit.consecutiveSeed || 1}</span>
-                                <span className="text-green-600 font-medium">Activa</span>
                             </div>
                         </div>
                     ))}
@@ -263,9 +239,9 @@ function UnitModal({
     // Fetch Providers for Team Selection
     const { data: providersData } = useQuery({
         queryKey: ['providers'],
-        queryFn: getProviders
+        queryFn: () => getProviders()
     })
-    const providers = providersData?.providers || []
+    const providers = (providersData as any)?.providers || []
 
     const handleChange = (field: keyof Unit, value: any) => {
         setForm(prev => ({ ...prev, [field]: value }))

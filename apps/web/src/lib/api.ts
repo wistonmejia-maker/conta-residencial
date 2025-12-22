@@ -30,6 +30,11 @@ export async function updateUnit(id: string, data: Partial<{ name: string; taxId
     return res.json()
 }
 
+export async function deleteUnit(id: string) {
+    const res = await fetch(`${API_BASE}/units/${id}`, { method: 'DELETE' })
+    return res.json()
+}
+
 // ============ PROVIDERS (GLOBAL) ============
 export interface Provider {
     id: string
