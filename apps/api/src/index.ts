@@ -33,6 +33,20 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'ContaResidencial API', timestamp: new Date().toISOString() })
 })
 
+// Debug endpoint to check environment variables
+app.get('/api/debug-env', (req, res) => {
+    const dbUrl = process.env.DATABASE_URL
+    res.json({
+        DATABASE_URL_exists: !!dbUrl,
+        DATABASE_URL_length: dbUrl?.length || 0,
+        DATABASE_URL_starts_with_postgresql: dbUrl?.startsWith('postgresql://'),
+        DATABASE_URL_first_30_chars: dbUrl?.substring(0, 30) || 'NOT SET',
+        PORT: process.env.PORT,
+        NODE_ENV: process.env.NODE_ENV,
+        CLOUDINARY_CLOUD_NAME_exists: !!process.env.CLOUDINARY_CLOUD_NAME
+    })
+})
+
 // API Routes
 app.use('/api/units', unitsRouter)
 app.use('/api/providers', providersRouter)
