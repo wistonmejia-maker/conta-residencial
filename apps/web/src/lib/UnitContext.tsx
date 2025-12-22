@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { getUnits } from './api'
 
 export interface Unit {
     id: string
@@ -18,8 +19,6 @@ interface UnitContextType {
 
 const UnitContext = createContext<UnitContextType | undefined>(undefined)
 
-const API_BASE = '/api'
-
 export function UnitProvider({ children }: { children: ReactNode }) {
     const [units, setUnits] = useState<Unit[]>([])
     const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
@@ -28,9 +27,9 @@ export function UnitProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function fetchUnits() {
             try {
-                const res = await fetch(`${API_BASE}/units`)
-                const data = await res.json()
-                const unitList = data.units || data || []
+                const data = await getUnits()
+                // api.ts getUnits returns { units: [...] } but let's be safe
+                const unitList = (data as any).units || data || []
                 setUnits(unitList)
 
                 // Select first unit by default or from localStorage
