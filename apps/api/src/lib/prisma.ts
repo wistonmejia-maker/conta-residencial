@@ -1,21 +1,25 @@
 import { PrismaClient } from '@prisma/client'
 
-// Lazy initialization - only create PrismaClient when first used
-// This ensures environment variables are fully loaded before connecting
-let prisma: PrismaClient | null = null
+// Initialize PrismaClient with explicit datasource URL
+// This overrides the schema.prisma env("DATABASE_URL") and uses runtime environment variable
+const databaseUrl = process.env.DATABASE_URL
 
-function getPrismaClient(): PrismaClient {
-    if (!prisma) {
-        console.log('Initializing PrismaClient...')
-        console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET (length: ' + process.env.DATABASE_URL.length + ')' : 'NOT SET')
-        prisma = new PrismaClient()
-    }
-    return prisma
+console.log('=== Prisma Initialization ===')
+console.log('DATABASE_URL exists:', !!databaseUrl)
+console.log('DATABASE_URL starts with postgresql:', databaseUrl?.startsWith('postgresql://'))
+console.log('DATABASE_URL length:', databaseUrl?.length || 0)
+
+if (!databaseUrl) {
+    console.error('WARNING: DATABASE_URL is not set!')
 }
 
-// Export a proxy that lazily initializes the client
-export default new Proxy({} as PrismaClient, {
-    get(_target, prop) {
-        return (getPrismaClient() as any)[prop]
-    }
+const prisma = new PrismaClient({
+    datasources: databaseUrl ? {
+        db: {
+            url: databaseUrl
+        }
+    } : undefined,
+    log: ['error', 'warn']
 })
+
+export default prisma
