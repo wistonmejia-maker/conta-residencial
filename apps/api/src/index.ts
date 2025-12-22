@@ -1,0 +1,51 @@
+import express from 'express'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import path from 'path'
+
+// Routes
+import unitsRouter from './routes/units'
+import providersRouter from './routes/providers'
+import invoicesRouter from './routes/invoices'
+import paymentsRouter from './routes/payments'
+import bankRouter from './routes/bank'
+import alertsRouter from './routes/alerts'
+import filesRouter from './routes/files'
+import providerConfigsRouter from './routes/providerConfigs'
+import searchRouter from './routes/search'
+import reportsRouter from './routes/reports'
+
+dotenv.config()
+
+const app = express()
+const PORT = process.env.PORT || 3002
+
+// Middleware
+app.use(cors())
+app.use(express.json())
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', service: 'ContaResidencial API', timestamp: new Date().toISOString() })
+})
+
+// API Routes
+app.use('/api/units', unitsRouter)
+app.use('/api/providers', providersRouter)
+app.use('/api/invoices', invoicesRouter)
+app.use('/api/payments', paymentsRouter)
+app.use('/api/bank', bankRouter)
+app.use('/api/alerts', alertsRouter)
+app.use('/api/files', filesRouter)
+app.use('/api/provider-configs', providerConfigsRouter)
+app.use('/api/search', searchRouter)
+app.use('/api/reports', reportsRouter)
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`🚀 ContaResidencial API running on http://localhost:${PORT}`)
+})
+

@@ -1,0 +1,551 @@
+import { Router } from 'express'
+import prisma from '../lib/prisma'
+
+const router = Router()
+
+// GET all payments (optionally filtered)
+router.get('/', async (req, res) => {
+    try {
+        const { unitId, status, month, year } = req.query
+
+        // Auto-resequence on load if unitId is present
+        if (unitId) {
+            await resequencePaymentConsecutives(String(unitId))
+        }
+
+        const where: any = {}
+        if (unitId) where.unitId = unitId
+        if (status) where.status = status
+
+        // Filter by month/year if provided
+        if (month && year) {
+            const startDate = new Date(Number(year), Number(month) - 1, 1)
+            const endDate = new Date(Number(year), Number(month), 0)
+            where.paymentDate = {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+
+        const payments = await prisma.payment.findMany({
+            where,
+            include: {
+                invoiceItems: {
+                    include: {
+                        invoice: {
+                            include: {
+                                provider: { select: { name: true, nit: true } }
+                            }
+                        }
+                    }
+                },
+                conciliation: true
+            },
+            orderBy: [
+                { paymentDate: 'desc' },
+                { consecutiveNumber: 'desc' }
+            ]
+        })
+
+        // Flatten provider info for easier frontend consumption
+        const paymentsWithProvider = payments.map(p => {
+            const firstInvoice = p.invoiceItems[0]?.invoice
+            return {
+                ...p,
+                provider: firstInvoice?.provider || null,
+                invoiceCount: p.invoiceItems.length
+            }
+        })
+
+        res.json({ payments: paymentsWithProvider })
+    } catch (error) {
+        console.error('Error fetching payments:', error)
+        res.status(500).json({ error: 'Error fetching payments' })
+    }
+})
+
+// GET single payment
+router.get('/:id', async (req, res) => {
+    try {
+        const payment = await prisma.payment.findUnique({
+            where: { id: req.params.id },
+            include: {
+                unit: true,
+                invoiceItems: {
+                    include: {
+                        invoice: {
+                            include: { provider: true }
+                        }
+                    }
+                },
+                conciliation: {
+                    include: { bankMovement: true }
+                }
+            }
+        })
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' })
+        }
+        res.json(payment)
+    } catch (error) {
+        console.error('Error fetching payment:', error)
+        res.status(500).json({ error: 'Error fetching payment' })
+    }
+})
+
+// POST create payment
+router.post('/', async (req, res) => {
+    try {
+        const {
+            unitId, paymentDate, sourceType, amountPaid,
+            retefuenteApplied, reteicaApplied,
+            bankPaymentMethod, transactionRef,
+            invoiceAllocations, // Array of { invoiceId, amount } - OPTIONAL
+            hasAuditIssue,      // Flag for date anomalies
+            hasPendingInvoice,   // Flag for no invoice selected
+            pilaFileUrl         // PDF de la PILA
+        } = req.body
+
+        if (!unitId || !paymentDate || !sourceType || !amountPaid) {
+            return res.status(400).json({
+                error: 'unitId, paymentDate, sourceType, and amountPaid are required'
+            })
+        }
+
+        // Calculate net value
+        const netValue = Number(amountPaid) - Number(retefuenteApplied || 0) - Number(reteicaApplied || 0)
+
+        // Determine consecutive number
+        let consecutiveNumber = null
+        let finalManualConsecutive = null
+
+        if (sourceType === 'INTERNAL') {
+            const unit = await prisma.unit.findUnique({ where: { id: unitId } })
+            if (!unit) {
+                return res.status(400).json({ error: 'Unit not found' })
+            }
+            consecutiveNumber = unit.consecutiveSeed
+
+            // Update seed for next payment
+            await prisma.unit.update({
+                where: { id: unitId },
+                data: { consecutiveSeed: unit.consecutiveSeed + 1 }
+            })
+        } else if (sourceType === 'EXTERNAL') {
+            // Validate manual consecutive
+            if (!req.body.manualConsecutive) {
+                return res.status(400).json({ error: 'El número de comprobante es requerido para pagos externos' })
+            }
+
+            // Check uniqueness
+            const existing = await prisma.payment.findFirst({
+                where: {
+                    unitId,
+                    manualConsecutive: req.body.manualConsecutive,
+                    sourceType: 'EXTERNAL'
+                }
+            })
+
+            if (existing) {
+                return res.status(400).json({ error: `Ya existe un comprobante externo con el número ${req.body.manualConsecutive}` })
+            }
+
+            finalManualConsecutive = req.body.manualConsecutive
+        }
+
+        // Determine if payment has pending invoice (no allocations)
+        const isPendingInvoice = hasPendingInvoice || !invoiceAllocations || invoiceAllocations.length === 0
+
+        // Create payment with invoice allocations
+        const payment = await prisma.payment.create({
+            data: {
+                unitId,
+                consecutiveNumber,
+                manualConsecutive: finalManualConsecutive,
+                paymentDate: new Date(paymentDate),
+                sourceType,
+                amountPaid,
+                retefuenteApplied: retefuenteApplied || 0,
+                reteicaApplied: reteicaApplied || 0,
+                netValue,
+                bankPaymentMethod,
+                transactionRef,
+                supportFileUrl: req.body.supportFileUrl,
+                pilaFileUrl,
+                status: isPendingInvoice ? 'DRAFT' : (sourceType === 'INTERNAL' ? 'COMPLETED' : 'PAID_NO_SUPPORT'),
+                hasAuditIssue: hasAuditIssue || false,
+                hasPendingInvoice: isPendingInvoice,
+                invoiceItems: invoiceAllocations && invoiceAllocations.length > 0 ? {
+                    create: invoiceAllocations.map((alloc: any) => ({
+                        invoiceId: alloc.invoiceId,
+                        amountApplied: alloc.amount
+                    }))
+                } : undefined
+            },
+            include: {
+                invoiceItems: {
+                    include: {
+                        invoice: { include: { provider: true } }
+                    }
+                }
+            }
+        })
+
+        // Create audit log entries if there are issues
+        if (hasAuditIssue) {
+            await prisma.auditLog.create({
+                data: {
+                    unitId,
+                    entityType: 'PAYMENT',
+                    entityId: payment.id,
+                    issueType: 'DATE_BEFORE_INVOICE',
+                    description: `Pago ${consecutiveNumber ? 'CE-' + consecutiveNumber : payment.id} tiene fecha anterior a la factura asociada`
+                }
+            })
+        }
+
+        if (isPendingInvoice) {
+            await prisma.auditLog.create({
+                data: {
+                    unitId,
+                    entityType: 'PAYMENT',
+                    entityId: payment.id,
+                    issueType: 'NO_INVOICE',
+                    description: `Pago ${consecutiveNumber ? 'CE-' + consecutiveNumber : payment.id} creado sin factura asociada`
+                }
+            })
+        }
+
+        // Update invoice statuses
+        if (invoiceAllocations && invoiceAllocations.length > 0) {
+            for (const alloc of invoiceAllocations) {
+                await updateInvoiceStatus(alloc.invoiceId)
+            }
+        }
+
+        // Resequence consecutives based on payment dates
+        await resequencePaymentConsecutives(unitId)
+
+        res.status(201).json(payment)
+    } catch (error) {
+        console.error('Error creating payment:', error)
+        res.status(500).json({ error: 'Error creating payment' })
+    }
+})
+
+// Helper function to update invoice status based on payments
+async function updateInvoiceStatus(invoiceId: string) {
+    const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        include: { paymentItems: true }
+    })
+
+    if (!invoice) return
+
+    const totalPaid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
+    const totalAmount = Number(invoice.totalAmount)
+
+    let newStatus = 'PENDING'
+    if (totalPaid >= totalAmount) {
+        newStatus = 'PAID'
+    } else if (totalPaid > 0) {
+        newStatus = 'PARTIALLY_PAID'
+    }
+
+    await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: newStatus }
+    })
+}
+
+// Helper function to resequence consecutive numbers based on payment dates
+// Only affects INTERNAL payments that are not closed (no monthlyReportId)
+async function resequencePaymentConsecutives(unitId: string) {
+    // Get all unfrozen INTERNAL payments ordered by date
+    const payments = await prisma.payment.findMany({
+        where: {
+            unitId,
+            sourceType: 'INTERNAL',
+            monthlyReportId: null // Only unfrozen payments
+        },
+        orderBy: [
+            { paymentDate: 'asc' },
+            { createdAt: 'asc' } // Secondary sort by creation time for same-day payments
+        ]
+    })
+
+    // Get the highest consecutive from frozen payments (already closed)
+    const frozenPayments = await prisma.payment.findMany({
+        where: {
+            unitId,
+            sourceType: 'INTERNAL',
+            monthlyReportId: { not: null }
+        },
+        orderBy: { consecutiveNumber: 'desc' },
+        take: 1
+    })
+
+    const startConsecutive = frozenPayments.length > 0
+        ? (frozenPayments[0].consecutiveNumber || 0) + 1
+        : 1
+
+    // Resequence unfrozen payments
+    for (let i = 0; i < payments.length; i++) {
+        const newConsecutive = startConsecutive + i
+        if (payments[i].consecutiveNumber !== newConsecutive) {
+            await prisma.payment.update({
+                where: { id: payments[i].id },
+                data: { consecutiveNumber: newConsecutive }
+            })
+        }
+    }
+}
+
+// PUT update payment - full edit support
+router.put('/:id', async (req, res) => {
+    try {
+        const {
+            consecutiveNumber, supportFileUrl, status,
+            bankPaymentMethod, transactionRef,
+            paymentDate, amountPaid, retefuenteApplied, reteicaApplied,
+            invoiceAllocations, manualConsecutive, sourceType,
+            pilaFileUrl
+        } = req.body
+
+        const paymentId = req.params.id
+
+        // Get existing payment with its invoice items
+        const existingPayment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: { invoiceItems: true }
+        })
+
+        if (!existingPayment) {
+            return res.status(404).json({ error: 'Payment not found' })
+        }
+
+        // Build update data
+        const updateData: any = {}
+        if (consecutiveNumber !== undefined) updateData.consecutiveNumber = consecutiveNumber
+        if (supportFileUrl !== undefined) updateData.supportFileUrl = supportFileUrl
+        if (pilaFileUrl !== undefined) updateData.pilaFileUrl = pilaFileUrl
+        if (status) updateData.status = status
+        if (sourceType) updateData.sourceType = sourceType
+        if (bankPaymentMethod !== undefined) updateData.bankPaymentMethod = bankPaymentMethod
+        if (transactionRef !== undefined) updateData.transactionRef = transactionRef
+
+        // Handle manual consecutive update for EXTERNAL payments
+        if (manualConsecutive && (sourceType === 'EXTERNAL' || existingPayment.sourceType === 'EXTERNAL')) {
+            // If manualConsecutive is provided, always update it if it is different or just update it
+            // Check uniqueness if changed or if switching to EXTERNAL
+            const targetSource = sourceType || existingPayment.sourceType
+
+            if (targetSource === 'EXTERNAL') {
+                if (manualConsecutive !== existingPayment.manualConsecutive) {
+                    const existing = await prisma.payment.findFirst({
+                        where: {
+                            unitId: existingPayment.unitId,
+                            manualConsecutive: manualConsecutive,
+                            sourceType: 'EXTERNAL',
+                            id: { not: paymentId }
+                        }
+                    })
+                    if (existing) {
+                        return res.status(400).json({ error: `Ya existe un comprobante externo con el número ${manualConsecutive}` })
+                    }
+                }
+                updateData.manualConsecutive = manualConsecutive
+            }
+        }
+        if (paymentDate) updateData.paymentDate = new Date(paymentDate)
+        if (amountPaid !== undefined) {
+            updateData.amountPaid = amountPaid
+            // Recalculate netValue
+            const reteF = retefuenteApplied !== undefined ? retefuenteApplied : Number(existingPayment.retefuenteApplied)
+            const reteI = reteicaApplied !== undefined ? reteicaApplied : Number(existingPayment.reteicaApplied)
+            updateData.netValue = amountPaid - reteF - reteI
+        }
+        if (retefuenteApplied !== undefined) updateData.retefuenteApplied = retefuenteApplied
+        if (reteicaApplied !== undefined) updateData.reteicaApplied = reteicaApplied
+
+        // If setting consecutive and support file, mark as COMPLETED
+        if (consecutiveNumber && supportFileUrl) {
+            updateData.status = 'COMPLETED'
+        }
+
+        // Handle invoice allocations if provided
+        if (invoiceAllocations !== undefined) {
+            // Get old invoice IDs to update their status after
+            const oldInvoiceIds = existingPayment.invoiceItems.map(pi => pi.invoiceId)
+
+            // Delete existing allocations
+            await prisma.paymentInvoice.deleteMany({
+                where: { paymentId }
+            })
+
+            // Create new allocations if any
+            if (invoiceAllocations && invoiceAllocations.length > 0) {
+                await prisma.paymentInvoice.createMany({
+                    data: invoiceAllocations.map((alloc: any) => ({
+                        paymentId,
+                        invoiceId: alloc.invoiceId,
+                        amountApplied: alloc.amount
+                    }))
+                })
+                updateData.hasPendingInvoice = false
+            } else {
+                updateData.hasPendingInvoice = true
+            }
+
+            // Update old invoice statuses
+            for (const invoiceId of oldInvoiceIds) {
+                await updateInvoiceStatus(invoiceId)
+            }
+
+            // Update new invoice statuses
+            if (invoiceAllocations) {
+                for (const alloc of invoiceAllocations) {
+                    await updateInvoiceStatus(alloc.invoiceId)
+                }
+            }
+        }
+
+        const payment = await prisma.payment.update({
+            where: { id: paymentId },
+            data: updateData,
+            include: {
+                invoiceItems: {
+                    include: {
+                        invoice: { include: { provider: true } }
+                    }
+                }
+            }
+        })
+
+        // Resequence consecutives if date changed
+        await resequencePaymentConsecutives(existingPayment.unitId)
+
+        res.json(payment)
+    } catch (error) {
+        console.error('Error updating payment:', error)
+        res.status(500).json({ error: 'Error updating payment' })
+    }
+})
+
+// POST link invoice to pending payment
+router.post('/:id/link-invoice', async (req, res) => {
+    try {
+        const { invoiceId, amount } = req.body
+        const paymentId = req.params.id
+
+        if (!invoiceId || !amount) {
+            return res.status(400).json({ error: 'invoiceId and amount are required' })
+        }
+
+        // Check if payment exists and has pending invoice flag
+        const payment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: { invoiceItems: true }
+        })
+
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' })
+        }
+
+        // Create the invoice allocation
+        await prisma.paymentInvoice.create({
+            data: {
+                paymentId,
+                invoiceId,
+                amountApplied: amount
+            }
+        })
+
+        // Update payment to remove pending invoice flag and update status
+        await prisma.payment.update({
+            where: { id: paymentId },
+            data: {
+                hasPendingInvoice: false,
+                status: payment.sourceType === 'INTERNAL' ? 'COMPLETED' : 'PAID_NO_SUPPORT'
+            }
+        })
+
+        // Resolve audit log if exists
+        await prisma.auditLog.updateMany({
+            where: {
+                entityId: paymentId,
+                issueType: 'NO_INVOICE',
+                resolved: false
+            },
+            data: { resolved: true }
+        })
+
+        // Update invoice status
+        await updateInvoiceStatus(invoiceId)
+
+        res.json({ success: true })
+    } catch (error) {
+        console.error('Error linking invoice:', error)
+        res.status(500).json({ error: 'Error linking invoice' })
+    }
+})
+
+// DELETE payment
+router.delete('/:id', async (req, res) => {
+    try {
+        const payment = await prisma.payment.findUnique({
+            where: { id: req.params.id },
+            include: { conciliation: true, invoiceItems: true }
+        })
+
+        if (payment?.conciliation) {
+            return res.status(400).json({
+                error: 'No se puede eliminar un pago conciliado'
+            })
+        }
+
+        // Get affected invoices before deleting
+        const invoiceIds = payment?.invoiceItems.map(pi => pi.invoiceId) || []
+
+        // Delete payment items first, then payment
+        await prisma.paymentInvoice.deleteMany({
+            where: { paymentId: req.params.id }
+        })
+        await prisma.payment.delete({
+            where: { id: req.params.id }
+        })
+
+        // Update invoice statuses
+        for (const invoiceId of invoiceIds) {
+            await updateInvoiceStatus(invoiceId)
+        }
+
+        // Resequence consecutives to fill gaps
+        if (payment?.unitId) {
+            await resequencePaymentConsecutives(payment.unitId)
+        }
+
+        res.json({ success: true })
+    } catch (error) {
+        console.error('Error deleting payment:', error)
+        res.status(500).json({ error: 'Error deleting payment' })
+    }
+})
+
+// GET next consecutive number for a unit
+router.get('/next-consecutive/:unitId', async (req, res) => {
+    try {
+        const unit = await prisma.unit.findUnique({
+            where: { id: req.params.unitId }
+        })
+        if (!unit) {
+            return res.status(404).json({ error: 'Unit not found' })
+        }
+        res.json({ nextConsecutive: unit.consecutiveSeed })
+    } catch (error) {
+        console.error('Error fetching next consecutive:', error)
+        res.status(500).json({ error: 'Error fetching consecutive' })
+    }
+})
+
+export default router
