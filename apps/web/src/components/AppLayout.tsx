@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Users, FileText, CreditCard, GitCompare, FileSpreadsheet, Building2, RefreshCw, ChevronDown, Loader2, BarChart3, Menu, X } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
 import GlobalSearch from './GlobalSearch'
@@ -26,10 +26,13 @@ const bottomNavItems = [
     { to: '/providers', icon: Users, label: 'Proveedores' },
 ]
 
+const publicPaths = ['/units', '/providers']
+
 export default function AppLayout() {
     const { units, selectedUnit, setSelectedUnit, isLoading } = useUnit()
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const location = useLocation()
+    const navigate = useNavigate()
 
     // Close sidebar on route change (mobile)
     useEffect(() => {
@@ -46,6 +49,32 @@ export default function AppLayout() {
         window.addEventListener('resize', handleResize)
         return () => window.removeEventListener('resize', handleResize)
     }, [])
+
+    // Protect routes
+    useEffect(() => {
+        if (isLoading) return
+
+        const currentPath = location.pathname
+
+        // Check if path is public
+        const isPublic = publicPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'))
+
+        // If not public and no unit selected, redirect to units
+        if (!selectedUnit && !isPublic) {
+            navigate('/units')
+        }
+    }, [isLoading, selectedUnit, location.pathname, navigate])
+
+    const isLinkEnabled = (path: string) => {
+        if (publicPaths.some(p => path === p || path.startsWith(p + '/'))) return true
+        return !!selectedUnit
+    }
+
+    const handleLinkClick = (e: React.MouseEvent, path: string) => {
+        if (!isLinkEnabled(path)) {
+            e.preventDefault()
+        }
+    }
 
     return (
         <div className="min-h-screen flex bg-slate-50">
@@ -93,10 +122,13 @@ export default function AppLayout() {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
+                                onClick={(e) => handleLinkClick(e, item.to)}
                                 className={({ isActive }) =>
-                                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-                                        ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${!isLinkEnabled(item.to)
+                                        ? 'opacity-40 cursor-not-allowed hover:bg-transparent text-gray-400'
+                                        : isActive
+                                            ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }`
                                 }
                             >
@@ -113,10 +145,13 @@ export default function AppLayout() {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
+                                onClick={(e) => handleLinkClick(e, item.to)}
                                 className={({ isActive }) =>
-                                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-                                        ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${!isLinkEnabled(item.to)
+                                        ? 'opacity-40 cursor-not-allowed hover:bg-transparent text-gray-400'
+                                        : isActive
+                                            ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }`
                                 }
                             >
@@ -158,7 +193,7 @@ export default function AppLayout() {
 
                     {/* Search - Hidden on small mobile */}
                     <div className="hidden sm:block flex-1 max-w-xl">
-                        <GlobalSearch />
+                        {selectedUnit ? <GlobalSearch /> : <div />}
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
@@ -187,6 +222,7 @@ export default function AppLayout() {
                                         }}
                                         className="appearance-none pl-2 md:pl-3 pr-7 md:pr-9 py-2 text-xs md:text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-semibold cursor-pointer hover:bg-gray-100 hover:border-gray-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/10 min-w-[120px] md:min-w-[200px]"
                                     >
+                                        <option value="" disabled>Seleccionar Unidad</option>
                                         {units.map(unit => (
                                             <option key={unit.id} value={unit.id}>{unit.name}</option>
                                         ))}
@@ -214,10 +250,13 @@ export default function AppLayout() {
                         <NavLink
                             key={item.to}
                             to={item.to}
+                            onClick={(e) => handleLinkClick(e, item.to)}
                             className={({ isActive }) =>
-                                `flex flex-col items-center justify-center flex-1 h-full py-2 transition-colors ${isActive
-                                    ? 'text-indigo-600'
-                                    : 'text-gray-500'
+                                `flex flex-col items-center justify-center flex-1 h-full py-2 transition-colors ${!isLinkEnabled(item.to)
+                                    ? 'opacity-40 cursor-not-allowed text-gray-300'
+                                    : isActive
+                                        ? 'text-indigo-600'
+                                        : 'text-gray-500'
                                 }`
                             }
                         >
