@@ -1,6 +1,9 @@
+// Load environment variables FIRST, before any other imports
+import dotenv from 'dotenv'
+dotenv.config()
+
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import path from 'path'
 
 // Routes
@@ -14,8 +17,6 @@ import filesRouter from './routes/files'
 import providerConfigsRouter from './routes/providerConfigs'
 import searchRouter from './routes/search'
 import reportsRouter from './routes/reports'
-
-dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3002
