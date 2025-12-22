@@ -13,12 +13,19 @@ interface PreviewRow {
     index: number
     name: string
     nit: string
+    dv?: string
     taxType: string
     email?: string
     phone?: string
+    address?: string
     city?: string
     bankName?: string
     bankAccount?: string
+    accountType?: string
+    defaultRetefuentePerc?: string
+    defaultReteicaPerc?: string
+    isRecurring?: string
+    category?: string
     error?: string
 }
 
@@ -27,16 +34,27 @@ const COLUMN_MAP: Record<string, keyof PreviewRow> = {
     'nombre': 'name',
     'razon social': 'name',
     'nit': 'nit',
+    'dv': 'dv',
+    'digito verificacion': 'dv',
     'tipo': 'taxType',
     'tipo contribuyente': 'taxType',
     'email': 'email',
     'correo': 'email',
     'telefono': 'phone',
     'teléfono': 'phone',
+    'direccion': 'address',
+    'dirección': 'address',
     'ciudad': 'city',
     'banco': 'bankName',
     'cuenta': 'bankAccount',
-    'numero cuenta': 'bankAccount'
+    'numero cuenta': 'bankAccount',
+    'tipo cuenta': 'accountType',
+    'retefuente': 'defaultRetefuentePerc',
+    '% retefuente': 'defaultRetefuentePerc',
+    'reteica': 'defaultReteicaPerc',
+    '% reteica': 'defaultReteicaPerc',
+    'recurrente': 'isRecurring',
+    'categoria': 'category'
 }
 
 export default function BulkImportModal({ onClose, onSuccess }: BulkImportModalProps) {
@@ -135,12 +153,19 @@ export default function BulkImportModal({ onClose, onSuccess }: BulkImportModalP
         const providers = validRows.map(r => ({
             name: r.name,
             nit: r.nit,
+            dv: r.dv || '',
             taxType: r.taxType || 'Juridica',
             email: r.email,
             phone: r.phone,
+            address: r.address,
             city: r.city,
             bankName: r.bankName,
-            bankAccount: r.bankAccount
+            bankAccount: r.bankAccount,
+            accountType: r.accountType,
+            defaultRetefuentePerc: r.defaultRetefuentePerc ? parseFloat(r.defaultRetefuentePerc) : 0,
+            defaultReteicaPerc: r.defaultReteicaPerc ? parseFloat(r.defaultReteicaPerc) : 0,
+            isRecurring: r.isRecurring?.toLowerCase() === 'si' || r.isRecurring?.toLowerCase() === 'true' || r.isRecurring === '1',
+            category: r.category
         }))
 
         try {
@@ -209,10 +234,10 @@ export default function BulkImportModal({ onClose, onSuccess }: BulkImportModalP
                                     <button
                                         onClick={() => {
                                             const templateData = [
-                                                ['Nombre', 'NIT', 'Tipo', 'Email', 'Teléfono', 'Ciudad', 'Banco', 'Cuenta'],
-                                                ['EPM Empresas Públicas', '890904996', 'Juridica', 'info@epm.com.co', '6044444444', 'Medellín', 'Bancolombia', '12345678901'],
-                                                ['Vigilancia ABC', '900123456', 'Juridica', 'contacto@vigilancia.com', '3001234567', 'Medellín', 'Davivienda', '98765432101'],
-                                                ['Juan Pérez', '1017123456', 'Persona Natural', 'juan@email.com', '3009876543', 'Bogotá', '', '']
+                                                ['Nombre', 'NIT', 'DV', 'Tipo', 'Email', 'Teléfono', 'Dirección', 'Ciudad', 'Banco', 'Cuenta', 'Tipo Cuenta', '% Retefuente', '% ReteICA', 'Recurrente', 'Categoría'],
+                                                ['EPM Empresas Públicas', '890904996', '4', 'Juridica', 'info@epm.com.co', '6044444444', 'Cra 58 #42-125', 'Medellín', 'Bancolombia', '12345678901', 'Corriente', '2.5', '0.0069', 'Si', 'Servicios Públicos'],
+                                                ['Vigilancia ABC', '900123456', '1', 'Juridica', 'contacto@vigilancia.com', '3001234567', 'Calle 10 #20-30', 'Medellín', 'Davivienda', '98765432101', 'Ahorros', '4', '0.0069', 'Si', 'Vigilancia'],
+                                                ['Juan Pérez', '1017123456', '0', 'Persona Natural', 'juan@email.com', '3009876543', 'Cra 70 #45-12', 'Bogotá', '', '', '', '0', '0', 'No', 'Mantenimiento']
                                             ]
                                             const ws = XLSX.utils.aoa_to_sheet(templateData)
                                             const wb = XLSX.utils.book_new()
