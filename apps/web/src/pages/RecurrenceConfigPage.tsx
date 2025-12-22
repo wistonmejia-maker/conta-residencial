@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Plus, Trash2, Loader2, AlertTriangle, Check, Search, ChevronDown } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
-import { getProviders } from '../lib/api'
+import { getProviders, getProviderConfigs, upsertProviderConfig, deleteProviderConfig } from '../lib/api'
 import type { Provider } from '../lib/api'
-
-const API_BASE = '/api'
 
 interface ProviderUnitConfig {
     id: string
@@ -105,27 +103,6 @@ function SearchableSelect({
             )}
         </div>
     )
-}
-
-// ... async functions ...
-
-async function getProviderConfigs(unitId: string): Promise<{ configs: ProviderUnitConfig[] }> {
-    const res = await fetch(`${API_BASE}/provider-configs?unitId=${unitId}`)
-    return res.json()
-}
-
-async function upsertProviderConfig(data: { providerId: string; unitId: string; isRecurring: boolean; category?: string }) {
-    const res = await fetch(`${API_BASE}/provider-configs`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    return res.json()
-}
-
-async function deleteProviderConfig(id: string) {
-    const res = await fetch(`${API_BASE}/provider-configs/${id}`, { method: 'DELETE' })
-    return res.json()
 }
 
 export default function RecurrenceConfigPage() {

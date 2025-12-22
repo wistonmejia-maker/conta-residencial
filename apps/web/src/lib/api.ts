@@ -98,6 +98,12 @@ export async function getProvider(id: string) {
     return res.json()
 }
 
+export async function getProviderDetail(id: string, unitId?: string) {
+    const params = unitId ? `?unitId=${unitId}` : ''
+    const res = await fetch(`${API_BASE}/providers/${id}${params}`)
+    return res.json()
+}
+
 export async function createProvider(data: Partial<Provider>) {
     const res = await fetch(`${API_BASE}/providers`, {
         method: 'POST',
@@ -118,6 +124,25 @@ export async function updateProvider(id: string, data: Partial<Provider>) {
 
 export async function deleteProvider(id: string) {
     const res = await fetch(`${API_BASE}/providers/${id}`, { method: 'DELETE' })
+    return res.json()
+}
+
+export async function getProviderConfigs(unitId: string) {
+    const res = await fetch(`${API_BASE}/provider-configs?unitId=${unitId}`)
+    return res.json()
+}
+
+export async function upsertProviderConfig(data: { providerId: string; unitId: string; isRecurring: boolean; category?: string }) {
+    const res = await fetch(`${API_BASE}/provider-configs`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    return res.json()
+}
+
+export async function deleteProviderConfig(id: string) {
+    const res = await fetch(`${API_BASE}/provider-configs/${id}`, { method: 'DELETE' })
     return res.json()
 }
 
