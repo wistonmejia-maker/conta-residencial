@@ -87,20 +87,35 @@ router.get('/recurring-providers', async (req, res) => {
             return res.status(400).json({ error: 'unitId is required' })
         }
 
-        const providers = await prisma.provider.findMany({
+        // Get recurring providers from ProviderUnitConfig (which has unitId)
+        const recurringConfigs = await prisma.providerUnitConfig.findMany({
             where: {
                 unitId: String(unitId),
-                isRecurring: true,
-                status: 'ACTIVE'
+                isRecurring: true
             },
-            select: {
-                id: true,
-                name: true,
-                nit: true,
-                recurringCategory: true
-            },
-            orderBy: { name: 'asc' }
+            include: {
+                provider: {
+                    select: {
+                        id: true,
+                        name: true,
+                        nit: true,
+                        status: true,
+                        recurringCategory: true
+                    }
+                }
+            }
         })
+
+        // Filter to only active providers and map to expected format
+        const providers = recurringConfigs
+            .filter(c => c.provider.status === 'ACTIVE')
+            .map(c => ({
+                id: c.provider.id,
+                name: c.provider.name,
+                nit: c.provider.nit,
+                recurringCategory: c.category || c.provider.recurringCategory
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name))
 
         res.json({ providers })
     } catch (error) {
