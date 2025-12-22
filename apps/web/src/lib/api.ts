@@ -1,5 +1,5 @@
-// Use environment variable for production, fallback to /api for local dev
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+// Use environment variable for production, fallback to Railway URL if missing, or /api for local
+const API_BASE = import.meta.env.VITE_API_URL || 'https://conta-residencial-production.up.railway.app/api'
 
 // ============ UNITS ============
 export async function getUnits() {
