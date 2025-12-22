@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "npx prisma generate && tsc",
+    "build": "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy npx prisma generate && tsc",
     "start": "node -r ./dist/preload.js ./dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
