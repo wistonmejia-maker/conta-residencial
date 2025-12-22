@@ -114,7 +114,7 @@ export default function ProvidersPage() {
             </div>
 
             {/* Table */}
-            <div className="card overflow-hidden">
+            <div className="card overflow-x-auto">
                 {isLoading ? (
                     <div className="p-8 text-center text-gray-500">Cargando proveedores...</div>
                 ) : providers.length === 0 ? (

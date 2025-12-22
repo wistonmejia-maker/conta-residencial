@@ -294,7 +294,7 @@ export default function InvoicesPage() {
             </div>
 
             {/* Table */}
-            <div className="card overflow-hidden">
+            <div className="card overflow-x-auto">
                 {isLoading ? (
                     <div className="p-8 text-center text-gray-500">Cargando facturas...</div>
                 ) : invoices.length === 0 ? (
