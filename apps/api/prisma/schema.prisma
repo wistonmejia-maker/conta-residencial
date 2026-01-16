@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,52 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// CONTARESIDENCIAL - Schema Principal
-// ============================================
-
-// Unidades Residenciales (Edificios/Conjuntos)
 model Unit {
-  id              String   @id @default(uuid())
-  name            String   // Ej: "Edificio Altos del Poblado"
-  taxId           String   @map("tax_id") // NIT
-  // Perfil General
-  email           String?
-  observations    String?  @db.Text
-  logoUrl         String?  @map("logo_url")
-  
-  // Información Financiera
-  bankAccountInfo String?  @map("bank_account_info") // Info cuentas bancarias
-  
-  // Perfil Estructural
-  propertyType    String?  @default("RESIDENTIAL") @map("property_type")
-  totalTowers     Int?     @map("total_towers")
-  totalUnits      Int?     @map("total_units")
-  
-  // Configuración de Comprobantes
-  defaultPaymentType String @default("INTERNAL") @map("default_payment_type")
-  consecutiveSeed    Int    @default(1) @map("consecutive_seed")
-  
-  address         String?
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  // Equipo de Gestión (Relaciones con Provider)
-  accountantId    String?  @map("accountant_id")
-  adminId         String?  @map("admin_id")
-  fiscalRevisorId String?  @map("fiscal_revisor_id")
-  
-  accountant      Provider? @relation("UnitAccountant", fields: [accountantId], references: [id])
-  admin           Provider? @relation("UnitAdmin", fields: [adminId], references: [id])
-  fiscalRevisor   Provider? @relation("UnitFiscalRevisor", fields: [fiscalRevisorId], references: [id])
-
-  // Relaciones
-  invoices       Invoice[]
-  payments       Payment[]
-  bankMovements  BankMovement[]
-  providerConfigs ProviderUnitConfig[]  // Configuración de proveedores para esta unidad
-  reports        MonthlyReport[]
-  auditLogs      AuditLog[]
-  gmailToken     GmailToken?
+  id                 String               @id @default(uuid())
+  name               String
+  taxId              String               @map("tax_id")
+  email              String?
+  observations       String?
+  logoUrl            String?              @map("logo_url")
+  bankAccountInfo    String?              @map("bank_account_info")
+  propertyType       String?              @default("RESIDENTIAL") @map("property_type")
+  totalTowers        Int?                 @map("total_towers")
+  totalUnits         Int?                 @map("total_units")
+  defaultPaymentType String               @default("INTERNAL") @map("default_payment_type")
+  consecutiveSeed    Int                  @default(1) @map("consecutive_seed")
+  address            String?
+  createdAt          DateTime             @default(now()) @map("created_at")
+  accountantId       String?              @map("accountant_id")
+  adminId            String?              @map("admin_id")
+  fiscalRevisorId    String?              @map("fiscal_revisor_id")
+  organization_id    String?
+  auditLogs          AuditLog[]
+  bankMovements      BankMovement[]
+  invoices           Invoice[]
+  reports            MonthlyReport[]
+  payments           Payment[]
+  providerConfigs    ProviderUnitConfig[]
+  accountant         Provider?            @relation("UnitAccountant", fields: [accountantId], references: [id])
+  admin              Provider?            @relation("UnitAdmin", fields: [adminId], references: [id])
+  fiscalRevisor      Provider?            @relation("UnitFiscalRevisor", fields: [fiscalRevisorId], references: [id])
+  organizations      organizations?       @relation(fields: [organization_id], references: [id])
+  user_unit_access   user_unit_access[]
+  gmailToken         GmailToken?
 
   @@map("units")
 }
@@ -74,248 +56,243 @@ model GmailToken {
   @@map("gmail_tokens")
 }
 
-// Proveedores (Terceros) - GLOBALES, disponibles para todas las unidades
 model Provider {
-  id                   String   @id @default(uuid())
-  name                 String
-  taxType              String   @map("tax_type") // 'Persona Natural', 'Jurídica', 'Gran Contribuyente'
-  nit                  String   @unique  // NIT único global
-  dv                   String   // Dígito de Verificación
-  
-  // Datos de contacto
-  email                String?
-  phone                String?
-  address              String?
-  city                 String?
-  
-  // Datos bancarios
-  bankAccount          String?  @map("bank_account")
-  bankName             String?  @map("bank_name")
-  accountType          String?  @map("account_type") // 'Ahorros', 'Corriente'
-  
-  // Retenciones por defecto
-  defaultRetefuentePerc Decimal @default(0) @map("default_retefuente_perc") @db.Decimal(5, 2)
-  defaultReteicaPerc    Decimal @default(0) @map("default_reteica_perc") @db.Decimal(5, 4)
-  
-  // Relaciones inversas con Unit
-  unitsAsAccountant Unit[] @relation("UnitAccountant")
-  unitsAsAdmin      Unit[] @relation("UnitAdmin")
-  unitsAsFiscalRevisor Unit[] @relation("UnitFiscalRevisor")
-
-  // Facturas recurrentes
-  isRecurring          Boolean  @default(false) @map("is_recurring")
-  recurringCategory    String?  @map("recurring_category")
-  category             String?  // Categoría general (Servicios, Seguridad, etc.)
-  
-  status               String   @default("ACTIVE")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
-
-  invoices    Invoice[]
-  documents   ProviderDocument[]
-  unitConfigs ProviderUnitConfig[]  // Configuración por unidad
+  id                    String               @id @default(uuid())
+  name                  String
+  taxType               String               @map("tax_type")
+  nit                   String               @unique
+  dv                    String
+  email                 String?
+  phone                 String?
+  address               String?
+  city                  String?
+  bankAccount           String?              @map("bank_account")
+  bankName              String?              @map("bank_name")
+  accountType           String?              @map("account_type")
+  defaultRetefuentePerc Decimal              @default(0) @map("default_retefuente_perc") @db.Decimal(5, 2)
+  defaultReteicaPerc    Decimal              @default(0) @map("default_reteica_perc") @db.Decimal(5, 4)
+  isRecurring           Boolean              @default(false) @map("is_recurring")
+  recurringCategory     String?              @map("recurring_category")
+  category              String?
+  status                String               @default("ACTIVE")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  invoices              Invoice[]
+  documents             ProviderDocument[]
+  unitConfigs           ProviderUnitConfig[]
+  unitsAsAccountant     Unit[]               @relation("UnitAccountant")
+  unitsAsAdmin          Unit[]               @relation("UnitAdmin")
+  unitsAsFiscalRevisor  Unit[]               @relation("UnitFiscalRevisor")
 
   @@map("providers")
 }
 
-// Documentos de Proveedores (RUT, Planilla PILA, Cert. Bancaria, etc.)
 model ProviderDocument {
-  id           String    @id @default(uuid())
-  providerId   String    @map("provider_id")
-  
-  type         String    // 'rut', 'pila', 'cert_bancaria', 'contrato', 'otro'
-  fileName     String    @map("file_name")
-  fileUrl      String    @map("file_url")
-  fileSize     Int?      @map("file_size") // bytes
-  
-  // Control de vencimiento
-  expiresAt    DateTime? @map("expires_at")
-  isExpired    Boolean   @default(false) @map("is_expired")
-  
-  uploadedAt   DateTime  @default(now()) @map("uploaded_at")
-  notes        String?
-  
-  provider     Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  
+  id         String    @id @default(uuid())
+  providerId String    @map("provider_id")
+  type       String
+  fileName   String    @map("file_name")
+  fileUrl    String    @map("file_url")
+  fileSize   Int?      @map("file_size")
+  expiresAt  DateTime? @map("expires_at")
+  isExpired  Boolean   @default(false) @map("is_expired")
+  uploadedAt DateTime  @default(now()) @map("uploaded_at")
+  notes      String?
+  provider   Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
   @@map("provider_documents")
 }
 
-// Configuración Proveedor-Unidad (Recurrencia por unidad)
 model ProviderUnitConfig {
-  id              String   @id @default(uuid())
-  providerId      String   @map("provider_id")
-  unitId          String   @map("unit_id")
-  
-  // Configuración de recurrencia para esta unidad
-  isRecurring     Boolean  @default(false) @map("is_recurring")
-  category        String?  // 'servicios_publicos', 'seguridad', 'aseo', 'seguros', 'impuestos', 'otro'
-  
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
-  provider        Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  
-  @@unique([providerId, unitId]) // Un proveedor solo puede tener una config por unidad
+  id          String   @id @default(uuid())
+  providerId  String   @map("provider_id")
+  unitId      String   @map("unit_id")
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  category    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, unitId])
   @@map("provider_unit_configs")
 }
 
-// Facturas (Causación / Deuda)
 model Invoice {
-  id            String   @id @default(uuid())
-  unitId        String   @map("unit_id")
-  providerId    String   @map("provider_id")
-  invoiceNumber String   @map("invoice_number") // Número de factura del proveedor
-  isAutogenerated Boolean @default(false) @map("is_autogenerated") // True si es Cuenta de Cobro auto-generada
-  invoiceDate   DateTime @map("invoice_date")
-  dueDate       DateTime? @map("due_date")
-  fileUrl       String?  @map("file_url")
-  
-  // Valores Monetarios
-  subtotal      Decimal  @db.Decimal(12, 2)
-  taxIva        Decimal  @default(0) @map("tax_iva") @db.Decimal(12, 2)
-  totalAmount   Decimal  @map("total_amount") @db.Decimal(12, 2)
-  
-  description   String?
-  pdfUrl        String?  @map("pdf_url")
-  
-  status        String   @default("PENDING") // PENDING, PARTIALLY_PAID, PAID
-  monthlyReportId String? @map("monthly_report_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  unit          Unit     @relation(fields: [unitId], references: [id])
-  provider      Provider @relation(fields: [providerId], references: [id])
-  report        MonthlyReport? @relation(fields: [monthlyReportId], references: [id])
-  paymentItems  PaymentInvoice[]
+  id              String           @id @default(uuid())
+  unitId          String           @map("unit_id")
+  providerId      String           @map("provider_id")
+  invoiceNumber   String           @map("invoice_number")
+  isAutogenerated Boolean          @default(false) @map("is_autogenerated")
+  invoiceDate     DateTime         @map("invoice_date")
+  dueDate         DateTime?        @map("due_date")
+  fileUrl         String?          @map("file_url")
+  subtotal        Decimal          @db.Decimal(12, 2)
+  taxIva          Decimal          @default(0) @map("tax_iva") @db.Decimal(12, 2)
+  totalAmount     Decimal          @map("total_amount") @db.Decimal(12, 2)
+  description     String?
+  pdfUrl          String?          @map("pdf_url")
+  status          String           @default("PENDING")
+  monthlyReportId String?          @map("monthly_report_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  report          MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
+  provider        Provider         @relation(fields: [providerId], references: [id])
+  unit            Unit             @relation(fields: [unitId], references: [id])
+  paymentItems    PaymentInvoice[]
 
   @@unique([providerId, invoiceNumber], name: "unique_provider_invoice")
   @@map("invoices")
 }
 
-// Pagos (Egresos)
 model Payment {
-  id                 String   @id @default(uuid())
-  unitId             String   @map("unit_id")
-  consecutiveNumber  Int?     @map("consecutive_number") // NULL si es Modo Externo antes de asignar
-  manualConsecutive  String?  @map("manual_consecutive") // Para pagos EXTERNOS (CE Manual)
-  paymentDate        DateTime @map("payment_date")
-  
-  // Tipo de comprobante
-  sourceType         String   @map("source_type") // 'INTERNAL' (App) o 'EXTERNAL' (Contador)
-  
-  // Valores del Egreso
-  amountPaid         Decimal  @map("amount_paid") @db.Decimal(12, 2) // Valor total que baja de la deuda
-  
-  // Retenciones aplicadas en este pago
-  retefuenteApplied  Decimal  @default(0) @map("retefuente_applied") @db.Decimal(12, 2)
-  reteicaApplied     Decimal  @default(0) @map("reteica_applied") @db.Decimal(12, 2)
-  
-  // Valor neto girado al banco (calculado)
-  netValue           Decimal  @map("net_value") @db.Decimal(12, 2)
-  
-  bankPaymentMethod  String?  @map("bank_payment_method") // Transferencia, Cheque
-  transactionRef     String?  @map("transaction_ref") // Referencia bancaria
-  
-  supportFileUrl     String?  @map("support_file_url") // El PDF del comprobante final
-  pilaFileUrl        String?  @map("pila_file_url")    // PDF de la PILA (Seguridad Social)
-  
-  status             String   @default("DRAFT") 
-  // DRAFT, PAID_NO_SUPPORT, COMPLETED, CONCILIATED
-  
-  // Control flags
-  hasAuditIssue      Boolean  @default(false) @map("has_audit_issue")
-  hasPendingInvoice  Boolean  @default(false) @map("has_pending_invoice")
-  
-  monthlyReportId    String?  @map("monthly_report_id")
-  createdAt          DateTime @default(now()) @map("created_at")
-
-  unit           Unit             @relation(fields: [unitId], references: [id])
-  report         MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
-  invoiceItems   PaymentInvoice[]
-  conciliation   Conciliation?
+  id                String           @id @default(uuid())
+  unitId            String           @map("unit_id")
+  consecutiveNumber Int?             @map("consecutive_number")
+  manualConsecutive String?          @map("manual_consecutive")
+  paymentDate       DateTime         @map("payment_date")
+  sourceType        String           @map("source_type")
+  amountPaid        Decimal          @map("amount_paid") @db.Decimal(12, 2)
+  retefuenteApplied Decimal          @default(0) @map("retefuente_applied") @db.Decimal(12, 2)
+  reteicaApplied    Decimal          @default(0) @map("reteica_applied") @db.Decimal(12, 2)
+  netValue          Decimal          @map("net_value") @db.Decimal(12, 2)
+  bankPaymentMethod String?          @map("bank_payment_method")
+  transactionRef    String?          @map("transaction_ref")
+  supportFileUrl    String?          @map("support_file_url")
+  pilaFileUrl       String?          @map("pila_file_url")
+  status            String           @default("DRAFT")
+  hasAuditIssue     Boolean          @default(false) @map("has_audit_issue")
+  hasPendingInvoice Boolean          @default(false) @map("has_pending_invoice")
+  monthlyReportId   String?          @map("monthly_report_id")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  conciliation      Conciliation?
+  invoiceItems      PaymentInvoice[]
+  report            MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
+  unit              Unit             @relation(fields: [unitId], references: [id])
 
   @@map("payments")
 }
 
-// Tabla intermedia para relación 1:N (Una factura, multiples pagos)
 model PaymentInvoice {
   id            String  @id @default(uuid())
   paymentId     String  @map("payment_id")
   invoiceId     String  @map("invoice_id")
-  amountApplied Decimal @map("amount_applied") @db.Decimal(12, 2) // Cuánto de este pago se abona a esta factura
-
-  payment Payment @relation(fields: [paymentId], references: [id])
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  amountApplied Decimal @map("amount_applied") @db.Decimal(12, 2)
+  invoice       Invoice @relation(fields: [invoiceId], references: [id])
+  payment       Payment @relation(fields: [paymentId], references: [id])
 
   @@map("payment_invoices")
 }
 
-// Movimientos Bancarios (Extractos Importados)
 model BankMovement {
-  id              String   @id @default(uuid())
-  unitId          String   @map("unit_id")
-  transactionDate DateTime @map("transaction_date")
+  id              String        @id @default(uuid())
+  unitId          String        @map("unit_id")
+  transactionDate DateTime      @map("transaction_date")
   description     String?
-  amount          Decimal  @db.Decimal(12, 2) // Negativo para salidas
-  referenceCode   String?  @map("reference_code")
-  isConciliated   Boolean  @default(false) @map("is_conciliated")
-  rawData         Json?    @map("raw_data") // Data original del banco
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  unit          Unit           @relation(fields: [unitId], references: [id])
-  conciliation  Conciliation?
+  amount          Decimal       @db.Decimal(12, 2)
+  referenceCode   String?       @map("reference_code")
+  isConciliated   Boolean       @default(false) @map("is_conciliated")
+  rawData         Json?         @map("raw_data")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  unit            Unit          @relation(fields: [unitId], references: [id])
+  conciliation    Conciliation?
 
   @@map("bank_movements")
 }
 
-// Conciliación (Match)
 model Conciliation {
-  id             String   @id @default(uuid())
-  paymentId      String   @unique @map("payment_id")
-  bankMovementId String   @unique @map("bank_movement_id")
-  conciliatedAt  DateTime @default(now()) @map("conciliated_at")
+  id             String       @id @default(uuid())
+  paymentId      String       @unique @map("payment_id")
+  bankMovementId String       @unique @map("bank_movement_id")
+  conciliatedAt  DateTime     @default(now()) @map("conciliated_at")
   notes          String?
-
-  payment      Payment      @relation(fields: [paymentId], references: [id])
-  bankMovement BankMovement @relation(fields: [bankMovementId], references: [id])
+  bankMovement   BankMovement @relation(fields: [bankMovementId], references: [id])
+  payment        Payment      @relation(fields: [paymentId], references: [id])
 
   @@map("conciliations")
 }
 
-// ============================================
-// REPORTES MENSUALES
-// ============================================
 model MonthlyReport {
-  id        String   @id @default(uuid())
-  unitId    String   @map("unit_id")
-  
-  month     String   // "Diciembre"
-  year      String   // "2025"
-  status    String   @default("SENT") // SENT, DRAFT
-  pdfUrl    String?  @map("pdf_url")  // URL to the generated PDF
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  createdById String? @map("created_by_id")
-
-  unit     Unit      @relation(fields: [unitId], references: [id])
-  invoices Invoice[]
-  payments Payment[]
+  id          String    @id @default(uuid())
+  unitId      String    @map("unit_id")
+  month       String
+  year        String
+  status      String    @default("SENT")
+  pdfUrl      String?   @map("pdf_url")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdById String?   @map("created_by_id")
+  invoices    Invoice[]
+  unit        Unit      @relation(fields: [unitId], references: [id])
+  payments    Payment[]
 
   @@map("monthly_reports")
 }
 
-// Log de Auditoría para anomalías
 model AuditLog {
   id          String   @id @default(uuid())
   unitId      String   @map("unit_id")
-  entityType  String   @map("entity_type")  // PAYMENT, INVOICE
+  entityType  String   @map("entity_type")
   entityId    String   @map("entity_id")
-  issueType   String   @map("issue_type")   // DATE_BEFORE_INVOICE, NO_INVOICE
+  issueType   String   @map("issue_type")
   description String
   resolved    Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
-  
-  unit Unit @relation(fields: [unitId], references: [id])
-  
+  unit        Unit     @relation(fields: [unitId], references: [id])
+
   @@map("audit_logs")
+}
+
+model organizations {
+  id         String   @id
+  name       String
+  nit        String   @unique
+  email      String
+  phone      String?
+  plan       String   @default("FREE")
+  maxUnits   Int      @default(1)
+  created_at DateTime @default(now())
+  units      Unit[]
+  users      users[]
+}
+
+model user_unit_access {
+  id         String   @id
+  user_id    String
+  unit_id    String
+  role       UnitRole @default(VIEWER)
+  created_at DateTime @default(now())
+  units      Unit     @relation(fields: [unit_id], references: [id], onDelete: Cascade)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, unit_id])
+}
+
+model users {
+  id               String             @id
+  email            String             @unique
+  firebase_uid     String?            @unique
+  first_name       String?
+  last_name        String?
+  phone            String?
+  avatar_url       String?
+  role             GlobalRole         @default(USER)
+  organization_id  String
+  is_active        Boolean            @default(true)
+  last_login_at    DateTime?
+  created_at       DateTime           @default(now())
+  user_unit_access user_unit_access[]
+  organizations    organizations      @relation(fields: [organization_id], references: [id])
+}
+
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum UnitRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  FISCAL_REVISOR
+  AUXILIARY
+  VIEWER
 }
