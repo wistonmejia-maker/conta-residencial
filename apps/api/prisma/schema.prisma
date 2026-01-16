@@ -48,6 +48,7 @@ model Unit {
   admin           Provider? @relation("UnitAdmin", fields: [adminId], references: [id])
   fiscalRevisor   Provider? @relation("UnitFiscalRevisor", fields: [fiscalRevisorId], references: [id])
 
+}
   // Relaciones
   invoices       Invoice[]
   payments       Payment[]
@@ -55,8 +56,23 @@ model Unit {
   providerConfigs ProviderUnitConfig[]  // Configuración de proveedores para esta unidad
   reports        MonthlyReport[]
   auditLogs      AuditLog[]
+  gmailToken     GmailToken?
 
   @@map("units")
+}
+
+model GmailToken {
+  id            String   @id @default(uuid())
+  unitId        String   @unique @map("unit_id")
+  unit          Unit     @relation(fields: [unitId], references: [id])
+  email         String   
+  accessToken   String   @map("access_token")
+  refreshToken  String   @map("refresh_token")
+  expiresAt     BigInt   @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("gmail_tokens")
 }
 
 // Proveedores (Terceros) - GLOBALES, disponibles para todas las unidades
