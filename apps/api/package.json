@@ -17,13 +17,18 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.19.1",
     "@types/multer": "^2.0.0",
+    "adm-zip": "^0.5.16",
     "cloudinary": "^2.8.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "multer": "^2.0.2"
+    "fast-xml-parser": "^5.3.3",
+    "googleapis": "^170.1.0",
+    "multer": "^2.0.2",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
