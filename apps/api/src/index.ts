@@ -59,6 +59,13 @@ app.use('/api/provider-configs', providerConfigsRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/reports', reportsRouter)
 
+// New Routes
+import authRouter from './routes/auth'
+import scanRouter from './routes/scan'
+
+app.use('/api/auth', authRouter)
+app.use('/api/invoices', scanRouter) // Attach scan to invoices path or separate
+
 // Start server
 app.listen(PORT, () => {
     console.log(`🚀 ContaResidencial API running on http://localhost:${PORT}`)
