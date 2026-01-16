@@ -48,7 +48,6 @@ model Unit {
   admin           Provider? @relation("UnitAdmin", fields: [adminId], references: [id])
   fiscalRevisor   Provider? @relation("UnitFiscalRevisor", fields: [fiscalRevisorId], references: [id])
 
-}
   // Relaciones
   invoices       Invoice[]
   payments       Payment[]
