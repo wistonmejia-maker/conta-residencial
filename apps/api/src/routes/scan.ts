@@ -88,3 +88,4 @@ router.post('/scan-gmail', async (req, res) => {
 });
 
 // ... existing routes
+export default router;
