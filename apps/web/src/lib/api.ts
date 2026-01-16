@@ -527,3 +527,21 @@ export async function uploadFile(file: File, folder: string = 'general') {
     const data = await res.json()
     return data.url as string
 }
+
+// ============ GMAIL INTEGRATION ============
+export function connectGmail(unitId: string) {
+    // Redirects browser to backend auth initiation
+    window.location.href = `${API_BASE}/auth/google?unitId=${unitId}`;
+}
+
+export async function scanGmail(unitId: string) {
+    const res = await fetch(`${API_BASE}/invoices/scan-gmail?unitId=${unitId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    return res.json() as Promise<{
+        success: boolean;
+        processedCount: number;
+        results: { status: string; file: string; invoice?: Invoice }[];
+    }>;
+}
