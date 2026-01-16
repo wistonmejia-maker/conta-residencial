@@ -46,6 +46,10 @@ export default function UnitsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] })
             setShowModal(false)
+        },
+        onError: (error: any) => {
+            console.error('Error creating unit:', error)
+            alert('Error al crear la unidad: ' + (error.message || 'Error desconocido'))
         }
     })
 
@@ -55,6 +59,10 @@ export default function UnitsPage() {
             queryClient.invalidateQueries({ queryKey: ['units'] })
             setEditingUnit(null)
             setShowModal(false)
+        },
+        onError: (error: any) => {
+            console.error('Error updating unit:', error)
+            alert('Error al actualizar la unidad: ' + (error.message || 'Error desconocido'))
         }
     })
 

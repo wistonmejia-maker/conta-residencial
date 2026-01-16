@@ -59,12 +59,17 @@ router.post('/', async (req, res) => {
             data: {
                 name, taxId, address,
                 consecutiveSeed: Number(consecutiveSeed) || 1,
-                email, observations, logoUrl, bankAccountInfo,
+                email: email || null,
+                observations: observations || null,
+                logoUrl: logoUrl || null,
+                bankAccountInfo: bankAccountInfo || null,
                 propertyType: propertyType || 'RESIDENTIAL',
                 totalTowers: totalTowers ? Number(totalTowers) : null,
                 totalUnits: totalUnits ? Number(totalUnits) : null,
                 defaultPaymentType: defaultPaymentType || 'INTERNAL',
-                accountantId, adminId, fiscalRevisorId
+                accountantId: accountantId || null,
+                adminId: adminId || null,
+                fiscalRevisorId: fiscalRevisorId || null
             }
         })
         res.status(201).json(unit)
@@ -90,12 +95,17 @@ router.put('/:id', async (req, res) => {
             data: {
                 name, taxId, address,
                 consecutiveSeed: Number(consecutiveSeed),
-                email, observations, logoUrl, bankAccountInfo,
+                email: email || null,
+                observations: observations || null,
+                logoUrl: logoUrl || null,
+                bankAccountInfo: bankAccountInfo || null,
                 propertyType,
                 totalTowers: totalTowers ? Number(totalTowers) : null,
                 totalUnits: totalUnits ? Number(totalUnits) : null,
                 defaultPaymentType,
-                accountantId, adminId, fiscalRevisorId
+                accountantId: accountantId || null,
+                adminId: adminId || null,
+                fiscalRevisorId: fiscalRevisorId || null
             }
         })
         res.json(unit)
