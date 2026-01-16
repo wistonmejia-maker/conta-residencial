@@ -136,9 +136,15 @@ export default function UnitsPage() {
                                                 alt={unit.name}
                                                 className="w-full h-full object-contain p-1"
                                                 onError={(e) => {
-                                                    // Fallback if image fails to load
-                                                    (e.target as HTMLImageElement).src = '';
-                                                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2 w-6 h-6 text-indigo-500"><path d="M6 22V4c0-.5.2-1 .6-1.4C7 2.2 7.5 2 8 2h8c.5 0 1 .2 1.4.6.4.4.6.9.6 1.4v18"/><path d="M6 18h12"/><path d="M10 22v-4a2 2 0 0 1 2-2 2 2 0 0 1 2 2v4"/><path d="M2 22h20"/><path d="M9 6h2"/><path d="M9 10h2"/><path d="M13 6h2"/><path d="M13 10h2"/><path d="M17 6h2"/><path d="M17 10h2"/></svg>';
+                                                    // Hide broken image and show fallback icon
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                    const parent = (e.target as HTMLImageElement).parentElement;
+                                                    if (parent && !parent.querySelector('.fallback-icon')) {
+                                                        const icon = document.createElement('div');
+                                                        icon.className = 'fallback-icon';
+                                                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M6 22V4c0-.5.2-1 .6-1.4C7 2.2 7.5 2 8 2h8c.5 0 1 .2 1.4.6.4.4.6.9.6 1.4v18"/><path d="M6 18h12"/><path d="M10 22v-4a2 2 0 0 1 2-2 2 2 0 0 1 2 2v4"/><path d="M2 22h20"/><path d="M9 6h2"/><path d="M9 10h2"/><path d="M13 6h2"/><path d="M13 10h2"/></svg>';
+                                                        parent.appendChild(icon);
+                                                    }
                                                 }}
                                             />
                                         ) : (
