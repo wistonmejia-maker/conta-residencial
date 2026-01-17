@@ -63,7 +63,7 @@ export async function fetchNewEmails(unitId: string) {
     const response = await gmail.users.messages.list({
         userId: 'me',
         q: `has:attachment ${dateFilter}`,
-        maxResults: 50,
+        maxResults: 100,
     });
 
     console.log(`[Gmail] Found ${response.data.resultSizeEstimate || 0} potential messages.`);

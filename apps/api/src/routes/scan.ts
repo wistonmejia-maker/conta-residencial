@@ -184,7 +184,11 @@ router.post('/scan-gmail', async (req, res) => {
                             const cleanUnitNit = unit.taxId.replace(/[^0-9]/g, '');
                             const cleanInvoiceClientNit = clientNit ? clientNit.replace(/[^0-9]/g, '') : '';
 
-                            if (cleanInvoiceClientNit && !cleanUnitNit.includes(cleanInvoiceClientNit) && !cleanUnitNit.includes(cleanInvoiceClientNit)) {
+                            // Compare only the first 9 digits (base NIT) to avoid DV mismatches
+                            const baseUnitNit = cleanUnitNit.substring(0, 9);
+                            const baseInvoiceNit = cleanInvoiceClientNit.substring(0, 9);
+
+                            if (baseInvoiceNit && baseUnitNit !== baseInvoiceNit) {
                                 logScan(`  [!] ALERTA: El NIT del cliente (${clientNit}) no coincide con el de la unidad (${unit.taxId}). Saltando...`);
                                 continue;
                             }
