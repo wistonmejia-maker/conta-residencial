@@ -34,7 +34,7 @@ function validateEnv(): Env {
         return envSchema.parse(process.env);
     } catch (err) {
         if (err instanceof z.ZodError) {
-            const missingVars = err.errors.map(e => e.path.join('.')).join(', ');
+            const missingVars = err.issues.map((e: z.ZodIssue) => e.path.join('.')).join(', ');
             console.error('❌ Invalid environment variables:', missingVars);
             process.exit(1);
         }

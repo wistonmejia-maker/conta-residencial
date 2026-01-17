@@ -111,15 +111,26 @@ router.get('/execution', async (req, res) => {
                 paymentDate: { gte: startDate, lte: endDate },
                 status: 'PAID'
             },
-            include: { provider: true }
+            include: {
+                invoiceItems: {
+                    include: {
+                        invoice: {
+                            include: { provider: true }
+                        }
+                    }
+                }
+            }
+
         })
 
         // 3. Aggregate Execution by Category
         const executionMap: Record<string, number> = {}
         payments.forEach(p => {
-            const cat = p.provider?.category || 'Sin Categoría'
+            const firstInvoice = p.invoiceItems[0]?.invoice
+            const cat = firstInvoice?.provider?.category || 'Sin Categoría'
             executionMap[cat] = (executionMap[cat] || 0) + Number(p.amountPaid)
         })
+
 
         // 4. Combine
         const allCategories = new Set([
@@ -172,7 +183,16 @@ router.post('/analyze', async (req, res) => {
                 paymentDate: { gte: startDate, lte: endDate },
                 status: 'PAID'
             },
-            include: { provider: true }
+            include: {
+                invoiceItems: {
+                    include: {
+                        invoice: {
+                            include: { provider: true }
+                        }
+                    }
+                }
+            }
+
         })
 
         // 3. Aggregate Execution (Summary)
@@ -180,16 +200,18 @@ router.post('/analyze', async (req, res) => {
         const transactionsByCategory: Record<string, any[]> = {}
 
         payments.forEach(p => {
-            const cat = p.provider?.category || 'Sin Categoría'
+            const firstInvoice = p.invoiceItems[0]?.invoice
+            const cat = firstInvoice?.provider?.category || 'Sin Categoría'
             executionMap[cat] = (executionMap[cat] || 0) + Number(p.amountPaid)
 
             if (!transactionsByCategory[cat]) transactionsByCategory[cat] = []
             transactionsByCategory[cat].push({
-                description: p.provider?.name || 'Desconocido',
+                description: firstInvoice?.provider?.name || 'Desconocido',
                 amount: Number(p.amountPaid),
                 date: p.paymentDate
             })
         })
+
 
         // Sort and take top 3 per category
         const topTransactions: any[] = []
