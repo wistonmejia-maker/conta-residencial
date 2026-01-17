@@ -47,10 +47,22 @@ export async function fetchNewEmails(unitId: string) {
 
     console.log(`[Gmail] Fetching unread emails for unit ${unitId}...`);
 
-    // Get unread emails from the last 24h
+    // Get unit config for date
+    const unit = await prisma.unit.findUnique({ where: { id: unitId } });
+    let dateFilter = 'newer_than:1d';
+
+    if (unit?.gmailScanStartDate) {
+        const date = new Date(unit.gmailScanStartDate);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        dateFilter = `after:${yyyy}/${mm}/${dd}`;
+    }
+
+    // Get unread emails
     const response = await gmail.users.messages.list({
         userId: 'me',
-        q: 'is:unread has:attachment newer_than:1d',
+        q: `is:unread has:attachment ${dateFilter}`,
         maxResults: 50,
     });
 
@@ -109,9 +121,21 @@ export async function fetchNewEmails(unitId: string) {
 export async function fetchRecentEmails(unitId: string, limit: number = 10) {
     const gmail = await getGmailClient(unitId);
 
+    // Get unit config for date
+    const unit = await prisma.unit.findUnique({ where: { id: unitId } });
+    let dateFilter = 'newer_than:1d';
+
+    if (unit?.gmailScanStartDate) {
+        const date = new Date(unit.gmailScanStartDate);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        dateFilter = `after:${yyyy}/${mm}/${dd}`;
+    }
+
     const response = await gmail.users.messages.list({
         userId: 'me',
-        q: 'has:attachment newer_than:1d', // Filter by having attachments and date (last 24h)
+        q: `has:attachment ${dateFilter}`, // Filter by having attachments and date
         maxResults: limit,
     });
 

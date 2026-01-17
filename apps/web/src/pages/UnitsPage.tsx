@@ -29,6 +29,7 @@ interface Unit {
     accountantId?: string
     adminId?: string
     fiscalRevisorId?: string
+    gmailScanStartDate?: string
 }
 
 export default function UnitsPage() {
@@ -267,7 +268,8 @@ function UnitModal({
         consecutiveSeed: unit?.consecutiveSeed || 1,
         accountantId: unit?.accountantId || '',
         adminId: unit?.adminId || '',
-        fiscalRevisorId: unit?.fiscalRevisorId || ''
+        fiscalRevisorId: unit?.fiscalRevisorId || '',
+        gmailScanStartDate: unit?.gmailScanStartDate || ''
     })
 
     // Fetch Providers for Team Selection
@@ -637,7 +639,25 @@ function UnitModal({
                                             </p>
 
                                             {unit ? (
-                                                <GmailStatusManager unitId={unit.id} />
+                                                <>
+                                                    <div className="mt-4 pt-4 border-t border-indigo-100/50">
+                                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                                            Fecha de inicio de escaneo
+                                                        </label>
+                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                            <input
+                                                                type="date"
+                                                                value={form.gmailScanStartDate ? new Date(form.gmailScanStartDate).toISOString().split('T')[0] : ''}
+                                                                onChange={e => handleChange('gmailScanStartDate', e.target.value)}
+                                                                className="px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/10 outline-none w-full sm:w-auto"
+                                                            />
+                                                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                                                                Solo se procesarán correos recibidos <strong>a partir de</strong> esta fecha.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <GmailStatusManager unitId={unit.id} />
+                                                </>
                                             ) : (
                                                 <div className="mt-4 p-3 bg-amber-50 text-amber-700 rounded-lg text-xs flex items-center gap-2">
                                                     <Settings className="w-4 h-4" />

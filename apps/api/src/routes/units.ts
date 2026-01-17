@@ -48,7 +48,8 @@ router.post('/', async (req, res) => {
             email, observations, logoUrl, bankAccountInfo,
             propertyType, totalTowers, totalUnits,
             defaultPaymentType,
-            accountantId, adminId, fiscalRevisorId
+            accountantId, adminId, fiscalRevisorId,
+            gmailScanStartDate
         } = req.body
 
         if (!name || !taxId) {
@@ -69,7 +70,8 @@ router.post('/', async (req, res) => {
                 defaultPaymentType: defaultPaymentType || 'INTERNAL',
                 accountantId: accountantId || null,
                 adminId: adminId || null,
-                fiscalRevisorId: fiscalRevisorId || null
+                fiscalRevisorId: fiscalRevisorId || null,
+                gmailScanStartDate: gmailScanStartDate ? new Date(gmailScanStartDate) : null
             }
         })
         res.status(201).json(unit)
@@ -87,7 +89,8 @@ router.put('/:id', async (req, res) => {
             email, observations, logoUrl, bankAccountInfo,
             propertyType, totalTowers, totalUnits,
             defaultPaymentType,
-            accountantId, adminId, fiscalRevisorId
+            accountantId, adminId, fiscalRevisorId,
+            gmailScanStartDate
         } = req.body
 
         const unit = await prisma.unit.update({
@@ -105,7 +108,8 @@ router.put('/:id', async (req, res) => {
                 defaultPaymentType,
                 accountantId: accountantId || null,
                 adminId: adminId || null,
-                fiscalRevisorId: fiscalRevisorId || null
+                fiscalRevisorId: fiscalRevisorId || null,
+                gmailScanStartDate: gmailScanStartDate !== undefined ? (gmailScanStartDate ? new Date(gmailScanStartDate) : null) : undefined
             }
         })
         res.json(unit)
