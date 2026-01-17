@@ -28,12 +28,23 @@ export async function classifyAndExtractDocument(
         model: 'gemini-2.0-flash',
     });
 
-    const prompt = `Analiza este documento y determina su tipo y extrae la información relevante.
+    const prompt = `Analiza este documento y determina su tipo y extrae la información relevante. NO INVENTES INFORMACIÓN.
+
+    CONTEXTO:
+    Eres el asistente contable de un Conjunto Residencial. Tu trabajo es procesar GASTOS (Salidas de dinero).
+    El conjunto tiene cuenta en Banco AV Villas.
 
     TIPOS SOPORTADOS:
-    1. "INVOICE": Facturas de venta o Cuentas de cobro.
-    2. "PAYMENT_RECEIPT": Comprobantes de transferencia bancaria, recibos de pago, o soportes de transacciones (ej: Bancolombia, Davivienda, Nequi, etc).
-    3. "OTHER": Si no es ninguno de los anteriores.
+    1. "INVOICE": Facturas de venta o Cuentas de cobro emitidas POR PROVEEDORES hacia el conjunto.
+    2. "PAYMENT_RECEIPT": Comprobantes de EGRESO o TRANSFERENCIA (Salidas de dinero desde la cuenta del conjunto hacia un tercero).
+       - IMPORTANTE: Debe ser dinero COMPROBADO que SALIÓ de la cuenta.
+    3. "OTHER": Cualquier otro documento, incluyendo:
+       - Recibos de CAJA o RECAUDO (Dinero que ENTRA al conjunto).
+       - Consignaciones de residentes o propietarios (Pagos de administración).
+       - Estados de cuenta.
+
+    REGLA DE EXCLUSIÓN CRÍTICA (TIPO "OTHER"):
+    - Si el documento dice "COMPROBANTE DE RECAUDO", "CONSIGNACIÓN", "DEPÓSITO" o muestra que un residente (ej: "Apto 501", "Torre A") le pagó al conjunto, clasifícalo como "OTHER". NO LO PROCESES. Solo nos interesan los pagos QUE HACE el conjunto.
 
     FORMATO DE RESPUESTA (JSON):
     Si es INVOICE:
@@ -46,19 +57,19 @@ export async function classifyAndExtractDocument(
             "invoiceNumber": "Número de factura",
             "totalAmount": 1000,
             "date": "YYYY-MM-DD",
-            "concept": "Genera una descripción profesional y detallada basada en los ítems de la factura. Ej: 'Mantenimiento preventivo de ascensores - Enero 2024' o 'Compra de artículos de aseo para portería'"
+            "concept": "Genera una descripción profesional basada en los ítems."
         }
     }
 
-    Si es PAYMENT_RECEIPT:
+    Si es PAYMENT_RECEIPT (Solo Egresos):
     {
         "type": "PAYMENT_RECEIPT",
         "data": {
-            "bankName": "Nombre del banco (ej: Bancolombia)",
-            "transactionRef": "Número de referencia o aprobación",
+            "bankName": "Nombre del banco origen",
+            "transactionRef": "Número de aprobación/CUS",
             "totalAmount": 1000,
             "date": "YYYY-MM-DD",
-            "concept": "Descripción o destinatario del pago"
+            "concept": "Pago a [Nombre Proveedor] - [Concepto]"
         }
     }
 
