@@ -2,7 +2,7 @@ import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, C
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE } from '../lib/api/index'
+import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus } from '../lib/api/index'
 
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -665,26 +665,62 @@ export default function InvoicesPage() {
         }
     }
 
+    const [scanJobId, setScanJobId] = useState<string | null>(null)
+    const [scanProgress, setScanProgress] = useState(0)
+    const [scanStatusMessage, setScanStatusMessage] = useState('Iniciando escaneo...')
+
+    // Polling for Scan Job Status
+    useQuery({
+        queryKey: ['scan-job', scanJobId],
+        queryFn: async () => {
+            if (!scanJobId) return null
+            const status = await getScanStatus(scanJobId)
+
+            if (status.status === 'PROCESSING') {
+                setScanProgress(status.progress)
+                setScanStatusMessage(`Procesando correos (${status.processedCount}/${status.totalItems})...`)
+            } else if (status.status === 'COMPLETED') {
+                setScanProgress(100)
+                setScanJobId(null)
+                setScanningGmail(false)
+
+                if (status.processedCount > 0) {
+                    alert(`¡Éxito! Se han importado ${status.processedCount} documentos. Por favor revísalas en Facturas o Pagos.`)
+                    queryClient.invalidateQueries({ queryKey: ['invoices'] })
+                    queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+                } else {
+                    alert('Escaneo finalizado. No se encontraron nuevos documentos válidos.')
+                }
+            } else if (status.status === 'FAILED') {
+                setScanJobId(null)
+                setScanningGmail(false)
+                alert(`Error en el escaneo: ${status.error}`)
+            }
+            return status
+        },
+        enabled: !!scanJobId,
+        refetchInterval: 2000 // Poll every 2s
+    })
+
     const handleGmailScan = async () => {
         if (!unitId) return
         setScanningGmail(true)
+        setScanProgress(0)
+        setScanStatusMessage('Conectando con Gmail...')
         try {
             const res = await scanGmail(unitId)
-            if (res.processedCount > 0) {
-                alert(`¡Éxito! Se han importado ${res.processedCount} facturas como BORRADOR. Por favor revísalas antes de aprobarlas.`)
-                queryClient.invalidateQueries({ queryKey: ['invoices'] })
-                queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+            if (res.jobId) {
+                setScanJobId(res.jobId)
             } else {
-                alert('No se encontraron nuevas facturas en los correos no leídos.')
+                throw new Error('No se pudo iniciar el trabajo de escaneo')
             }
         } catch (error) {
             console.error('Error scanning Gmail:', error)
+            setScanningGmail(false)
             alert('Error al escanear Gmail. Verifica si la cuenta está conectada.')
             if (confirm('¿Deseas conectar/reconectar la cuenta de Gmail ahora?')) {
                 connectGmail(unitId)
             }
-        } finally {
-            setScanningGmail(false)
         }
     }
 
@@ -708,9 +744,10 @@ export default function InvoicesPage() {
             {/* AI Processing Overlay for Gmail Scan */}
             <AIProcessingOverlay
                 visible={scanningGmail}
-                message="Escaneando correos..."
-                subMessage="Buscando facturas en tu inbox de Gmail"
-                estimatedTime={30}
+                message={scanStatusMessage}
+                subMessage="Esto puede tomar unos minutos dependiendo de la cantidad de correos."
+                progress={scanProgress > 0 ? scanProgress : undefined}
+                estimatedTime={scanProgress > 0 ? undefined : 30}
             />
 
             <div className="space-y-6 animate-fade-in">

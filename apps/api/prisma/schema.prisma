@@ -315,3 +315,18 @@ enum UnitRole {
   AUXILIARY
   VIEWER
 }
+model ScanningJob {
+  id             String    @id @default(uuid())
+  unitId         String    @map("unit_id")
+  status         String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  progress       Int       @default(0)
+  totalItems     Int       @default(0)
+  processedCount Int       @default(0)
+  results        Json?     // Array of results { status, file, type, id }
+  error          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
+
+  @@map("scanning_jobs")
+}

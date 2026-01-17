@@ -29,14 +29,26 @@ export async function getGmailPreview(unitId: string): Promise<{ success: boolea
 
 export async function scanGmail(unitId: string): Promise<{
     success: boolean;
-    processedCount: number;
-    results: { status: string; file: string; invoice?: Invoice }[];
+    jobId: string;
 }> {
     const res = await fetch(`${API_BASE}/invoices/scan-gmail?unitId=${unitId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     });
     return handleResponse(res, 'Error al escanear Gmail');
+}
+
+export async function getScanStatus(jobId: string): Promise<{
+    id: string;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    progress: number;
+    totalItems: number;
+    processedCount: number;
+    results: any[];
+    error?: string;
+}> {
+    const res = await fetch(`${API_BASE}/invoices/scan-status/${jobId}`);
+    return handleResponse(res, 'Error al obtener estado de escaneo');
 }
 
 

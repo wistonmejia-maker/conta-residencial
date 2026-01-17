@@ -24,9 +24,20 @@ router.get('/gmail/preview', async (req, res) => {
     }
 });
 
+// GET /api/scan/status/:jobId
+router.get('/scan-status/:jobId', async (req, res) => {
+    const { jobId } = req.params;
+    try {
+        const job = await prisma.scanningJob.findUnique({ where: { id: jobId } });
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+        res.json(job);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching job status' });
+    }
+});
+
 // Helper to upload buffer (Cloudinary or Local)
 async function uploadBuffer(buffer: Buffer, filename: string, folder: string = 'general'): Promise<string> {
-    // Check if Cloudinary is configured with REAL values (not placeholders)
     const useCloudinary = !!(
         process.env.CLOUDINARY_CLOUD_NAME &&
         process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' &&
@@ -39,7 +50,7 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
                 {
                     folder: `conta-residencial/${folder}`,
                     resource_type: 'auto',
-                    public_id: filename.replace(/\.[^/.]+$/, "") // Remove extension for public_id
+                    public_id: filename.replace(/\.[^/.]+$/, "")
                 },
                 (error: any, result: any) => {
                     if (error) reject(error);
@@ -49,75 +60,64 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
             uploadStream.end(buffer);
         });
     } else {
-        // Local storage - Use process.cwd() to be safe in ts-node/dev environments
         const uploadsDir = path.resolve(process.cwd(), 'uploads');
         const destDir = path.join(uploadsDir, folder);
+        if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-        console.log(`[STORAGE] Target directory: ${destDir}`);
+        const timestamp = Date.now();
+        const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const finalName = `${timestamp}-${safeName}`;
+        const filePath = path.join(destDir, finalName);
 
-        try {
-            if (!fs.existsSync(destDir)) {
-                console.log(`[STORAGE] Creating directory: ${destDir}`);
-                fs.mkdirSync(destDir, { recursive: true });
-            }
+        fs.writeFileSync(filePath, buffer);
 
-            const timestamp = Date.now();
-            const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const finalName = `${timestamp}-${safeName}`;
-            const filePath = path.join(destDir, finalName);
-
-            console.log(`[STORAGE] Writing file to: ${filePath} (${buffer.length} bytes)`);
-            fs.writeFileSync(filePath, buffer);
-
-            // Verify file exists
-            if (fs.existsSync(filePath)) {
-                console.log(`[STORAGE] File written successfully.`);
-            } else {
-                throw new Error('File not found after write');
-            }
-
-            // Return URL for database
-            // Note: Frontend must be able to resolve this. 
-            // If the API serves /uploads, this works.
-            return `http://localhost:3002/uploads/${folder}/${finalName}`;
-        } catch (err) {
-            console.error('[STORAGE] Critical error writing file:', err);
-            throw err;
-        }
+        // In production, we might need a real domain
+        const baseUrl = process.env.API_URL || 'http://localhost:3002';
+        return `${baseUrl}/uploads/${folder}/${finalName}`;
     }
 }
 
 const SCAN_LOG = path.join(process.cwd(), 'scan_debug.log');
 function logScan(msg: string) {
     const line = `[${new Date().toISOString()}] ${msg}\n`;
-    fs.appendFileSync(SCAN_LOG, line);
+    try {
+        fs.appendFileSync(SCAN_LOG, line);
+    } catch (e) { }
     console.log(msg);
 }
 
-// POST /scan-gmail?unitId=...
-router.post('/scan-gmail', async (req, res) => {
-    const { unitId } = req.query;
-
-    if (!unitId) return res.status(400).send({ error: 'Unit ID is required' });
-
-    logScan(`Gmail Scan Started for unit ${unitId}`);
+// Internal function to run the scan in background
+async function runBackgroundScan(jobId: string, unitId: string) {
+    const results: any[] = [];
+    let processedCount = 0;
 
     try {
-        const unit = await prisma.unit.findUnique({ where: { id: unitId as string } });
-        if (!unit) return res.status(404).send({ error: 'Unit not found' });
+        const unit = await prisma.unit.findUnique({ where: { id: unitId } });
+        if (!unit) throw new Error('Unit not found');
 
-        const emails = await fetchNewEmails(unitId as string);
-        const results = [];
-        logScan(`Found ${emails.length} emails with attachments in the specified range.`);
+        await prisma.scanningJob.update({
+            where: { id: jobId },
+            data: { status: 'PROCESSING', progress: 5 }
+        });
+
+        const emails = await fetchNewEmails(unitId);
+
+        await prisma.scanningJob.update({
+            where: { id: jobId },
+            data: { totalItems: emails.length, progress: 10 }
+        });
 
         if (emails.length === 0) {
-            logScan(`No emails with attachments found since the configured start date.`);
+            await prisma.scanningJob.update({
+                where: { id: jobId },
+                data: { status: 'COMPLETED', progress: 100, completedAt: new Date() }
+            });
+            return;
         }
 
         for (let i = 0; i < emails.length; i++) {
             const email = emails[i];
-            console.log(`[SCAN] (${i + 1}/${emails.length}) Processing: "${email.subject}"`);
-            let processed = false;
+            let emailProcessed = false;
 
             for (const att of email.attachments) {
                 let buffer: Buffer | null = null;
@@ -127,211 +127,140 @@ router.post('/scan-gmail', async (req, res) => {
                 try {
                     const isPdf = mimeType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
                     const isImage = mimeType.startsWith('image/');
-                    const isZip = mimeType === 'application/zip' ||
-                        mimeType === 'application/x-zip-compressed' ||
-                        filename.toLowerCase().endsWith('.zip');
+                    const isZip = filename.toLowerCase().endsWith('.zip');
 
                     if (isPdf || isImage) {
-                        logScan(`  -> Downloading ${isPdf ? 'PDF' : 'Image'}: ${filename} (MIME: ${mimeType})`);
-                        buffer = await getAttachment(unitId as string, email.id, att.attachmentId);
-                    }
-                    else if (isZip) {
-                        logScan(`  -> ZIP detected: ${filename} (MIME: ${mimeType})`);
-                        const zipBuffer = await getAttachment(unitId as string, email.id, att.attachmentId);
-
-                        try {
-                            const AdmZip = require('adm-zip');
-                            const zip = new AdmZip(zipBuffer);
-                            const zipEntries = zip.getEntries();
-                            const pdfEntry = zipEntries.find((entry: any) =>
-                                entry.entryName.toLowerCase().endsWith('.pdf') && !entry.isDirectory
-                            );
-
-                            if (pdfEntry) {
-                                logScan(`  -> Extracted PDF from ZIP: ${pdfEntry.entryName}`);
-                                buffer = pdfEntry.getData();
-                                mimeType = 'application/pdf';
-                                filename = pdfEntry.entryName;
-                            } else {
-                                logScan(`  -> No PDF found inside ZIP.`);
-                            }
-                        } catch (zipError) {
-                            logScan(`  -> ZIP Extract Error: ${zipError}`);
+                        buffer = await getAttachment(unitId, email.id, att.attachmentId);
+                    } else if (isZip) {
+                        const zipBuffer = await getAttachment(unitId, email.id, att.attachmentId);
+                        const AdmZip = require('adm-zip');
+                        const zip = new AdmZip(zipBuffer);
+                        const pdfEntry = zip.getEntries().find((e: any) => e.entryName.toLowerCase().endsWith('.pdf'));
+                        if (pdfEntry) {
+                            buffer = pdfEntry.getData();
+                            mimeType = 'application/pdf';
+                            filename = pdfEntry.entryName;
                         }
-                    } else {
-                        logScan(`  -> Skipping attachment: ${filename} (MIME: ${mimeType}) - Not a supported type.`);
                     }
 
                     if (buffer) {
-                        console.log(`  -> AI Analysis started...`);
-                        // Rate Limiting: Wait 4s before calling AI
-                        await new Promise(r => setTimeout(r, 4000));
-
+                        await new Promise(r => setTimeout(r, 4000)); // Rate limit
                         const analysis = await classifyAndExtractDocument(buffer, mimeType);
-                        logScan(`  -> AI Result: type=${analysis.type}`);
 
                         if (analysis.type === 'INVOICE' && analysis.data) {
                             const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept } = analysis.data;
 
-                            if (!nit || !providerName) {
-                                logScan(`  [!] Error: El AI no extrajo el NIT o el nombre del emisor. Saltando...`);
+                            // Validar NIT (leniente)
+                            const cleanUnitNit = unit.taxId.replace(/[^0-9]/g, '').substring(0, 9);
+                            const cleanInvoiceClientNit = (clientNit || '').replace(/[^0-9]/g, '').substring(0, 9);
+
+                            if (cleanInvoiceClientNit && cleanUnitNit !== cleanInvoiceClientNit) {
+                                logScan(`  [!] NIT mismatch: ${cleanInvoiceClientNit} vs ${cleanUnitNit}`);
                                 continue;
                             }
 
-                            logScan(`  -> Extracted Invoice: ${providerName} (Emisor: ${nit}) | Cliente: ${clientNit} | Factura: ${invoiceNumber}`);
+                            const fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/invoices`);
 
-                            // VALIDATION: Check if invoice belongs to this unit
-                            const cleanUnitNit = unit.taxId.replace(/[^0-9]/g, '');
-                            const cleanInvoiceClientNit = clientNit ? clientNit.replace(/[^0-9]/g, '') : '';
-
-                            // Compare only the first 9 digits (base NIT) to avoid DV mismatches
-                            const baseUnitNit = cleanUnitNit.substring(0, 9);
-                            const baseInvoiceNit = cleanInvoiceClientNit.substring(0, 9);
-
-                            if (baseInvoiceNit && baseUnitNit !== baseInvoiceNit) {
-                                logScan(`  [!] ALERTA: El NIT del cliente (${clientNit}) no coincide con el de la unidad (${unit.taxId}). Saltando...`);
-                                continue;
-                            }
-
-                            // Upload File
-                            let fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/invoices`);
-
-                            // 1. Find or Create Provider
                             let provider = await prisma.provider.findUnique({ where: { nit: nit! } });
                             if (!provider) {
                                 provider = await prisma.provider.create({
+                                    data: { name: providerName!, nit: nit!, taxType: 'NIT', dv: '0', email: email.from }
+                                });
+                            }
+
+                            const existing = await prisma.invoice.findFirst({
+                                where: { providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF' }
+                            });
+
+                            if (!existing) {
+                                const inv = await prisma.invoice.create({
                                     data: {
-                                        name: providerName!,
-                                        nit: nit!,
-                                        taxType: 'NIT',
-                                        dv: '0',
-                                        email: email.from.match(/<(.+)>/)?.[1] || '',
+                                        unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
+                                        invoiceDate: date ? new Date(date) : new Date(),
+                                        totalAmount, subtotal: totalAmount, status: 'DRAFT',
+                                        description: `Importado: ${email.subject}`, pdfUrl: fileUrl, fileUrl
                                     }
                                 });
+                                results.push({ status: 'created', type: 'invoice', id: inv.id, file: filename });
+                                emailProcessed = true;
                             }
-
-                            // 2. Check if Invoice already exists (skip duplicates)
-                            const existingInvoice = await prisma.invoice.findFirst({
-                                where: {
-                                    providerId: provider.id,
-                                    invoiceNumber: invoiceNumber || 'SIN-REF'
-                                }
-                            });
-
-                            if (existingInvoice) {
-                                logScan(`  [i] La factura ${invoiceNumber} de ${providerName} ya existe. Saltando...`);
-                                continue;
-                            }
-
-                            // 2. Create Invoice Draft
-                            const newInvoice = await prisma.invoice.create({
-                                data: {
-                                    unitId: unitId as string,
-                                    providerId: provider.id,
-                                    invoiceNumber: invoiceNumber || 'SIN-REF',
-                                    invoiceDate: date ? new Date(date) : new Date(),
-                                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                                    subtotal: totalAmount,
-                                    totalAmount: totalAmount,
-                                    status: 'DRAFT',
-                                    description: `Importado de Gmail: ${email.subject} - ${concept}`,
-                                    pdfUrl: fileUrl,
-                                    fileUrl: fileUrl
-                                }
-                            });
-
-                            results.push({ status: 'created', type: 'invoice', id: newInvoice.id, file: filename });
-                            processed = true;
-                        }
-                        else if (analysis.type === 'PAYMENT_RECEIPT' && analysis.data) {
-                            const { totalAmount, date, concept, transactionRef, bankName } = analysis.data;
-
-                            if (totalAmount === undefined || totalAmount === null) {
-                                logScan(`  [!] Error: El AI no extrajo el monto total del comprobante. Saltando...`);
-                                continue;
-                            }
-
-                            // Check if Payment already exists (skip duplicates)
-                            if (transactionRef && transactionRef !== 'GMAIL_IMPORT') {
-                                const existingPayment = await prisma.payment.findFirst({
-                                    where: {
-                                        unitId: unitId as string,
-                                        transactionRef: transactionRef,
-                                        amountPaid: totalAmount
-                                    }
+                        } else if (analysis.type === 'PAYMENT_RECEIPT' && analysis.data) {
+                            const { totalAmount, date, transactionRef, bankName } = analysis.data;
+                            if (transactionRef) {
+                                const existing = await prisma.payment.findFirst({
+                                    where: { unitId, transactionRef, amountPaid: totalAmount }
                                 });
-
-                                if (existingPayment) {
-                                    logScan(`  [i] El comprobante con referencia ${transactionRef} ya existe. Saltando...`);
-                                    continue;
+                                if (!existing) {
+                                    const fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/payments`);
+                                    const pay = await prisma.payment.create({
+                                        data: {
+                                            unitId, paymentDate: date ? new Date(date) : new Date(),
+                                            amountPaid: totalAmount, netValue: totalAmount, sourceType: 'BANCO',
+                                            bankPaymentMethod: bankName || 'GMAIL', transactionRef, status: 'DRAFT',
+                                            supportFileUrl: fileUrl
+                                        }
+                                    });
+                                    results.push({ status: 'created', type: 'payment', id: pay.id, file: filename });
+                                    emailProcessed = true;
                                 }
                             }
-
-                            logScan(`  -> Extracted Payment: ${bankName} | $${totalAmount} | Ref: ${transactionRef}`);
-
-                            // Upload File
-                            const fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/payments`);
-
-                            // Create Payment Draft
-                            const newPayment = await prisma.payment.create({
-                                data: {
-                                    unitId: unitId as string,
-                                    paymentDate: date ? new Date(date) : new Date(),
-                                    amountPaid: totalAmount,
-                                    netValue: totalAmount,
-                                    sourceType: 'BANCO',
-                                    bankPaymentMethod: bankName || 'GMAIL_IMPORT',
-                                    transactionRef: transactionRef || 'GMAIL_IMPORT',
-                                    status: 'DRAFT',
-                                    supportFileUrl: fileUrl,
-                                }
-                            });
-
-                            results.push({ status: 'created', type: 'payment', id: newPayment.id, file: filename });
-                            processed = true;
-                        }
-                        else {
-                            logScan(`  -> AI decided this is not a supported document type or data is missing.`);
                         }
                     }
-                } catch (processingError: any) {
-                    logScan(`  -> System Error for ${filename}: ${processingError.message}`);
-                    if (processingError.message?.includes('429')) {
-                        logScan('  -> Rate limit hit. Extra 10s wait...');
-                        await new Promise(r => setTimeout(r, 10000));
-                    }
+                } catch (err: any) {
+                    logScan(`Error processing attachment: ${err.message}`);
+                    if (err.message.includes('429')) await new Promise(r => setTimeout(r, 10000));
                 }
             }
 
-            if (processed) {
-                logScan(`  -> Marking email as read: ${email.id}`);
-                await markAsRead(unitId as string, email.id);
-            }
+            if (emailProcessed) await markAsRead(unitId, email.id);
+
+            processedCount++;
+            const progress = Math.round(10 + (processedCount / emails.length) * 85);
+            await prisma.scanningJob.update({
+                where: { id: jobId },
+                data: { progress, processedCount, results: results as any }
+            });
         }
 
-        logScan(`Scan finished for unit ${unitId}. Processed: ${results.length}`);
-        res.json({ success: true, processedCount: results.length, results });
+        await prisma.scanningJob.update({
+            where: { id: jobId },
+            data: { status: 'COMPLETED', progress: 100, completedAt: new Date(), results: results as any }
+        });
 
-    } catch (error) {
-        console.error('[SCAN] Critical Scan Error:', error);
-        res.status(500).json({ error: (error as Error).message });
+    } catch (error: any) {
+        logScan(`JOB FAILED: ${error.message}`);
+        await prisma.scanningJob.update({
+            where: { id: jobId },
+            data: { status: 'FAILED', error: error.message }
+        });
+    }
+}
+
+// POST /scan-gmail?unitId=...
+router.post('/scan-gmail', async (req, res) => {
+    const { unitId } = req.query;
+    if (!unitId) return res.status(400).send({ error: 'Unit ID is required' });
+
+    try {
+        const job = await prisma.scanningJob.create({
+            data: { unitId: unitId as string, status: 'PENDING' }
+        });
+
+        // Trigger background process
+        runBackgroundScan(job.id, unitId as string);
+
+        res.json({ success: true, jobId: job.id });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
     }
 });
 
-// POST /api/scan/analyze - Analyze a manually uploaded file
 router.post('/analyze', upload.single('file'), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        const buffer = req.file.buffer;
-        const mimeType = req.file.mimetype;
-
-        const analysis = await classifyAndExtractDocument(buffer, mimeType);
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const analysis = await classifyAndExtractDocument(req.file.buffer, req.file.mimetype);
         res.json(analysis);
     } catch (error) {
-        console.error('Error analyzing document:', error);
         res.status(500).json({ error: 'Error analyzing document' });
     }
 });
