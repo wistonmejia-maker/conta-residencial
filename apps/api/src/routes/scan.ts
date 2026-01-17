@@ -71,8 +71,19 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
 
         fs.writeFileSync(filePath, buffer);
 
-        // In production, we might need a real domain
-        const baseUrl = process.env.API_URL || 'http://localhost:3002';
+        // In production (Railway), allow using the public domain if API_URL is not set
+        let baseUrl = process.env.API_URL;
+        if (!baseUrl) {
+            // Fallback to current domain if possible, or localhost
+            // If we are in Railway, we might use the RAICWAY_PUBLIC_DOMAIN or similar, 
+            // but 'GOOGLE_REDIRECT_URI' usually contains the public base
+            if (process.env.GOOGLE_REDIRECT_URI) {
+                baseUrl = new URL(process.env.GOOGLE_REDIRECT_URI).origin;
+            } else {
+                baseUrl = 'http://localhost:3002';
+            }
+        }
+
         return `${baseUrl}/uploads/${folder}/${finalName}`;
     }
 }
