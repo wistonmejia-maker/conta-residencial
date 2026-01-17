@@ -638,7 +638,7 @@ export default function InvoicesPage() {
             setShowDeleteConfirm(null)
         } catch (error) {
             console.error('Error deleting invoice:', error)
-            alert('Error al eliminar la factura.')
+            alert(error instanceof Error ? error.message : 'Error al eliminar la factura. Por favor intente de nuevo.')
         } finally {
             setDeletingId(null)
         }

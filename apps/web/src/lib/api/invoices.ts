@@ -1,4 +1,5 @@
-import { API_BASE } from './common'
+import { API_BASE, handleResponse } from './common'
+
 
 export interface Invoice {
     id: string
@@ -20,50 +21,63 @@ export interface Invoice {
     monthlyReportId?: string
 }
 
-export async function getInvoices(filters?: { unitId?: string; providerId?: string; status?: string }) {
+export async function getInvoices(filters?: { unitId?: string; providerId?: string; status?: string }): Promise<{ invoices: Invoice[] }> {
     const params = new URLSearchParams()
     if (filters?.unitId) params.set('unitId', filters.unitId)
     if (filters?.providerId) params.set('providerId', filters.providerId)
     if (filters?.status) params.set('status', filters.status)
     const res = await fetch(`${API_BASE}/invoices?${params}`)
-    return res.json()
+    return handleResponse<{ invoices: Invoice[] }>(res, 'Error al obtener facturas')
 }
 
-export async function getInvoice(id: string) {
+
+
+export async function getInvoice(id: string): Promise<Invoice> {
     const res = await fetch(`${API_BASE}/invoices/${id}`)
-    return res.json()
+    return handleResponse<Invoice>(res, 'Error al obtener factura')
 }
 
-export async function createInvoice(data: Partial<Invoice>) {
+
+
+export async function createInvoice(data: Partial<Invoice>): Promise<Invoice> {
     const res = await fetch(`${API_BASE}/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse<Invoice>(res, 'Error al crear factura')
 }
 
-export async function updateInvoice(id: string, data: Partial<Invoice>) {
+
+
+export async function updateInvoice(id: string, data: Partial<Invoice>): Promise<Invoice> {
     const res = await fetch(`${API_BASE}/invoices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse<Invoice>(res, 'Error al actualizar factura')
 }
 
-export async function deleteInvoice(id: string) {
+
+
+export async function deleteInvoice(id: string): Promise<{ success: boolean }> {
     const res = await fetch(`${API_BASE}/invoices/${id}`, { method: 'DELETE' })
-    return res.json()
+    return handleResponse<{ success: boolean }>(res, 'Error al eliminar factura')
 }
 
-export async function getInvoiceStats(unitId?: string) {
+
+
+export async function getInvoiceStats(unitId?: string): Promise<any> {
     const url = unitId ? `${API_BASE}/invoices/stats/summary?unitId=${unitId}` : `${API_BASE}/invoices/stats/summary`
     const res = await fetch(url)
-    return res.json()
+    return handleResponse<any>(res, 'Error al obtener estadísticas')
 }
+
+
 
 export async function getNextCCNumber(unitId: string): Promise<{ number: string; prefix: string; nextNumber: number }> {
     const res = await fetch(`${API_BASE}/invoices/next-cc-number?unitId=${unitId}`)
-    return res.json()
+    return handleResponse(res, 'Error al obtener próximo número')
 }
+
