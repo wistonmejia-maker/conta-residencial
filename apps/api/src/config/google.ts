@@ -1,11 +1,10 @@
 import { google } from 'googleapis';
-import dotenv from 'dotenv';
-dotenv.config();
+import { config } from './env';
 
 export const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
+    config.GOOGLE_CLIENT_ID,
+    config.GOOGLE_CLIENT_SECRET,
+    config.GOOGLE_REDIRECT_URI
 );
 
 // Gmail API scopes required
