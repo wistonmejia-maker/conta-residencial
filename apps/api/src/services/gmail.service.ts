@@ -193,3 +193,48 @@ export async function markAsRead(unitId: string, messageId: string) {
         },
     });
 }
+
+const PROCESSED_LABEL_NAME = 'MejIA_Processed';
+
+export async function ensureLabel(unitId: string): Promise<string> {
+    const gmail = await getGmailClient(unitId);
+    try {
+        const res = await gmail.users.labels.list({ userId: 'me' });
+        const label = res.data.labels?.find(l => l.name === PROCESSED_LABEL_NAME);
+        if (label?.id) return label.id;
+
+        // Create if not exists
+        const created = await gmail.users.labels.create({
+            userId: 'me',
+            requestBody: {
+                name: PROCESSED_LABEL_NAME,
+                labelListVisibility: 'labelShow',
+                messageListVisibility: 'show',
+                color: {
+                    backgroundColor: '#2ac766', // Green
+                    textColor: '#ffffff'
+                }
+            }
+        });
+        return created.data.id!;
+    } catch (e) {
+        console.error('Error ensuring label:', e);
+        return ''; // Fail silently
+    }
+}
+
+export async function markAsProcessed(unitId: string, messageId: string, labelId: string) {
+    const gmail = await getGmailClient(unitId);
+    const requestBody: any = {
+        removeLabelIds: ['UNREAD']
+    };
+    if (labelId) {
+        requestBody.addLabelIds = [labelId];
+    }
+
+    await gmail.users.messages.modify({
+        userId: 'me',
+        id: messageId,
+        requestBody
+    });
+}

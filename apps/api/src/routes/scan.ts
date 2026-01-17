@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import prisma from '../lib/prisma';
-import { fetchNewEmails, getAttachment, markAsRead, fetchRecentEmails } from '../services/gmail.service';
+import { fetchNewEmails, getAttachment, markAsRead, fetchRecentEmails, ensureLabel, markAsProcessed } from '../services/gmail.service';
 import { classifyAndExtractDocument } from '../services/ai.service';
 import cloudinary from '../lib/cloudinary';
 import path from 'path';
@@ -121,6 +121,8 @@ async function runBackgroundScan(jobId: string, unitId: string) {
             data: { totalItems: emails.length, progress: 10 }
         });
 
+        const processedLabelId = await ensureLabel(unitId);
+
         if (emails.length === 0) {
             await prisma.scanningJob.update({
                 where: { id: jobId },
@@ -134,6 +136,7 @@ async function runBackgroundScan(jobId: string, unitId: string) {
             let emailProcessed = false;
 
             for (const att of email.attachments) {
+                // ... attachment processing ...
                 let buffer: Buffer | null = null;
                 let mimeType = att.mimeType;
                 let filename = att.filename;
@@ -234,7 +237,7 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                 }
             }
 
-            if (emailProcessed) await markAsRead(unitId, email.id);
+            if (emailProcessed) await markAsProcessed(unitId, email.id, processedLabelId);
 
             processedCount++;
             const progress = Math.round(10 + (processedCount / emails.length) * 85);
