@@ -63,6 +63,7 @@ app.get('/api/debug-env', (req, res) => {
         DATABASE_URL_first_30_chars: dbUrl?.substring(0, 30) || 'NOT SET',
         PORT: process.env.PORT,
         NODE_ENV: process.env.NODE_ENV,
+        GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
         CLOUDINARY_CLOUD_NAME_exists: !!process.env.CLOUDINARY_CLOUD_NAME
     })
 })
