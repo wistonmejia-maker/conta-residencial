@@ -13,4 +13,10 @@ export const config = {
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 };
 
-console.log('Config loaded. GOOGLE_REDIRECT_URI:', config.GOOGLE_REDIRECT_URI ? 'SET' : 'NOT SET');
+console.log('--- API Config Check ---');
+console.log('PORT:', config.PORT);
+console.log('DATABASE_URL:', config.DATABASE_URL ? 'PRESENT' : 'MISSING');
+console.log('GOOGLE_CLIENT_ID:', config.GOOGLE_CLIENT_ID ? 'PRESENT' : 'MISSING');
+console.log('GOOGLE_CLIENT_SECRET:', config.GOOGLE_CLIENT_SECRET ? 'PRESENT' : 'MISSING');
+console.log('GOOGLE_REDIRECT_URI:', config.GOOGLE_REDIRECT_URI);
+console.log('------------------------');
