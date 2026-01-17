@@ -68,6 +68,8 @@ app.get('/api/debug-env', (req, res) => {
         GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
         GOOGLE_CLIENT_ID_exists: !!process.env.GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_ID_length: process.env.GOOGLE_CLIENT_ID?.length || 0,
+        GOOGLE_CLIENT_SECRET_exists: !!process.env.GOOGLE_CLIENT_SECRET,
+        GEMINI_API_KEY_exists: !!process.env.GEMINI_API_KEY,
         CLOUDINARY_CLOUD_NAME_exists: !!process.env.CLOUDINARY_CLOUD_NAME
     })
 })
