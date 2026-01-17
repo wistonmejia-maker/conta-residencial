@@ -686,6 +686,11 @@ function GmailStatusManager({ unitId }: { unitId: string }) {
         mutationFn: () => disconnectGmail(unitId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['gmail-status', unitId] })
+            alert('Conexión con Gmail desactivada correctamente.')
+        },
+        onError: (err: any) => {
+            console.error('Error disconnecting Gmail:', err)
+            alert(err.message || 'No se pudo desconectar Gmail. Verifica tu conexión.')
         }
     })
 
@@ -709,19 +714,23 @@ function GmailStatusManager({ unitId }: { unitId: string }) {
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     <span>Conectado como <strong>{status.email}</strong></span>
                 </div>
-                <button
-                    onClick={() => {
-                        if (confirm('¿Seguro que deseas desconectar Gmail? El escaneo automático dejará de funcionar.')) {
-                            disconnectMutation.mutate()
-                        }
-                    }}
-                    disabled={disconnectMutation.isPending}
-                    type="button"
-                    className="mt-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
-                >
-                    {disconnectMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />}
-                    Desconectar cuenta
-                </button>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            disconnectMutation.mutate();
+                        }}
+                        disabled={disconnectMutation.isPending}
+                        type="button"
+                        className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200 active:scale-95 disabled:opacity-50"
+                    >
+                        {disconnectMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />}
+                        {disconnectMutation.isPending ? 'Desconectando...' : 'Desconectar Gmail'}
+                    </button>
+                    <p className="text-[10px] text-gray-500 italic">
+                        Esta acción quitará el acceso a tus correos.
+                    </p>
+                </div>
             </div>
         )
     }
