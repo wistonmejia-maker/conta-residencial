@@ -1,4 +1,5 @@
-import { API_BASE } from './common'
+import { API_BASE, handleResponse } from './common'
+
 
 export interface Payment {
     id: string
@@ -46,43 +47,48 @@ export interface BankMovement {
     isConciliated: boolean
 }
 
-export async function getPayments(filters?: { unitId?: string; status?: string; month?: number; year?: number }) {
+export async function getPayments(filters?: { unitId?: string; status?: string; month?: number; year?: number }): Promise<{ payments: Payment[] }> {
     const params = new URLSearchParams()
     if (filters?.unitId) params.set('unitId', filters.unitId)
     if (filters?.status) params.set('status', filters.status)
     if (filters?.month) params.set('month', filters.month.toString())
     if (filters?.year) params.set('year', filters.year.toString())
     const res = await fetch(`${API_BASE}/payments?${params}`)
-    return res.json()
+    return handleResponse<{ payments: Payment[] }>(res, 'Error al obtener pagos')
 }
 
-export async function getPayment(id: string) {
+
+export async function getPayment(id: string): Promise<Payment> {
     const res = await fetch(`${API_BASE}/payments/${id}`)
-    return res.json()
+    return handleResponse<Payment>(res, 'Error al obtener pago')
 }
 
-export async function createPayment(data: any) {
+
+export async function createPayment(data: any): Promise<Payment> {
     const res = await fetch(`${API_BASE}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse<Payment>(res, 'Error al crear pago')
 }
 
-export async function updatePayment(id: string, data: Partial<Payment>) {
+
+export async function updatePayment(id: string, data: Partial<Payment>): Promise<Payment> {
     const res = await fetch(`${API_BASE}/payments/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse<Payment>(res, 'Error al actualizar pago')
 }
 
-export async function deletePayment(id: string) {
+
+export async function deletePayment(id: string): Promise<{ success: boolean }> {
     const res = await fetch(`${API_BASE}/payments/${id}`, { method: 'DELETE' })
-    return res.json()
+    return handleResponse<{ success: boolean }>(res, 'Error al eliminar pago')
 }
+
 
 export async function linkInvoiceToPayment(paymentId: string, invoiceId: string, amount: number) {
     const res = await fetch(`${API_BASE}/payments/${paymentId}/link-invoice`, {
