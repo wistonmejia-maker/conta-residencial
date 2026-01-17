@@ -46,11 +46,14 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
 
     if (useCloudinary) {
         return new Promise((resolve, reject) => {
+            // Sanitize filename for Cloudinary public_id (remove special chars/spaces)
+            const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: `conta-residencial/${folder}`,
                     resource_type: 'auto',
-                    public_id: filename.replace(/\.[^/.]+$/, "")
+                    public_id: safeName.replace(/\.[^/.]+$/, "") // Remove extension for public_id
                 },
                 (error: any, result: any) => {
                     if (error) reject(error);
