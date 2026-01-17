@@ -66,6 +66,8 @@ app.get('/api/debug-env', (req, res) => {
         PORT: process.env.PORT,
         NODE_ENV: process.env.NODE_ENV,
         GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
+        GOOGLE_CLIENT_ID_exists: !!process.env.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_ID_length: process.env.GOOGLE_CLIENT_ID?.length || 0,
         CLOUDINARY_CLOUD_NAME_exists: !!process.env.CLOUDINARY_CLOUD_NAME
     })
 })
