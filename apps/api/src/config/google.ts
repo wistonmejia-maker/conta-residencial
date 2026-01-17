@@ -7,7 +7,6 @@ export const oauth2Client = new google.auth.OAuth2(
     config.GOOGLE_REDIRECT_URI
 );
 
-// Gmail API scopes required
 export const GMAIL_SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/gmail.send',
