@@ -90,7 +90,7 @@ function GmailPreviewModal({ unitId, onClose }: { unitId: string; onClose: () =>
                 </div>
 
                 <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl text-xs text-gray-500">
-                    Nota: El escaneo automático solo procesa correos <strong>no leídos</strong> que contengan facturas adjuntas (PDF/ZIP).
+                    Nota: El escaneo procesa correos con facturas (PDF/ZIP) recibidos desde la fecha configurada en los ajustes del conjunto.
                 </div>
             </div>
         </div>
