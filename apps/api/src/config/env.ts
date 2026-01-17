@@ -1,22 +1,44 @@
+import { z } from 'zod';
 import dotenv from 'dotenv';
+
+// Load .env
 dotenv.config();
 
-export const config = {
-    PORT: process.env.PORT || 3002,
-    DATABASE_URL: process.env.DATABASE_URL || '',
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || '',
-    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
-    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
-};
+const envSchema = z.object({
+    // Server
+    PORT: z.string().default('3002').transform(Number).or(z.number()),
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
-console.log('--- API Config Check ---');
-console.log('PORT:', config.PORT);
-console.log('DATABASE_URL:', config.DATABASE_URL ? 'PRESENT' : 'MISSING');
-console.log('GOOGLE_CLIENT_ID:', config.GOOGLE_CLIENT_ID ? 'PRESENT' : 'MISSING');
-console.log('GOOGLE_CLIENT_SECRET:', config.GOOGLE_CLIENT_SECRET ? 'PRESENT' : 'MISSING');
-console.log('GOOGLE_REDIRECT_URI:', config.GOOGLE_REDIRECT_URI);
-console.log('------------------------');
+    // Database
+    DATABASE_URL: z.string().url(),
+
+    // Google AI (Gemini)
+    GEMINI_API_KEY: z.string().min(1, "GEMINI_API_KEY is required"),
+
+    // Google OAuth (Gmail)
+    GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
+    GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
+    GOOGLE_REDIRECT_URI: z.string().url(),
+
+    // Cloudinary (Optional)
+    CLOUDINARY_CLOUD_NAME: z.string().optional(),
+    CLOUDINARY_API_KEY: z.string().optional(),
+    CLOUDINARY_API_SECRET: z.string().optional(),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+function validateEnv(): Env {
+    try {
+        return envSchema.parse(process.env);
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            const missingVars = err.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ');
+            console.error('❌ Invalid environment variables:', missingVars);
+            process.exit(1);
+        }
+        throw err;
+    }
+}
+
+export const config = validateEnv();

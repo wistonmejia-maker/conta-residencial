@@ -55,25 +55,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'ContaResidencial API', timestamp: new Date().toISOString() })
 })
 
-// Debug endpoint to check environment variables
-app.get('/api/debug-env', (req, res) => {
-    const dbUrl = process.env.DATABASE_URL
-    res.json({
-        DATABASE_URL_exists: !!dbUrl,
-        DATABASE_URL_length: dbUrl?.length || 0,
-        DATABASE_URL_starts_with_postgresql: dbUrl?.startsWith('postgresql://'),
-        DATABASE_URL_first_30_chars: dbUrl?.substring(0, 30) || 'NOT SET',
-        PORT: process.env.PORT,
-        NODE_ENV: process.env.NODE_ENV,
-        GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
-        GOOGLE_CLIENT_ID_exists: !!process.env.GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_ID_length: process.env.GOOGLE_CLIENT_ID?.length || 0,
-        GOOGLE_CLIENT_SECRET_exists: !!process.env.GOOGLE_CLIENT_SECRET,
-        GEMINI_API_KEY_exists: !!process.env.GEMINI_API_KEY,
-        CLOUDINARY_CLOUD_NAME_exists: !!process.env.CLOUDINARY_CLOUD_NAME
-    })
-})
-
 // API Routes
 app.use('/api/units', unitsRouter)
 app.use('/api/providers', providersRouter)
