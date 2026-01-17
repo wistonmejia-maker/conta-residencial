@@ -111,7 +111,7 @@ router.delete('/google', async (req, res) => {
     if (!unitId) return res.status(400).send({ error: 'Unit ID is required' });
 
     try {
-        await prisma.gmailToken.delete({
+        await prisma.gmailToken.deleteMany({
             where: { unitId: unitId as string }
         });
         res.json({ success: true, message: 'Gmail disconnected successfully' });

@@ -1,40 +1,61 @@
-import { API_BASE } from './common'
+import { API_BASE, handleResponse } from './common'
+
 import type { Invoice } from './invoices'
 
 export function connectGmail(unitId: string) {
-    window.location.href = `${API_BASE}/auth/google?unitId=${unitId}`;
+    window.open(`${API_BASE}/auth/google?unitId=${unitId}`, 'gmail-auth', 'width=600,height=700');
 }
 
-export async function getGmailStatus(unitId: string) {
+
+export async function getGmailStatus(unitId: string): Promise<{ connected: boolean; email?: string }> {
     const res = await fetch(`${API_BASE}/auth/status?unitId=${unitId}`);
-    return res.json() as Promise<{ connected: boolean; email?: string }>;
+    return handleResponse<{ connected: boolean; email?: string }>(res, 'Error al obtener estado de Gmail');
 }
 
-export async function disconnectGmail(unitId: string) {
+
+export async function disconnectGmail(unitId: string): Promise<{ success: boolean; message: string }> {
     const res = await fetch(`${API_BASE}/auth/google?unitId=${unitId}`, {
         method: 'DELETE'
     })
-    return res.json()
+    return handleResponse<{ success: boolean; message: string }>(res, 'Error al desconectar Gmail');
 }
 
-export async function getGmailPreview(unitId: string) {
+
+export async function getGmailPreview(unitId: string): Promise<{ success: boolean; emails: any[] }> {
     const res = await fetch(`${API_BASE}/invoices/gmail/preview?unitId=${unitId}`);
-    return res.json() as Promise<{ success: boolean; emails: any[] }>;
+    return handleResponse<{ success: boolean; emails: any[] }>(res, 'Error al obtener vista previa de Gmail');
 }
 
-export async function scanGmail(unitId: string) {
+
+export async function scanGmail(unitId: string): Promise<{
+    success: boolean;
+    processedCount: number;
+    results: { status: string; file: string; invoice?: Invoice }[];
+}> {
     const res = await fetch(`${API_BASE}/invoices/scan-gmail?unitId=${unitId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     });
-    return res.json() as Promise<{
-        success: boolean;
-        processedCount: number;
-        results: { status: string; file: string; invoice?: Invoice }[];
-    }>;
+    return handleResponse(res, 'Error al escanear Gmail');
 }
 
-export async function analyzeDocument(file: File) {
+
+export async function analyzeDocument(file: File): Promise<{
+    type: 'INVOICE' | 'PAYMENT_RECEIPT' | 'OTHER';
+    confidence?: number;
+    data?: {
+        totalAmount: number;
+        date: string;
+        concept: string;
+
+        nit?: string;
+        providerName?: string;
+        clientNit?: string | null;
+        invoiceNumber?: string;
+        transactionRef?: string;
+        bankName?: string;
+    }
+}> {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -42,20 +63,6 @@ export async function analyzeDocument(file: File) {
         method: 'POST',
         body: formData
     });
-    return res.json() as Promise<{
-        type: 'INVOICE' | 'PAYMENT_RECEIPT' | 'OTHER';
-        confidence?: number;
-        data?: {
-            totalAmount: number;
-            date: string;
-            concept: string;
-
-            nit?: string;
-            providerName?: string;
-            clientNit?: string | null;
-            invoiceNumber?: string;
-            transactionRef?: string;
-            bankName?: string;
-        }
-    }>;
+    return handleResponse(res, 'Error al analizar documento');
 }
+

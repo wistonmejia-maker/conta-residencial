@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink } from 'lucide-react'
-import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail, scanGmail, getGmailPreview, API_BASE } from '../lib/api'
+import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail } from '../lib/api'
 
 import { useUnit } from '../lib/UnitContext'
 import { useNavigate } from 'react-router-dom'
@@ -690,9 +690,7 @@ function GmailStatusManager({ unitId }: { unitId: string }) {
     })
 
     const handleConnect = () => {
-        const apiUrl = API_BASE.replace('/api', '')
-
-        window.open(`${apiUrl}/api/auth/google?unitId=${unitId}`, 'gmail-auth', 'width=600,height=700')
+        connectGmail(unitId)
 
         // Poll for changes
         const interval = setInterval(async () => {
