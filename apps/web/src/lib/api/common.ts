@@ -1,4 +1,6 @@
-export const API_BASE = import.meta.env.VITE_API_URL || 'https://conta-residencial-production.up.railway.app/api'
+const rawUrl = import.meta.env.VITE_API_URL || 'https://conta-residencial-production.up.railway.app/api';
+export const API_BASE = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+
 
 export async function handleResponse<T>(res: Response, errorMsg: string): Promise<T> {
     if (!res.ok) {

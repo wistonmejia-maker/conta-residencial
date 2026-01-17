@@ -2,7 +2,8 @@ import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, C
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider } from '../lib/api/index'
+import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE } from '../lib/api/index'
+
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
@@ -278,7 +279,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
             if (isEditMode) {
                 await updateInvoice(initialData.id, invoiceData)
             } else {
-                const response = await fetch('/api/invoices', {
+                const response = await fetch(`${API_BASE}/invoices`, {
+
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
