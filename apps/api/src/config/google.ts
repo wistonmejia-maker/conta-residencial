@@ -21,6 +21,7 @@ export const getAuthUrl = (state: string) => {
         scope: GMAIL_SCOPES,
         state,
         prompt: 'consent',
+        redirect_uri: config.GOOGLE_REDIRECT_URI
     });
 };
 
