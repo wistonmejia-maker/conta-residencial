@@ -11,6 +11,8 @@ interface AIProcessingOverlayProps {
     progress?: number
     /** Estimated time remaining in seconds */
     estimatedTime?: number
+    /** Callback to minimize the overlay */
+    onMinimize?: () => void
 }
 
 /**
@@ -22,7 +24,8 @@ export function AIProcessingOverlay({
     message = 'Procesando con IA...',
     subMessage,
     progress,
-    estimatedTime
+    estimatedTime,
+    onMinimize
 }: AIProcessingOverlayProps) {
     if (!visible) return null
 
@@ -70,6 +73,15 @@ export function AIProcessingOverlay({
                     <span className="w-2 h-2 rounded-full bg-current"></span>
                     <span className="w-2 h-2 rounded-full bg-current"></span>
                 </div>
+
+                {onMinimize && (
+                    <button
+                        onClick={onMinimize}
+                        className="mt-4 text-xs font-medium text-gray-500 hover:text-gray-700 underline"
+                    >
+                        Ejecutar en segundo plano
+                    </button>
+                )}
             </div>
         </div>
     )

@@ -44,7 +44,9 @@ export async function classifyAndExtractDocument(
        - Estados de cuenta.
 
     REGLA DE EXCLUSIÓN CRÍTICA (TIPO "OTHER"):
-    - Si el documento dice "COMPROBANTE DE RECAUDO", "CONSIGNACIÓN", "DEPÓSITO" o muestra que un residente (ej: "Apto 501", "Torre A") le pagó al conjunto, clasifícalo como "OTHER". NO LO PROCESES. Solo nos interesan los pagos QUE HACE el conjunto.
+    - Si el documento dice "COMPROBANTE DE RECAUDO", "CONSIGNACIÓN", "DEPÓSITO".
+    - Si muestra que un residente (ej: "Apto 501", "Torre A") le pagó al conjunto.
+    - **MUY IMPORTANTE**: Si el EMISOR del documento (encabezado) es el propio conjunto (ej: "CONJUNTO RESIDENCIAL TREVISO", "CIUDAD JARDÍN") y le está cobrando a una persona ("Señor Propietario"), eso es una CUENTA DE COBRO DE ADMINISTRACIÓN (Ingreso). CLASIFÍCALO COMO "OTHER". Solo procesa facturas donde un TERCERO le cobra al conjunto.
 
     FORMATO DE RESPUESTA (JSON):
     Si es INVOICE:

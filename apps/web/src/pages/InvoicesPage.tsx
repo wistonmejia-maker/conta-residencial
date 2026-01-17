@@ -665,62 +665,30 @@ export default function InvoicesPage() {
         }
     }
 
-    const [scanJobId, setScanJobId] = useState<string | null>(null)
-    const [scanProgress, setScanProgress] = useState(0)
-    const [scanStatusMessage, setScanStatusMessage] = useState('Iniciando escaneo...')
+    // Use global AI context for scanning
+    const { startBackgroundScan, scanState, minimizeScanUI, dismissScanUI } = useAI()
 
-    // Polling for Scan Job Status
-    useQuery({
-        queryKey: ['scan-job', scanJobId],
-        queryFn: async () => {
-            if (!scanJobId) return null
-            const status = await getScanStatus(scanJobId)
+    // Derived state for local UI
+    const isScanning = scanState.status === 'PROCESSING' || scanState.status === 'PENDING';
+    const showOverlay = isScanning && !scanState.minimized;
 
-            if (status.status === 'PROCESSING') {
-                setScanProgress(status.progress)
-                setScanStatusMessage(`Procesando correos (${status.processedCount}/${status.totalItems})...`)
-            } else if (status.status === 'COMPLETED') {
-                setScanProgress(100)
-                setScanJobId(null)
-                setScanningGmail(false)
+    // Watch for completion to show alert/refresh
+    useEffect(() => {
+        if (scanState.status === 'COMPLETED' && scanState.processedEmails > 0) {
+            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+        }
+    }, [scanState.status, scanState.processedEmails, queryClient]);
 
-                if (status.processedCount > 0) {
-                    alert(`¡Éxito! Se han importado ${status.processedCount} documentos. Por favor revísalas en Facturas o Pagos.`)
-                    queryClient.invalidateQueries({ queryKey: ['invoices'] })
-                    queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
-                } else {
-                    alert('Escaneo finalizado. No se encontraron nuevos documentos válidos.')
-                }
-            } else if (status.status === 'FAILED') {
-                setScanJobId(null)
-                setScanningGmail(false)
-                alert(`Error en el escaneo: ${status.error}`)
-            }
-            return status
-        },
-        enabled: !!scanJobId,
-        refetchInterval: 2000 // Poll every 2s
-    })
 
     const handleGmailScan = async () => {
         if (!unitId) return
-        setScanningGmail(true)
-        setScanProgress(0)
-        setScanStatusMessage('Conectando con Gmail...')
-        try {
-            const res = await scanGmail(unitId)
-            if (res.jobId) {
-                setScanJobId(res.jobId)
-            } else {
-                throw new Error('No se pudo iniciar el trabajo de escaneo')
-            }
-        } catch (error) {
-            console.error('Error scanning Gmail:', error)
-            setScanningGmail(false)
-            alert('Error al escanear Gmail. Verifica si la cuenta está conectada.')
-            if (confirm('¿Deseas conectar/reconectar la cuenta de Gmail ahora?')) {
-                connectGmail(unitId)
-            }
+
+        if (startBackgroundScan) {
+            await startBackgroundScan(unitId);
+        } else {
+            // Fallback if context not ready (shouldn't happen)
+            console.error("AI Context not ready");
         }
     }
 
@@ -743,11 +711,12 @@ export default function InvoicesPage() {
         <>
             {/* AI Processing Overlay for Gmail Scan */}
             <AIProcessingOverlay
-                visible={scanningGmail}
-                message={scanStatusMessage}
+                visible={showOverlay}
+                message={scanState.message || 'Iniciando escaneo...'}
                 subMessage="Esto puede tomar unos minutos dependiendo de la cantidad de correos."
-                progress={scanProgress > 0 ? scanProgress : undefined}
-                estimatedTime={scanProgress > 0 ? undefined : 30}
+                progress={scanState.progress > 0 ? scanState.progress : undefined}
+                estimatedTime={undefined}
+                onMinimize={minimizeScanUI}
             />
 
             <div className="space-y-6 animate-fade-in">
