@@ -12,6 +12,7 @@ router.get('/google', (req, res) => {
         return res.status(400).send('Unit ID is required');
     }
     const url = getAuthUrl(unitId as string); // State = unitId
+    console.log('Generated Google Auth URL:', url);
     res.redirect(url);
 });
 
