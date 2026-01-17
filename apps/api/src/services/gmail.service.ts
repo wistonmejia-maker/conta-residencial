@@ -59,18 +59,30 @@ export async function fetchNewEmails(unitId: string) {
         dateFilter = `after:${yyyy}/${mm}/${dd}`;
     }
 
-    // Get unread or all relevant emails
-    const response = await gmail.users.messages.list({
-        userId: 'me',
-        q: `has:attachment ${dateFilter}`,
-        maxResults: 100,
-    });
+    // Get all relevant emails with pagination
+    let allMessages: any[] = [];
+    let nextPageToken: string | undefined | null = undefined;
 
-    console.log(`[Gmail] Found ${response.data.resultSizeEstimate || 0} potential messages.`);
+    do {
+        console.log(`[Gmail] Fetching page with token: ${nextPageToken || 'Start'}`);
+        const response: any = await gmail.users.messages.list({
+            userId: 'me',
+            q: `has:attachment ${dateFilter}`,
+            maxResults: 500, // Increased max per page
+            pageToken: nextPageToken,
+        });
+
+        if (response.data.messages) {
+            allMessages.push(...response.data.messages);
+        }
+        nextPageToken = response.data.nextPageToken;
+    } while (nextPageToken);
+
+    console.log(`[Gmail] Found ${allMessages.length} total messages matching criteria.`);
 
     const emails = [];
 
-    for (const msg of response.data.messages || []) {
+    for (const msg of allMessages) {
         console.log(`[Gmail] Fetching full message ${msg.id}...`);
         const email = await gmail.users.messages.get({
             userId: 'me',
