@@ -154,6 +154,10 @@ model Invoice {
   status          String           @default("PENDING")
   monthlyReportId String?          @map("monthly_report_id")
   createdAt       DateTime         @default(now()) @map("created_at")
+  source          String           @default("MANUAL")
+  emailSubject    String?          @map("email_subject")
+  emailSender     String?          @map("email_sender")
+  emailDate       DateTime?        @map("email_date")
   report          MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
   provider        Provider         @relation(fields: [providerId], references: [id])
   unit            Unit             @relation(fields: [unitId], references: [id])
@@ -183,6 +187,10 @@ model Payment {
   hasPendingInvoice Boolean          @default(false) @map("has_pending_invoice")
   monthlyReportId   String?          @map("monthly_report_id")
   createdAt         DateTime         @default(now()) @map("created_at")
+  source            String           @default("MANUAL")
+  emailSubject      String?          @map("email_subject")
+  emailSender       String?          @map("email_sender")
+  emailDate         DateTime?        @map("email_date")
   conciliation      Conciliation?
   invoiceItems      PaymentInvoice[]
   report            MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])

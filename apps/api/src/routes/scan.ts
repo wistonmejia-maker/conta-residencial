@@ -192,7 +192,11 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                         unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
                                         invoiceDate: date ? new Date(date) : new Date(),
                                         totalAmount, subtotal: totalAmount, status: 'DRAFT',
-                                        description: `Importado: ${email.subject}`, pdfUrl: fileUrl, fileUrl
+                                        description: `Importado: ${email.subject}`, pdfUrl: fileUrl, fileUrl,
+                                        source: 'GMAIL',
+                                        emailSubject: email.subject,
+                                        emailSender: email.from,
+                                        emailDate: email.date ? new Date(email.date) : new Date()
                                     }
                                 });
                                 results.push({ status: 'created', type: 'invoice', id: inv.id, file: filename });
@@ -211,7 +215,11 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                             unitId, paymentDate: date ? new Date(date) : new Date(),
                                             amountPaid: totalAmount, netValue: totalAmount, sourceType: 'BANCO',
                                             bankPaymentMethod: bankName || 'GMAIL', transactionRef, status: 'DRAFT',
-                                            supportFileUrl: fileUrl
+                                            supportFileUrl: fileUrl,
+                                            source: 'GMAIL',
+                                            emailSubject: email.subject,
+                                            emailSender: email.from,
+                                            emailDate: email.date ? new Date(email.date) : new Date()
                                         }
                                     });
                                     results.push({ status: 'created', type: 'payment', id: pay.id, file: filename });
