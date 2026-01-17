@@ -20,6 +20,8 @@ import searchRouter from './routes/search'
 import reportsRouter from './routes/reports'
 import aiRouter from './routes/ai'
 import budgetsRouter from './routes/budgets'
+import authRouter from './routes/auth'
+import scanRouter from './routes/scan'
 
 const app = express()
 const PORT = process.env.PORT || 3002
@@ -71,6 +73,8 @@ app.get('/api/debug-env', (req, res) => {
 // API Routes
 app.use('/api/units', unitsRouter)
 app.use('/api/providers', providersRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/invoices', scanRouter) // Register scanRouter FIRST to handle /scan-gmail
 app.use('/api/invoices', invoicesRouter)
 app.use('/api/payments', paymentsRouter)
 app.use('/api/bank', bankRouter)
@@ -81,14 +85,6 @@ app.use('/api/search', searchRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/budgets', budgetsRouter)
-
-// New Routes
-import authRouter from './routes/auth'
-import scanRouter from './routes/scan'
-
-app.use('/api/auth', authRouter)
-app.use('/api/invoices', scanRouter) // Register scanRouter BEFORE invoicesRouter to handle /api/invoices/scan-gmail
-app.use('/api/invoices', invoicesRouter)
 
 // Start server
 app.listen(PORT, () => {
