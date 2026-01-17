@@ -108,10 +108,10 @@ router.post('/scan-gmail', async (req, res) => {
 
         const emails = await fetchNewEmails(unitId as string);
         const results = [];
-        logScan(`Found ${emails.length} unread emails with attachments.`);
+        logScan(`Found ${emails.length} emails with attachments in the specified range.`);
 
         if (emails.length === 0) {
-            logScan(`No unread emails with attachments found in the last 24h.`);
+            logScan(`No emails with attachments found since the configured start date.`);
         }
 
         for (let i = 0; i < emails.length; i++) {
@@ -206,6 +206,19 @@ router.post('/scan-gmail', async (req, res) => {
                                 });
                             }
 
+                            // 2. Check if Invoice already exists (skip duplicates)
+                            const existingInvoice = await prisma.invoice.findFirst({
+                                where: {
+                                    providerId: provider.id,
+                                    invoiceNumber: invoiceNumber || 'SIN-REF'
+                                }
+                            });
+
+                            if (existingInvoice) {
+                                logScan(`  [i] La factura ${invoiceNumber} de ${providerName} ya existe. Saltando...`);
+                                continue;
+                            }
+
                             // 2. Create Invoice Draft
                             const newInvoice = await prisma.invoice.create({
                                 data: {
@@ -232,6 +245,22 @@ router.post('/scan-gmail', async (req, res) => {
                             if (totalAmount === undefined || totalAmount === null) {
                                 logScan(`  [!] Error: El AI no extrajo el monto total del comprobante. Saltando...`);
                                 continue;
+                            }
+
+                            // Check if Payment already exists (skip duplicates)
+                            if (transactionRef && transactionRef !== 'GMAIL_IMPORT') {
+                                const existingPayment = await prisma.payment.findFirst({
+                                    where: {
+                                        unitId: unitId as string,
+                                        transactionRef: transactionRef,
+                                        amountPaid: totalAmount
+                                    }
+                                });
+
+                                if (existingPayment) {
+                                    logScan(`  [i] El comprobante con referencia ${transactionRef} ya existe. Saltando...`);
+                                    continue;
+                                }
                             }
 
                             logScan(`  -> Extracted Payment: ${bankName} | $${totalAmount} | Ref: ${transactionRef}`);

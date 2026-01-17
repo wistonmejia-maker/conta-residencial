@@ -59,10 +59,10 @@ export async function fetchNewEmails(unitId: string) {
         dateFilter = `after:${yyyy}/${mm}/${dd}`;
     }
 
-    // Get unread emails
+    // Get unread or all relevant emails
     const response = await gmail.users.messages.list({
         userId: 'me',
-        q: `is:unread has:attachment ${dateFilter}`,
+        q: `has:attachment ${dateFilter}`,
         maxResults: 50,
     });
 
