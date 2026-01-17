@@ -45,6 +45,8 @@ export default function PaymentsPage() {
     const [linkInvoicePayment, setLinkInvoicePayment] = useState<Payment | null>(null)
     const [editPayment, setEditPayment] = useState<any | null>(null)
     const [scanningGmail, setScanningGmail] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     const queryClient = useQueryClient()
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,16 +59,30 @@ export default function PaymentsPage() {
 
             // Update Payment in DB
             await updatePayment(uploadPaymentId, { supportFileUrl: url })
-
-            // Refresh UI
             queryClient.invalidateQueries({ queryKey: ['payments'] })
+            setUploadPaymentId(null)
             alert('Soporte subido correctamente')
         } catch (error) {
-            console.error('Error uploading support:', error)
-            alert('Error al subir soporte')
+            console.error('Error uploading file:', error)
+            alert('Error al subir el archivo')
         } finally {
-            setUploadPaymentId(null)
             e.target.value = '' // Reset input
+        }
+    }
+
+    const confirmDelete = async () => {
+        if (!showDeleteConfirm) return
+        setDeletingId(showDeleteConfirm.id)
+        try {
+            await deletePayment(showDeleteConfirm.id)
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            setShowDeleteConfirm(null)
+        } catch (error) {
+            console.error('Error deleting payment:', error)
+            alert(error instanceof Error ? error.message : 'Error al eliminar el pago. Por favor intente de nuevo.')
+        } finally {
+            setDeletingId(null)
         }
     }
 
@@ -414,23 +430,15 @@ export default function PaymentsPage() {
                                                 <Edit className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={async () => {
-                                                    if (confirm('¿Está seguro de eliminar este pago?')) {
-                                                        try {
-                                                            await deletePayment(payment.id)
-                                                            queryClient.invalidateQueries({ queryKey: ['payments'] })
-                                                            queryClient.invalidateQueries({ queryKey: ['invoices'] })
-                                                        } catch (err) {
-                                                            console.error(err)
-                                                            alert('Error al eliminar pago')
-                                                        }
-                                                    }
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setShowDeleteConfirm(payment)
                                                 }}
-                                                disabled={!!payment.monthlyReportId}
-                                                className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                disabled={deletingId === payment.id || !!payment.monthlyReportId}
+                                                className="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                 title={payment.monthlyReportId ? 'No se puede eliminar (incluido en cierre)' : 'Eliminar Pago'}
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                {deletingId === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -538,6 +546,46 @@ export default function PaymentsPage() {
                         queryClient.invalidateQueries({ queryKey: ['invoices'] })
                     }}
                 />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+                        <div className="flex items-center gap-3 text-amber-600 mb-4">
+                            <div className="p-2 bg-amber-50 rounded-lg">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">¿Eliminar Egreso?</h3>
+                        </div>
+
+                        <p className="text-gray-600 mb-6">
+                            Estás a punto de eliminar el comprobante <span className="font-mono font-bold text-gray-900">
+                                {showDeleteConfirm.consecutiveNumber ? `CE-${String(showDeleteConfirm.consecutiveNumber).padStart(4, '0')}` : 'Sin CE'}
+                            </span> de {showDeleteConfirm.provider?.name || 'este proveedor'}.
+                            Esta acción desasociará cualquier factura pagada con este egreso.
+                        </p>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteConfirm(null)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={deletingId !== null}
+                                className="px-6 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {deletingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                {deletingId ? 'Eliminando...' : 'Sí, Eliminar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )
