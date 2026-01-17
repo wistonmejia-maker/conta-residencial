@@ -45,16 +45,21 @@ export async function getGmailClient(unitId: string) {
 export async function fetchNewEmails(unitId: string) {
     const gmail = await getGmailClient(unitId);
 
-    // Get unread emails
+    console.log(`[Gmail] Fetching unread emails for unit ${unitId}...`);
+
+    // Get unread emails from the last 24h
     const response = await gmail.users.messages.list({
         userId: 'me',
-        q: 'is:unread',
-        maxResults: 20,
+        q: 'is:unread has:attachment newer_than:1d',
+        maxResults: 50,
     });
+
+    console.log(`[Gmail] Found ${response.data.resultSizeEstimate || 0} potential messages.`);
 
     const emails = [];
 
     for (const msg of response.data.messages || []) {
+        console.log(`[Gmail] Fetching full message ${msg.id}...`);
         const email = await gmail.users.messages.get({
             userId: 'me',
             id: msg.id!,
@@ -65,18 +70,28 @@ export async function fetchNewEmails(unitId: string) {
         const getHeader = (name: string) =>
             headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
 
-        // Get attachments
-        const parts = email.data.payload?.parts || [];
-        const attachments = [];
-        for (const part of parts) {
-            if (part.filename && part.body?.attachmentId) {
-                attachments.push({
-                    filename: part.filename,
-                    mimeType: part.mimeType || 'application/octet-stream',
-                    attachmentId: part.body.attachmentId,
-                });
+        // Recursive attachment finder
+        const attachments: { filename: string; mimeType: string; attachmentId: string }[] = [];
+        const findAttachments = (parts: any[]) => {
+            for (const part of parts) {
+                if (part.filename && part.body?.attachmentId) {
+                    attachments.push({
+                        filename: part.filename,
+                        mimeType: part.mimeType || 'application/octet-stream',
+                        attachmentId: part.body.attachmentId,
+                    });
+                }
+                if (part.parts) {
+                    findAttachments(part.parts);
+                }
             }
+        };
+
+        if (email.data.payload?.parts) {
+            findAttachments(email.data.payload.parts);
         }
+
+        console.log(`[Gmail] Message ${msg.id} has ${attachments.length} attachments.`);
 
         emails.push({
             id: msg.id!,
@@ -90,6 +105,47 @@ export async function fetchNewEmails(unitId: string) {
 
     return emails;
 }
+
+export async function fetchRecentEmails(unitId: string, limit: number = 10) {
+    const gmail = await getGmailClient(unitId);
+
+    const response = await gmail.users.messages.list({
+        userId: 'me',
+        q: 'has:attachment newer_than:1d', // Filter by having attachments and date (last 24h)
+        maxResults: limit,
+    });
+
+    const emails = [];
+
+    for (const msg of response.data.messages || []) {
+        try {
+            const email = await gmail.users.messages.get({
+                userId: 'me',
+                id: msg.id!,
+                format: 'metadata', // Lighter request
+                metadataHeaders: ['From', 'Subject', 'Date']
+            });
+
+            const headers = email.data.payload?.headers || [];
+            const getHeader = (name: string) =>
+                headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+
+            emails.push({
+                id: msg.id!,
+                threadId: msg.threadId!,
+                snippet: email.data.snippet,
+                from: getHeader('from'),
+                subject: getHeader('subject'),
+                date: getHeader('date'),
+            });
+        } catch (err) {
+            console.error(`Error fetching individual email ${msg.id}:`, err);
+        }
+    }
+
+    return emails;
+}
+
 
 export async function getAttachment(unitId: string, messageId: string, attachmentId: string) {
     const gmail = await getGmailClient(unitId);

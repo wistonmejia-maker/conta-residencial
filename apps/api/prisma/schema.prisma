@@ -38,15 +38,31 @@ model Unit {
   organizations      organizations?       @relation(fields: [organization_id], references: [id])
   user_unit_access   user_unit_access[]
   gmailToken         GmailToken?
+  budgets            Budget[]
 
   @@map("units")
+}
+
+model Budget {
+  id        String   @id @default(uuid())
+  unitId    String   @map("unit_id")
+  year      Int
+  month     Int
+  category  String
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  unit      Unit     @relation(fields: [unitId], references: [id])
+
+  @@unique([unitId, year, month, category])
+  @@map("budgets")
 }
 
 model GmailToken {
   id            String   @id @default(uuid())
   unitId        String   @unique @map("unit_id")
   unit          Unit     @relation(fields: [unitId], references: [id])
-  email         String   
+  email         String   @unique
   accessToken   String   @map("access_token")
   refreshToken  String   @map("refresh_token")
   expiresAt     BigInt   @map("expires_at")
@@ -129,6 +145,8 @@ model Invoice {
   fileUrl         String?          @map("file_url")
   subtotal        Decimal          @db.Decimal(12, 2)
   taxIva          Decimal          @default(0) @map("tax_iva") @db.Decimal(12, 2)
+  retefuenteAmount Decimal         @default(0) @map("retefuente_amount") @db.Decimal(12, 2)
+  reteicaAmount    Decimal         @default(0) @map("reteica_amount") @db.Decimal(12, 2)
   totalAmount     Decimal          @map("total_amount") @db.Decimal(12, 2)
   description     String?
   pdfUrl          String?          @map("pdf_url")

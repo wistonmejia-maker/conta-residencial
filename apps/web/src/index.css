@@ -84,3 +84,163 @@ body {
 .status-error {
   @apply bg-red-50 text-red-700 border border-red-200;
 }
+
+/* ============================================
+   AI VISUAL SYSTEM - Coherent AI Styling
+   ============================================ */
+
+/* AI Gradient Background */
+.ai-gradient {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #4f46e5 100%);
+}
+
+.ai-gradient-text {
+  @apply bg-clip-text text-transparent;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+}
+
+/* AI Button - Primary action with glow effect */
+.ai-button {
+  @apply relative overflow-hidden px-4 py-2 rounded-lg font-medium text-white;
+  @apply bg-gradient-to-r from-violet-600 to-indigo-600;
+  @apply hover:from-violet-500 hover:to-indigo-500;
+  @apply shadow-lg shadow-indigo-500/25;
+  @apply transition-all duration-200;
+}
+
+.ai-button:hover {
+  @apply shadow-xl shadow-indigo-500/30 -translate-y-0.5;
+}
+
+.ai-button:disabled {
+  @apply opacity-50 cursor-not-allowed shadow-none translate-y-0;
+}
+
+/* AI Button Secondary (Outline) */
+.ai-button-secondary {
+  @apply relative px-4 py-2 rounded-lg font-medium;
+  @apply bg-white text-indigo-600 border border-indigo-200;
+  @apply hover:bg-indigo-50 hover:border-indigo-300;
+  @apply transition-all duration-200;
+}
+
+/* AI Icon Button (Small) */
+.ai-icon-button {
+  @apply p-2 rounded-lg;
+  @apply bg-gradient-to-r from-violet-50 to-indigo-50;
+  @apply text-indigo-600 border border-indigo-100;
+  @apply hover:from-violet-100 hover:to-indigo-100 hover:border-indigo-200;
+  @apply transition-all duration-200;
+}
+
+/* AI Badge */
+.ai-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  @apply bg-gradient-to-r from-violet-100 to-indigo-100;
+  @apply text-indigo-700 border border-indigo-200;
+}
+
+/* AI Card */
+.ai-card {
+  @apply bg-gradient-to-br from-violet-50/50 to-indigo-50/50;
+  @apply border border-indigo-100 rounded-xl;
+  @apply relative overflow-hidden;
+}
+
+.ai-card::before {
+  content: '';
+  @apply absolute top-0 right-0 w-32 h-32;
+  @apply bg-gradient-to-br from-violet-200/20 to-transparent;
+  @apply rounded-full -translate-y-1/2 translate-x-1/2;
+}
+
+/* AI Processing Overlay */
+.ai-processing {
+  @apply fixed inset-0 bg-black/30 backdrop-blur-sm;
+  @apply flex items-center justify-center z-50;
+}
+
+.ai-processing-card {
+  @apply bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4;
+  @apply flex flex-col items-center gap-4 text-center;
+}
+
+/* AI Pulse Animation */
+@keyframes ai-pulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.ai-pulse {
+  animation: ai-pulse 2s ease-in-out infinite;
+}
+
+/* AI Sparkle Animation */
+@keyframes ai-sparkle {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: rotate(180deg);
+  }
+}
+
+.ai-sparkle {
+  animation: ai-sparkle 3s ease-in-out infinite;
+}
+
+/* AI Loading Dots */
+@keyframes ai-dots {
+
+  0%,
+  20% {
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.ai-loading-dots span:nth-child(1) {
+  animation: ai-dots 1.4s infinite 0s;
+}
+
+.ai-loading-dots span:nth-child(2) {
+  animation: ai-dots 1.4s infinite 0.2s;
+}
+
+.ai-loading-dots span:nth-child(3) {
+  animation: ai-dots 1.4s infinite 0.4s;
+}
+
+/* AI Confidence Indicators */
+.ai-confidence-high {
+  @apply bg-emerald-100 text-emerald-700 border-emerald-200;
+}
+
+.ai-confidence-medium {
+  @apply bg-amber-100 text-amber-700 border-amber-200;
+}
+
+.ai-confidence-low {
+  @apply bg-red-100 text-red-700 border-red-200;
+}

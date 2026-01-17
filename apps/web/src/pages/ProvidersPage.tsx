@@ -2,7 +2,8 @@ import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye, Loader2 
 import { useState, useEffect } from 'react' // Added useEffect
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getProviders, createProvider, updateProvider, validateNit, DOCUMENT_TYPE_LABELS } from '../lib/api'
+import { getProviders, createProvider, updateProvider, validateNit, DOCUMENT_TYPE_LABELS, API_BASE } from '../lib/api'
+
 import type { Provider } from '../lib/api'
 import { uploadFileToStorage } from '../lib/storage'
 import BulkImportModal from '../components/BulkImportModal'
@@ -562,7 +563,8 @@ function DocumentsTab({ providerId }: { providerId: string }) {
     const { data: docsData, isLoading } = useQuery({
         queryKey: ['provider-documents', providerId],
         queryFn: async () => {
-            const res = await fetch(`http://localhost:3002/api/providers/${providerId}/documents`)
+            const res = await fetch(`${API_BASE}/providers/${providerId}/documents`)
+
             return res.json()
         }
     })
@@ -588,7 +590,8 @@ function DocumentsTab({ providerId }: { providerId: string }) {
                 `providers/${providerId}/documents`
             )
 
-            await fetch(`http://localhost:3002/api/providers/${providerId}/documents`, {
+            await fetch(`${API_BASE}/providers/${providerId}/documents`, {
+
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -615,7 +618,8 @@ function DocumentsTab({ providerId }: { providerId: string }) {
     const handleDelete = async (docId: string) => {
         if (!confirm('¿Eliminar este documento?')) return
 
-        await fetch(`http://localhost:3002/api/providers/${providerId}/documents/${docId}`, {
+        await fetch(`${API_BASE}/providers/${providerId}/documents/${docId}`, {
+
             method: 'DELETE'
         })
         queryClient.invalidateQueries({ queryKey: ['provider-documents', providerId] })

@@ -13,6 +13,9 @@ import { generateAccountingFolder } from '../lib/accountingFolderGenerator'
 import { uploadFileToStorage } from '../lib/storage'
 import { useUnit } from '../lib/UnitContext'
 import { toast } from '../components/ui/Toast'
+import { getAuditPreview } from '../lib/api/reports'
+import { Brain, AlertOctagon, TrendingUp, CheckCircle, FileWarning } from 'lucide-react'
+import { openPaymentReceiptPreview } from '../lib/pdfGenerator'
 
 const formatMoney = (value: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
@@ -63,8 +66,18 @@ export default function MonthlyClosurePage() {
     const [uploadingPilaId, setUploadingPilaId] = useState<string | null>(null)
 
     // History Tab State
-    const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate')
+    const [activeTab, setActiveTab] = useState<'generate' | 'history' | 'audit'>('generate')
     const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
+
+    // AI Audit State
+    const { data: auditData, isLoading: isLoadingAudit, refetch: refetchAudit } = useQuery({
+        queryKey: ['audit-preview', unitId, dateFrom],
+        queryFn: () => {
+            const date = new Date(dateFrom)
+            return getAuditPreview(unitId, date.getMonth() + 1, date.getFullYear())
+        },
+        enabled: activeTab === 'audit' && !!unitId
+    })
 
     const { data: historyReports, refetch: refetchHistory } = useQuery({
         queryKey: ['reports', unitId],
@@ -587,6 +600,40 @@ export default function MonthlyClosurePage() {
         }
     }
 
+    const handlePreviewVoucher = async (payment: any) => {
+        try {
+            const invoices = (payment.invoiceItems || []).map((item: any) => ({
+                invoiceNumber: item.invoice?.invoiceNumber || '',
+                invoiceDate: item.invoice?.invoiceDate || '',
+                description: item.invoice?.description,
+                amount: Number(item.amountApplied)
+            }))
+
+            await openPaymentReceiptPreview({
+                unitName: selectedUnit?.name || 'Unidad',
+                unitNit: selectedUnit?.taxId || 'N/A',
+                unitAddress: selectedUnit?.address,
+                consecutiveNumber: payment.consecutiveNumber,
+                paymentDate: payment.paymentDate,
+                providerName: payment.provider?.name || 'N/A',
+                providerNit: payment.provider?.nit || '',
+                providerDv: payment.provider?.dv || '',
+                invoices: invoices,
+                grossAmount: Number(payment.amountPaid),
+                retefuente: Number(payment.retefuenteApplied),
+                reteica: Number(payment.reteicaApplied),
+                netAmount: Number(payment.netValue),
+                paymentMethod: payment.bankPaymentMethod,
+                bankAccount: payment.provider?.bankAccount,
+                transactionRef: payment.transactionRef,
+                logoUrl: selectedUnit?.logoUrl
+            })
+        } catch (error) {
+            console.error('Error opening voucher preview:', error)
+            toast.error('Error al generar la vista previa del comprobante')
+        }
+    }
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* TABS */}
@@ -601,6 +648,16 @@ export default function MonthlyClosurePage() {
                     Generar Reporte
                 </button>
                 <button
+                    onClick={() => setActiveTab('audit')}
+                    className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'audit'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                >
+                    <Brain className="w-4 h-4" />
+                    Auditor Virtual (IA)
+                </button>
+                <button
                     onClick={() => setActiveTab('history')}
                     className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
                         ? 'border-indigo-600 text-indigo-600'
@@ -611,7 +668,118 @@ export default function MonthlyClosurePage() {
                 </button>
             </div>
 
-            {activeTab === 'history' ? (
+            {activeTab === 'audit' ? (
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-6 border border-indigo-100 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Brain className="w-32 h-32" />
+                        </div>
+                        <h2 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                            <Brain className="w-6 h-6 text-indigo-600" />
+                            Análisis de Cierre Inteligente
+                        </h2>
+                        <p className="text-sm text-indigo-700 max-w-2xl">
+                            La IA ha analizado los movimientos de este mes para detectar anomalías, validar cumplimiento y sugerir puntos clave para el informe de gestión.
+                        </p>
+                    </div>
+
+                    {isLoadingAudit ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                            <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                            <p className="text-gray-500 font-medium">Auditando transacciones...</p>
+                            <p className="text-gray-400 text-sm">Calculando variaciones y validando soportes</p>
+                        </div>
+                    ) : auditData ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* AI Summary Card */}
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-gray-600" />
+                                    Resumen Ejecutivo (Sugerido)
+                                </h3>
+                                <div className="bg-gray-50 rounded-lg p-4 text-gray-700 text-sm leading-relaxed border border-gray-100">
+                                    {auditData.aiAnalysis?.summary || 'No hay datos suficientes para generar el resumen.'}
+                                </div>
+                                <div className="mt-4 flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(auditData.aiAnalysis?.summary || '')
+                                            toast.success('Texto copiado al portapapeles')
+                                        }}
+                                        className="text-xs text-indigo-600 font-medium hover:underline"
+                                    >
+                                        Copiar para informe
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Compliance & Anomalies */}
+                            <div className="space-y-6">
+                                {/* Anomalies */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-orange-500" />
+                                        Anomalías de Gasto ({auditData.aiAnalysis?.anomalies?.length || 0})
+                                    </h3>
+                                    {auditData.aiAnalysis?.anomalies?.length > 0 ? (
+                                        <ul className="space-y-3">
+                                            {auditData.aiAnalysis.anomalies.map((anomaly: string, i: number) => (
+                                                <li key={i} className="flex gap-3 text-sm text-gray-600">
+                                                    <AlertOctagon className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                                                    {anomaly}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                                            <CheckCircle className="w-4 h-4" />
+                                            No se detectaron variaciones inusuales.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Compliance Issues */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                        <AlertOctagon className="w-5 h-5 text-red-500" />
+                                        Alertas de Cumplimiento
+                                    </h3>
+                                    {auditData.complianceIssues?.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {auditData.complianceIssues.map((issue: any, i: number) => (
+                                                <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                                                    <p className="text-sm font-semibold text-red-800 mb-1">
+                                                        {issue.type === 'MISSING_INVOICE_SUPPORT' ? 'Facturas sin Soporte (PDF)' : 'Problema de Cumplimiento'}
+                                                    </p>
+                                                    <p className="text-xs text-red-600 mb-2">
+                                                        Se encontraron {issue.count} registros incompletos.
+                                                    </p>
+                                                    <div className="max-h-24 overflow-y-auto pl-4 border-l-2 border-red-200">
+                                                        <ul className="text-xs text-red-700 space-y-1">
+                                                            {issue.details.map((d: string, idx: number) => (
+                                                                <li key={idx}>{d}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                                            <CheckCircle className="w-4 h-4" />
+                                            Todos los soportes documentales están en orden.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                            No hay datos para auditar en este periodo.
+                        </div>
+                    )}
+                </div>
+            ) : activeTab === 'history' ? (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-6 border-b border-gray-100">
                         <h2 className="text-lg font-semibold text-gray-800">Historial de Carpetas Mensuales</h2>
@@ -869,9 +1037,13 @@ export default function MonthlyClosurePage() {
                                             <tr key={payment.id} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3">
                                                     {payment.consecutiveNumber ? (
-                                                        <span className="font-mono text-sm bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
+                                                        <button
+                                                            onClick={() => handlePreviewVoucher(payment)}
+                                                            className="font-mono text-sm bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-100 hover:underline cursor-pointer transition-colors"
+                                                            title="Ver Comprobante de Egreso"
+                                                        >
                                                             CE-{payment.consecutiveNumber}
-                                                        </span>
+                                                        </button>
                                                     ) : (
                                                         <span className="text-xs text-gray-400">EXTERNO</span>
                                                     )}

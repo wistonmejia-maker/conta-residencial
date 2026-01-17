@@ -18,8 +18,10 @@ import {
     CheckCircle2
 } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
-import { getInvoices, getPayments, getProviders, getUnits } from '../lib/api'
+import { getInvoices, getPayments, getProviders, getUnits, analyzeReport } from '../lib/api'
 import * as XLSX from 'xlsx'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, AIButton } from '../components/ui'
+import { Brain } from 'lucide-react'
 
 // Helper for dates
 const getMonthRange = (monthsAgo = 0) => {
@@ -45,12 +47,92 @@ export default function ReportsHubPage() {
     const [exportingAux, setExportingAux] = useState(false)
     const [exportingExec, setExportingExec] = useState(false)
 
+    // AI Analysis State
+    const [analyzing, setAnalyzing] = useState(false)
+    const [analysisResult, setAnalysisResult] = useState<string | null>(null)
+    const [analysisTitle, setAnalysisTitle] = useState('')
+    const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+
     // Fetch providers for the filter
     const { data: providersData } = useQuery({
         queryKey: ['providers'],
         queryFn: () => getProviders()
     })
     const providers = providersData?.providers || []
+
+    // AI Helpers
+    const fetchAuxiliarData = async () => {
+        if (!selectedProviderId) return null
+        const [invoicesRes, paymentsRes] = await Promise.all([
+            getInvoices({ unitId, providerId: selectedProviderId }),
+            getPayments({ unitId })
+        ])
+        const invoices = invoicesRes.invoices || []
+
+        const providerPayments = (paymentsRes.payments || []).filter((p: any) => p.provider?.id === selectedProviderId)
+
+        return [
+            ...invoices.map((inv: any) => ({
+                fecha: inv.invoiceDate, type: 'Factura', ref: inv.invoiceNumber, desc: inv.description, credit: inv.totalAmount, debit: 0
+            })),
+            ...providerPayments.map((p: any) => ({
+                fecha: p.paymentDate, type: 'Egreso', ref: p.consecutiveNumber, desc: `Pago ${p.transactionRef}`, credit: 0, debit: p.amountPaid
+            }))
+        ]
+    }
+
+    const fetchExecutionData = async () => {
+        const [paymentsRes] = await Promise.all([getPayments({ unitId })])
+        const allPayments = paymentsRes.payments || []
+        const from = new Date(dateFrom + 'T00:00:00')
+        const to = new Date(dateTo + 'T23:59:59')
+
+        return allPayments.filter((p: any) => {
+            const pDate = new Date(p.paymentDate)
+            return pDate >= from && pDate <= to
+        }).map((p: any) => ({
+            fecha: p.paymentDate.split('T')[0],
+            proveedor: p.provider?.name,
+            categoria: p.provider?.category || 'Sin Categoría',
+            valor: p.amountPaid
+        }))
+    }
+
+    const handleAnalyze = async (reportId: string, title: string) => {
+        setAnalyzing(true)
+        setAnalysisTitle(title)
+        setShowAnalysisModal(true)
+        setAnalysisResult(null)
+
+        try {
+            let data: any[] = []
+
+            if (reportId === 'aux') data = await fetchAuxiliarData() || []
+            else if (reportId === 'exec') data = await fetchExecutionData()
+            else if (reportId === 'ap') {
+                // Quick fetch for purpose of demo
+                const [invRes] = await Promise.all([getInvoices({ unitId })])
+                data = (invRes.invoices || []).filter((i: any) => i.balance > 0).map((i: any) => ({
+                    proveedor: i.provider?.name,
+                    factura: i.invoiceNumber,
+                    saldo: i.balance,
+                    dias_vencido: Math.floor((Date.now() - new Date(i.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+                }))
+            }
+
+            if (!data || data.length === 0) {
+                setAnalysisResult('No hay datos suficientes para analizar en este periodo/selección.')
+            } else {
+                const res = await analyzeReport(title, data)
+                setAnalysisResult(res.analysis)
+            }
+        } catch (error) {
+            console.error(error)
+            setAnalysisResult('Error al generar el análisis. Intente nuevamente.')
+        } finally {
+            setAnalyzing(false)
+        }
+    }
 
     const handleAuxiliarExport = async () => {
         if (!selectedProviderId) {
@@ -542,9 +624,57 @@ export default function ReportsHubPage() {
                                 </>
                             )}
                         </button>
+
+                        {/* AI Button */}
+                        {!report.comingSoon && (
+                            <AIButton
+                                variant="secondary"
+                                loading={analyzing}
+                                disabled={report.requiresProvider && !selectedProviderId}
+                                onClick={() => handleAnalyze(report.id, report.title)}
+                                icon={<Brain className="w-4 h-4" />}
+                                className="w-full mt-2"
+                            >
+                                {analyzing ? 'Analizando...' : 'Analizar con IA'}
+                            </AIButton>
+                        )}
+
+
                     </div>
                 ))}
             </div>
+
+            <Dialog open={showAnalysisModal} onOpenChange={setShowAnalysisModal}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-indigo-700">
+                            <Brain className="w-6 h-6" />
+                            Análisis Inteligente: {analysisTitle}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Interpretación automática generada por Gemini AI basada en los datos actuales.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="mt-4">
+                        {analyzing ? (
+                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+                                <div className="text-center">
+                                    <p className="font-semibold text-gray-700">Analizando datos...</p>
+                                    <p className="text-sm text-gray-500">Buscando patrones y anomalías</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="prose prose-indigo prose-sm w-full max-w-none bg-gray-50 p-6 rounded-xl border border-gray-100">
+                                <div className="whitespace-pre-wrap font-medium text-gray-700">
+                                    {analysisResult}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <div className="card p-8 bg-indigo-900 text-white overflow-hidden relative">
                 <div className="relative z-10 max-w-lg">
@@ -560,6 +690,6 @@ export default function ReportsHubPage() {
                     <BarChart3 className="w-64 h-64" />
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

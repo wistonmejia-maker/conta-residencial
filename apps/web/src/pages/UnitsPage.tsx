@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Building2, X, Loader2, Upload, User, Wallet, Settings, LayoutGrid } from 'lucide-react'
-import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile } from '../lib/api'
-import type { Provider } from '../lib/api'
+import { Plus, Pencil, Trash2, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink } from 'lucide-react'
+import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail, scanGmail, getGmailPreview, API_BASE } from '../lib/api'
+
+import { useUnit } from '../lib/UnitContext'
+import { useNavigate } from 'react-router-dom'
 
 // Unit interface is not exported from api.ts, so we'll keep it here or match api.ts if it exists there.
 // Looking at api.ts content previously viewed, createUnit/updateUnit etc take args but don't export a 'Unit' interface for the full object return.
@@ -33,6 +35,8 @@ export default function UnitsPage() {
     const [showModal, setShowModal] = useState(false)
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
     const queryClient = useQueryClient()
+    const { setSelectedUnit } = useUnit()
+    const navigate = useNavigate()
 
     const { data, isLoading } = useQuery({
         queryKey: ['units'],
@@ -70,16 +74,22 @@ export default function UnitsPage() {
         mutationFn: deleteUnit,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] })
+        },
+        onError: (error: any) => {
+            console.error('Error deleting unit:', error)
+            alert('Error al eliminar la unidad: ' + (error.message || 'Error desconocido'))
         }
     })
 
-    const handleDelete = (unit: Unit) => {
+    const handleDelete = (e: React.MouseEvent, unit: Unit) => {
+        e.stopPropagation()
         if (confirm(`¿Eliminar la unidad "${unit.name}"? Esta acción no se puede deshacer.`)) {
             deleteMutation.mutate(unit.id)
         }
     }
 
-    const openEditModal = (unit: Unit) => {
+    const openEditModal = (e: React.MouseEvent, unit: Unit) => {
+        e.stopPropagation()
         setEditingUnit(unit)
         setShowModal(true)
     }
@@ -87,6 +97,11 @@ export default function UnitsPage() {
     const openCreateModal = () => {
         setEditingUnit(null)
         setShowModal(true)
+    }
+
+    const handleUnitClick = (unit: Unit) => {
+        setSelectedUnit(unit as any) // Cast as UnitContext Unit matches this interface structure mostly
+        navigate('/')
     }
 
     return (
@@ -125,8 +140,12 @@ export default function UnitsPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {units.map(unit => (
-                        <div key={unit.id} className="card p-5 hover:shadow-md transition-shadow">
+                    {units.map((unit: Unit) => (
+                        <div
+                            key={unit.id}
+                            onClick={() => handleUnitClick(unit)}
+                            className="card p-5 hover:shadow-md transition-shadow cursor-pointer group hover:ring-2 hover:ring-indigo-500/20"
+                        >
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
@@ -152,20 +171,20 @@ export default function UnitsPage() {
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-gray-900 truncate" title={unit.name}>{unit.name}</h3>
+                                        <h3 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors" title={unit.name}>{unit.name}</h3>
                                         <p className="text-sm text-gray-500">NIT: {unit.taxId}</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                        onClick={() => openEditModal(unit)}
+                                        onClick={(e) => openEditModal(e, unit)}
                                         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                         title="Editar"
                                     >
                                         <Pencil className="w-4 h-4" />
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(unit)}
+                                        onClick={(e) => handleDelete(e, unit)}
                                         disabled={deleteMutation.isPending}
                                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                                         title="Eliminar"
@@ -213,6 +232,7 @@ const TABS = [
     { id: 'structural', label: 'Estructura', icon: LayoutGrid },
     { id: 'financial', label: 'Financiero', icon: Wallet },
     { id: 'team', label: 'Equipo', icon: User },
+    { id: 'integrations', label: 'Integraciones', icon: Mail },
     { id: 'config', label: 'Configuración', icon: Settings },
 ] as const
 
@@ -560,7 +580,7 @@ function UnitModal({
                                             className="w-full px-3 py-2 border rounded-lg"
                                         >
                                             <option value="">-- Seleccionar --</option>
-                                            {providers.map(p => (
+                                            {providers.map((p: any) => (
                                                 <option key={p.id} value={p.id}>{p.name} ({p.nit})</option>
                                             ))}
                                         </select>
@@ -573,7 +593,7 @@ function UnitModal({
                                             className="w-full px-3 py-2 border rounded-lg"
                                         >
                                             <option value="">-- Seleccionar --</option>
-                                            {providers.map(p => (
+                                            {providers.map((p: any) => (
                                                 <option key={p.id} value={p.id}>{p.name} ({p.nit})</option>
                                             ))}
                                         </select>
@@ -586,7 +606,7 @@ function UnitModal({
                                             className="w-full px-3 py-2 border rounded-lg"
                                         >
                                             <option value="">-- Seleccionar --</option>
-                                            {providers.map(p => (
+                                            {providers.map((p: any) => (
                                                 <option key={p.id} value={p.id}>{p.name} ({p.nit})</option>
                                             ))}
                                         </select>
@@ -595,6 +615,36 @@ function UnitModal({
                                         <a href="/providers" className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
                                             <Plus className="w-3 h-3" /> Crear nuevo proveedor
                                         </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* INTEGRATIONS TAB */}
+                        {activeTab === 'integrations' && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Integraciones Externas</h3>
+
+                                <div className="card p-4 border-indigo-100 bg-indigo-50/30">
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-white rounded-xl shadow-sm border border-indigo-100">
+                                            <Mail className="w-6 h-6 text-indigo-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900">Google Gmail</h4>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                Conecta el correo de la copropiedad para escanear facturas automáticamente usando IA.
+                                            </p>
+
+                                            {unit ? (
+                                                <GmailStatusManager unitId={unit.id} />
+                                            ) : (
+                                                <div className="mt-4 p-3 bg-amber-50 text-amber-700 rounded-lg text-xs flex items-center gap-2">
+                                                    <Settings className="w-4 h-4" />
+                                                    Primero debes crear la unidad para activar esta integración.
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -621,6 +671,76 @@ function UnitModal({
                     </button>
                 </div>
             </div>
+        </div>
+    )
+}
+
+function GmailStatusManager({ unitId }: { unitId: string }) {
+    const queryClient = useQueryClient()
+    const { data: status, isLoading } = useQuery({
+        queryKey: ['gmail-status', unitId],
+        queryFn: () => getGmailStatus(unitId)
+    })
+
+    const disconnectMutation = useMutation({
+        mutationFn: () => disconnectGmail(unitId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['gmail-status', unitId] })
+        }
+    })
+
+    const handleConnect = () => {
+        const apiUrl = API_BASE.replace('/api', '')
+
+        window.open(`${apiUrl}/api/auth/google?unitId=${unitId}`, 'gmail-auth', 'width=600,height=700')
+
+        // Poll for changes
+        const interval = setInterval(async () => {
+            queryClient.invalidateQueries({ queryKey: ['gmail-status', unitId] })
+        }, 3000)
+
+        setTimeout(() => clearInterval(interval), 30000)
+    }
+
+    if (isLoading) return <Loader2 className="w-4 h-4 animate-spin text-gray-400 mt-2" />
+
+    if (status?.connected) {
+        return (
+            <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg text-sm border border-green-100">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span>Conectado como <strong>{status.email}</strong></span>
+                </div>
+                <button
+                    onClick={() => {
+                        if (confirm('¿Seguro que deseas desconectar Gmail? El escaneo automático dejará de funcionar.')) {
+                            disconnectMutation.mutate()
+                        }
+                    }}
+                    disabled={disconnectMutation.isPending}
+                    type="button"
+                    className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1 px-1"
+                >
+                    {disconnectMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />}
+                    Desconectar cuenta
+                </button>
+            </div>
+        )
+    }
+
+    return (
+        <div className="mt-4">
+            <button
+                onClick={handleConnect}
+                type="button"
+                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 shadow-sm flex items-center gap-2 transition-all active:scale-95"
+            >
+                <Link2 className="w-4 h-4 text-indigo-500" />
+                Conectar Gmail
+            </button>
+            <p className="text-[10px] text-gray-400 mt-2 italic">
+                Serás redirigido a Google para autorizar el acceso de lectura a tus correos.
+            </p>
         </div>
     )
 }

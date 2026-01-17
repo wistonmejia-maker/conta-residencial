@@ -4,6 +4,7 @@ dotenv.config()
 
 import express from 'express'
 import cors from 'cors'
+import { config } from './config/env' // Validate env vars
 import path from 'path'
 
 // Routes
@@ -17,6 +18,8 @@ import filesRouter from './routes/files'
 import providerConfigsRouter from './routes/providerConfigs'
 import searchRouter from './routes/search'
 import reportsRouter from './routes/reports'
+import aiRouter from './routes/ai'
+import budgetsRouter from './routes/budgets'
 
 const app = express()
 const PORT = process.env.PORT || 3002
@@ -58,13 +61,16 @@ app.use('/api/files', filesRouter)
 app.use('/api/provider-configs', providerConfigsRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/reports', reportsRouter)
+app.use('/api/ai', aiRouter)
+app.use('/api/budgets', budgetsRouter)
 
 // New Routes
 import authRouter from './routes/auth'
 import scanRouter from './routes/scan'
 
 app.use('/api/auth', authRouter)
-app.use('/api/invoices', scanRouter) // Attach scan to invoices path or separate
+app.use('/api/invoices', scanRouter) // Register scanRouter BEFORE invoicesRouter to handle /api/invoices/scan-gmail
+app.use('/api/invoices', invoicesRouter)
 
 // Start server
 app.listen(PORT, () => {

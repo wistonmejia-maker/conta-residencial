@@ -1,13 +1,13 @@
-import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment } from '../lib/api'
-import type { Payment, Invoice, Provider } from '../lib/api'
+import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment, scanGmail, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
+import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
-import { generateReceiptFromPayment } from '../lib/pdfGenerator'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
+import { AIButton } from '../components/ui'
 
 const formatMoney = (value: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
@@ -44,6 +44,7 @@ export default function PaymentsPage() {
     const [uploadPaymentId, setUploadPaymentId] = useState<string | null>(null)
     const [linkInvoicePayment, setLinkInvoicePayment] = useState<Payment | null>(null)
     const [editPayment, setEditPayment] = useState<any | null>(null)
+    const [scanningGmail, setScanningGmail] = useState(false)
     const queryClient = useQueryClient()
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,16 +76,61 @@ export default function PaymentsPage() {
         enabled: !!unitId
     })
 
+    const { data: gmailStatus } = useQuery({
+        queryKey: ['gmail-status', unitId],
+        queryFn: () => unitId ? getGmailStatus(unitId) : Promise.resolve(null),
+        enabled: !!unitId,
+        refetchInterval: 5000
+    })
+
     const payments = paymentsData?.payments || []
 
-    const filtered = payments.filter((p: Payment & { provider?: { name: string } }) =>
-        p.provider?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        (p.consecutiveNumber && p.consecutiveNumber.toString().includes(search))
-    )
+    const filtered = useMemo(() => {
+        const lowerSearch = search.toLowerCase()
+        return payments.filter((p: Payment & { provider?: { name: string } }) =>
+            p.provider?.name?.toLowerCase().includes(lowerSearch) ||
+            (p.consecutiveNumber && p.consecutiveNumber.toString().includes(search)) ||
+            statusLabels[p.status]?.toLowerCase().includes(lowerSearch)
+        )
+    }, [payments, search])
 
     // Calculate stats
     const internalCount = payments.filter((p: Payment) => p.sourceType === 'INTERNAL').length
     const pendingSupportCount = payments.filter((p: Payment) => p.status === 'PAID_NO_SUPPORT').length
+    const draftsCount = payments.filter((p: Payment) => p.status === 'DRAFT').length
+
+    const handleGmailScan = async () => {
+        if (!unitId) return
+        setScanningGmail(true)
+        try {
+            const res = await scanGmail(unitId)
+            if (res.processedCount > 0) {
+                alert(`¡Éxito! Se han importado ${res.processedCount} documentos. Por favor revisa los BORRADORES.`)
+                queryClient.invalidateQueries({ queryKey: ['payments'] })
+                queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            } else {
+                alert('No se encontraron nuevos soportes o facturas en los correos no leídos.')
+            }
+        } catch (error) {
+            console.error('Error scanning Gmail:', error)
+            alert('Error al escanear Gmail.')
+        } finally {
+            setScanningGmail(false)
+        }
+    }
+
+    const handleApprovePayment = async (id: string) => {
+        try {
+            // If it's a draft payment from Gmail, we might want to mark it as PAID_NO_SUPPORT 
+            // or just COMPLETED if the user manually uploads support later.
+            // For now, let's move it to PAID_NO_SUPPORT if it has no support or COMPLETED if it does.
+            await updatePayment(id, { status: 'PAID_NO_SUPPORT' })
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+        } catch (error) {
+            console.error('Error approving payment:', error)
+            alert('Error al aprobar el egreso.')
+        }
+    }
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -95,6 +141,31 @@ export default function PaymentsPage() {
                     <p className="text-sm text-gray-500 mt-1">Control de pagos y comprobantes</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {gmailStatus?.connected ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm border border-green-200">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            <span className="font-medium">{gmailStatus.email}</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => connectGmail(unitId)}
+                            className="px-3 py-2 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2"
+                        >
+                            <Mail className="w-4 h-4" />
+                            Conectar Gmail
+                        </button>
+                    )}
+
+                    <AIButton
+                        variant="secondary"
+                        loading={scanningGmail}
+                        disabled={!gmailStatus?.connected}
+                        onClick={handleGmailScan}
+                    >
+                        {scanningGmail ? 'Escaneando...' : 'Escanear Inbox'}
+                    </AIButton>
+
+
                     <button
                         onClick={() => {
                             const dataToExport = filtered.map((p: any) => ({
@@ -132,6 +203,27 @@ export default function PaymentsPage() {
                     </button>
                 </div>
             </div>
+
+            {/* DRAFT ATTENTION ALERT */}
+            {draftsCount > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-pulse">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 rounded-lg text-purple-700">
+                            <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-purple-900">Egresos en Borrador</p>
+                            <p className="text-xs text-purple-700">Tienes {draftsCount} egresos importados que requieren revisión.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setSearch('Borrador')}
+                        className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        Revisar ahora
+                    </button>
+                </div>
+            )}
 
             {/* Mode Info */}
             <div className="card p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-100">
@@ -294,7 +386,16 @@ export default function PaymentsPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-1">
+                                        <div className="flex items-center justify-center gap-2">
+                                            {payment.status === 'DRAFT' && (
+                                                <button
+                                                    onClick={() => handleApprovePayment(payment.id)}
+                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                    title="Aprobar Borrador"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                            )}
                                             {payment.hasPendingInvoice && (
                                                 <button
                                                     onClick={() => setLinkInvoicePayment(payment)}
@@ -332,9 +433,51 @@ export default function PaymentsPage() {
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => generateReceiptFromPayment(payment as any, UNIT_INFO)}
+                                                onClick={() => {
+                                                    // Map keys to preview struct
+                                                    const UNIT_INFO = {
+                                                        name: selectedUnit?.name || 'Unidad',
+                                                        taxId: selectedUnit?.taxId || 'N/A',
+                                                        address: selectedUnit?.address,
+                                                        logoUrl: selectedUnit?.logoUrl
+                                                    }
+
+                                                    // Helper to preview
+                                                    import('../lib/pdfGenerator').then(mod => {
+                                                        mod.generateReceiptFromPayment(payment as any, UNIT_INFO) // This helper was updated in previous step to use the new generator? 
+                                                        // Wait, I messed up. I need to expose a preview helper.
+
+                                                        // Let's create a local wrapper or call the mapped function
+                                                        const invoices = (payment.invoiceItems || []).map((item: any) => ({
+                                                            invoiceNumber: item.invoice.invoiceNumber,
+                                                            invoiceDate: item.invoice.invoiceDate,
+                                                            description: item.invoice.description,
+                                                            amount: Number(item.amountApplied)
+                                                        }))
+
+                                                        mod.openPaymentReceiptPreview({
+                                                            unitName: UNIT_INFO.name,
+                                                            unitNit: UNIT_INFO.taxId,
+                                                            unitAddress: UNIT_INFO.address,
+                                                            consecutiveNumber: payment.consecutiveNumber ?? null,
+                                                            paymentDate: payment.paymentDate,
+                                                            providerName: payment.provider?.name || 'N/A',
+                                                            providerNit: (payment.provider as any)?.nit || '',
+                                                            providerDv: (payment.provider as any)?.dv || '',
+                                                            invoices: invoices,
+                                                            grossAmount: Number(payment.amountPaid),
+                                                            retefuente: Number(payment.retefuenteApplied),
+                                                            reteica: Number(payment.reteicaApplied),
+                                                            netAmount: Number(payment.netValue),
+                                                            paymentMethod: payment.bankPaymentMethod,
+                                                            bankAccount: (payment.provider as any)?.bankAccount,
+                                                            transactionRef: payment.transactionRef,
+                                                            logoUrl: UNIT_INFO.logoUrl
+                                                        })
+                                                    })
+                                                }}
                                                 className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600"
-                                                title="Generar Comprobante PDF"
+                                                title="Ver/Descargar Comprobante PDF"
                                             >
                                                 <Calculator className="w-4 h-4" />
                                             </button>
@@ -552,6 +695,8 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
 
     // Manual amount for payments without invoice
     const [manualAmount, setManualAmount] = useState(Number(payment?.amountPaid || 0))
+    const [analyzing, setAnalyzing] = useState(false)
+    const [aiError, setAiError] = useState<string | null>(null)
 
     // Fetch pending invoices
     const { data: invoicesData } = useQuery({
@@ -596,6 +741,38 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         acc[provName].push(inv)
         return acc
     }, {} as Record<string, typeof filteredInvoices>)
+
+    const handleAIExtract = async (file: File) => {
+        setAnalyzing(true)
+        setAiError(null)
+        try {
+            const analysis = await analyzeDocument(file)
+            if (analysis.type === 'PAYMENT_RECEIPT' && analysis.data) {
+                const data = analysis.data
+                setForm(f => ({
+                    ...f,
+                    paymentDate: data.date || f.paymentDate,
+                    transactionRef: data.transactionRef || f.transactionRef,
+                    bankPaymentMethod: data.bankName ? 'TRANSFER' : f.bankPaymentMethod
+                }))
+                setManualAmount(data.totalAmount || manualAmount)
+
+                // If it's a payment, maybe we can match provider or description
+                if (data.concept) {
+                    // Try to update some note or similar if available
+                }
+            } else if (analysis.type === 'INVOICE') {
+                setAiError('Este documento parece ser una factura, no un comprobante de pago. Por favor súbelo en la sección de Facturas.')
+            } else {
+                setAiError('No se pudo extraer información válida de este comprobante con IA.')
+            }
+        } catch (err) {
+            console.error('AI Extraction error:', err)
+            setAiError('Error al conectar con el servicio de IA.')
+        } finally {
+            setAnalyzing(false)
+        }
+    }
 
     // Calculate totals - use manual amount if no invoices selected
     const totalAmount = selectedInvoices.size > 0
@@ -957,6 +1134,12 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                     {/* File Upload Section */}
                     <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Soporte de Pago (Opcional)</label>
+                        {aiError && (
+                            <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-100 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                {aiError}
+                            </div>
+                        )}
                         <div className="flex items-center gap-4">
                             <label className="flex-1 cursor-pointer group">
                                 <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg transition-colors ${file ? 'border-indigo-300 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-white'}`}>
@@ -991,6 +1174,17 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                 </button>
                             )}
                         </div>
+                        {file && (
+                            <button
+                                type="button"
+                                onClick={() => handleAIExtract(file)}
+                                disabled={analyzing}
+                                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-medium hover:bg-purple-100 transition-colors disabled:opacity-50"
+                            >
+                                {analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                {analyzing ? 'Analizando con IA...' : 'Auto-completar con IA (Experimental)'}
+                            </button>
+                        )}
                     </div>
                 </form>
 

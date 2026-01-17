@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, CreditCard, GitCompare, FileSpreadsheet, Building2, RefreshCw, ChevronDown, Loader2, BarChart3, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, CreditCard, GitCompare, FileSpreadsheet, Building2, RefreshCw, ChevronDown, Loader2, BarChart3, Menu, X, Calculator } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
 import GlobalSearch from './GlobalSearch'
 
@@ -11,6 +11,7 @@ const operationalItems = [
     { to: '/conciliation', icon: GitCompare, label: 'Conciliación' },
     { to: '/closure', icon: FileSpreadsheet, label: 'Cierre Mensual' },
     { to: '/reports', icon: BarChart3, label: 'Reportes' },
+    { to: '/budget', icon: Calculator, label: 'Presupuesto' },
 ]
 
 const configItems = [

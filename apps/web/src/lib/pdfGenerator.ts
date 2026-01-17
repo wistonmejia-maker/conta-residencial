@@ -13,6 +13,7 @@ interface PaymentReceiptData {
     unitName: string
     unitNit: string
     unitAddress?: string
+    unitCity?: string // Added
 
     // Consecutive
     consecutiveNumber: number | null
@@ -24,6 +25,8 @@ interface PaymentReceiptData {
     providerName: string
     providerNit: string
     providerDv: string
+    providerCity?: string // Added
+    providerPhone?: string // Added
 
     // Invoices list
     invoices: InvoiceInfo[]
@@ -46,10 +49,63 @@ interface PaymentReceiptData {
 const formatMoney = (value: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
-const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
+const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
+}
 
+// Simple Number to Words Converter for Spanish (Integers)
+function numeroALetras(num: number): string {
+    if (num === 0) return "CERO PESOS M/C";
 
+    const unidades = ["", "UN ", "DOS ", "TRES ", "CUATRO ", "CINCO ", "SEIS ", "SIETE ", "OCHO ", "NUEVE "];
+    const especiales = ["DIEZ ", "ONCE ", "DOCE ", "TRECE ", "CATORCE ", "QUINCE ", "DIECISEIS ", "DIECISIETE ", "DIECIOCHO ", "DIECINUEVE "];
+    const decenas = ["", "DIEZ ", "VEINTE ", "TREINTA ", "CUARENTA ", "CINCUENTA ", "SESENTA ", "SETENTA ", "OCHENTA ", "NOVENTA "];
+    const centenas = ["", "CIENTO ", "DOSCIENTOS ", "TRESCIENTOS ", "CUATROCIENTOS ", "QUINIENTOS ", "SEISCIENTOS ", "SETECIENTOS ", "OCHOCIENTOS ", "NOVECIENTOS "];
+
+    let lyrics = "";
+    let rest = Math.floor(num); // Handle integers for simplicity
+
+    if (rest >= 1000000) {
+        const millions = Math.floor(rest / 1000000);
+        if (millions === 1) lyrics += "UN MILLON ";
+        else lyrics += numeroALetras(millions).replace("PESOS M/C", "").replace("UN ", "UN") + " MILLONES ";
+        rest = rest % 1000000;
+    }
+
+    if (rest >= 1000) {
+        const thousands = Math.floor(rest / 1000);
+        if (thousands === 1) lyrics += "MIL ";
+        else lyrics += numeroALetras(thousands).replace("PESOS M/C", "").replace("UN ", "UN") + " MIL ";
+        rest = rest % 1000;
+    }
+
+    if (rest >= 100) {
+        if (rest === 100) {
+            lyrics += "CIEN ";
+            rest = 0;
+        } else {
+            lyrics += centenas[Math.floor(rest / 100)];
+            rest = rest % 100;
+        }
+    }
+
+    if (rest >= 20) {
+        lyrics += decenas[Math.floor(rest / 10)];
+        rest = rest % 10;
+        if (rest > 0) lyrics = lyrics.trim() + " Y ";
+    } else if (rest >= 10) {
+        lyrics += especiales[rest - 10];
+        rest = 0;
+    }
+
+    if (rest > 0) {
+        lyrics += unidades[rest];
+    }
+
+    return (lyrics.trim() + " PESOS M/C").replace("  ", " ");
+}
 
 export async function generatePaymentReceipt(data: PaymentReceiptData): Promise<void> {
     const doc = await createPaymentReceiptDoc(data)
@@ -62,20 +118,47 @@ export async function generatePaymentReceipt(data: PaymentReceiptData): Promise<
     doc.save(filename)
 }
 
+export async function openPaymentReceiptPreview(data: PaymentReceiptData): Promise<void> {
+    const doc = await createPaymentReceiptDoc(data)
+    window.open(doc.output('bloburl'), '_blank')
+}
+
 export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise<jsPDF> {
     const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
+    const width = doc.internal.pageSize.getWidth()
+    const height = doc.internal.pageSize.getHeight()
+    const margin = 10
+    const contentWidth = width - (margin * 2)
 
-    // Colors
-    const primaryColor: [number, number, number] = [79, 70, 229] // Indigo-600
-    const grayColor: [number, number, number] = [107, 114, 128] // Gray-500
-    const darkColor: [number, number, number] = [17, 24, 39] // Gray-900
+    // --- UTILS ---
+    const drawRect = (x: number, y: number, w: number, h: number, fill = false) => {
+        doc.setDrawColor(0) // Black borders
+        doc.setLineWidth(0.3)
+        if (fill) {
+            doc.setFillColor(230, 230, 230) // Light Gray
+            doc.rect(x, y, w, h, 'FD')
+        } else {
+            doc.rect(x, y, w, h)
+        }
+    }
 
-    // Header background
-    doc.setFillColor(...primaryColor)
-    doc.rect(0, 0, pageWidth, 35, 'F')
+    const drawText = (text: string, x: number, y: number, size = 9, bold = false, align: 'left' | 'center' | 'right' = 'left') => {
+        doc.setTextColor(0)
+        doc.setFontSize(size)
+        doc.setFont('helvetica', bold ? 'bold' : 'normal')
+        doc.text(text, x, y, { align })
+    }
 
-    // Logo (if available)
+    let y = margin
+
+    // --- 1. HEADER (Logo | Info | Doc Num) ---
+    const headerH = 25
+    drawRect(margin, y, contentWidth, headerH) // Main Box
+
+    // Logo (Left - 25% width)
+    const logoW = 40
+    doc.line(margin + logoW, y, margin + logoW, y + headerH) // Vertical Sep
+
     if (data.logoUrl) {
         try {
             const imgData = await new Promise<string>((resolve, reject) => {
@@ -92,207 +175,225 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
                 img.onerror = reject
                 img.src = data.logoUrl!
             })
-            // Draw logo on the left of header
-            // Max height 25, max width 60
-            doc.addImage(imgData, 'PNG', 10, 5, 25, 25, undefined, 'FAST')
+            // Fit Logo
+            doc.addImage(imgData, 'PNG', margin + 2, y + 2, logoW - 4, headerH - 4, undefined, 'NONE')
         } catch (error) {
-            console.error('Error adding logo to PDF:', error)
+            // Ignore
         }
+    } else {
+        drawText("LOGO", margin + (logoW / 2), y + (headerH / 2), 10, true, 'center')
     }
 
-    // Header text
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
-    doc.text('COMPROBANTE DE EGRESO', pageWidth / 2, 18, { align: 'center' })
+    // Doc Num (Right - 30mm)
+    const docNumW = 40
+    const docNumX = margin + contentWidth - docNumW
+    doc.line(docNumX, y, docNumX, y + headerH) // Ver Sep
 
-    // Consecutive number
-    doc.setFontSize(14)
-    const consecutiveText = data.consecutiveNumber
-        ? `CE-${data.consecutiveNumber.toString().padStart(4, '0')}`
-        : 'EXTERNO (Sin CE)'
-    doc.text(consecutiveText, pageWidth / 2, 28, { align: 'center' })
+    drawText("Comprobante Egreso", docNumX + (docNumW / 2), y + 6, 8, false, 'center')
+    drawText(data.consecutiveNumber ? `No. ${data.consecutiveNumber}` : "S/N", docNumX + (docNumW / 2), y + 16, 12, true, 'center')
 
-    // Unit info (left side)
-    doc.setTextColor(...darkColor)
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.text(data.unitName, 14, 50)
+    // Center Info (Unit Name, Nit, City)
+    const centerX = margin + logoW + ((contentWidth - logoW - docNumW) / 2)
+    drawText(data.unitName.toUpperCase(), centerX, y + 8, 11, true, 'center')
+    drawText(`NIT: ${data.unitNit}`, centerX, y + 14, 9, false, 'center')
+    drawText(data.unitCity || "Colombia", centerX, y + 20, 9, false, 'center')
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(...grayColor)
-    doc.text(`NIT: ${data.unitNit}`, 14, 56)
-    if (data.unitAddress) {
-        doc.text(data.unitAddress, 14, 62)
-    }
+    y += headerH + 2
 
-    // Date (right side)
-    doc.setTextColor(...darkColor)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Fecha:', pageWidth - 60, 50)
-    doc.setFont('helvetica', 'normal')
-    doc.text(formatDate(data.paymentDate), pageWidth - 60, 56)
+    // --- 2. PROVIDER GRID ---
+    const rowH = 7
+    // Row 1
+    drawRect(margin, y, contentWidth, rowH * 2) // Box for 2 rows
+    doc.line(margin, y + rowH, margin + contentWidth, y + rowH) // Horizontal Split
 
-    // Separator line
-    doc.setDrawColor(229, 231, 235)
-    doc.setLineWidth(0.5)
-    doc.line(14, 70, pageWidth - 14, 70)
+    // Row 1 Cols: Proveedor (Auto) | Telefono (30) | Fecha (30)
+    const colDateW = 35
+    const colTelW = 35
+    const colProvW = contentWidth - colDateW - colTelW
 
-    // Provider section
-    let yPos = 80
+    // Vertical lines Row 1
+    doc.line(margin + colProvW, y, margin + colProvW, y + rowH)
+    doc.line(margin + colProvW + colTelW, y, margin + colProvW + colTelW, y + rowH)
 
-    doc.setTextColor(...primaryColor)
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'bold')
-    doc.text('BENEFICIARIO', 14, yPos)
+    // Text Row 1
+    drawText("Proveedor:", margin + 2, y + 5, 8, true)
+    drawText(data.providerName.toUpperCase(), margin + 25, y + 5, 9, false)
 
-    yPos += 8
-    doc.setTextColor(...darkColor)
-    doc.setFontSize(12)
-    doc.text(data.providerName, 14, yPos)
+    drawText("Teléfono:", margin + colProvW + 2, y + 5, 8, true)
+    drawText(data.providerPhone || "", margin + colProvW + 20, y + 5, 9, false)
 
-    yPos += 6
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...grayColor)
-    doc.text(`NIT: ${data.providerNit}-${data.providerDv}`, 14, yPos)
+    drawText("Fecha Comprobante", margin + colProvW + colTelW + (colDateW / 2), y + 3, 7, true, 'center')
+    drawText(formatDate(data.paymentDate), margin + colProvW + colTelW + (colDateW / 2), y + 6.5, 9, false, 'center')
 
-    // Invoices Details Table
-    yPos += 14
-    doc.setTextColor(...primaryColor)
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'bold')
-    doc.text('DETALLE DE FACTURAS', 14, yPos)
+    // Row 2: NIT | Ciudad | Date
+    // Using same vertical lines logic roughly
+    doc.line(margin + colProvW, y + rowH, margin + colProvW, y + (rowH * 2))
+    doc.line(margin + colProvW + colTelW, y + rowH, margin + colProvW + colTelW, y + (rowH * 2))
 
-    yPos += 5
+    drawText("NIT.:", margin + 2, y + rowH + 5, 8, true)
+    drawText(data.providerNit + (data.providerDv ? `-${data.providerDv}` : ''), margin + 25, y + rowH + 5, 9, false)
 
-    // Prepare table body based on invoices
-    const invoiceRows = data.invoices.map(inv => [
-        inv.invoiceNumber,
-        formatDate(inv.invoiceDate),
-        inv.description || '',
+    drawText("Ciudad:", margin + colProvW + 2, y + rowH + 5, 8, true)
+    drawText(data.providerCity || "", margin + colProvW + 20, y + rowH + 5, 9, false)
+
+    // Date already in row 1 merged cell visual, but let's leave row 2 blank or repeat
+    // The reference has a merged cell look for the Title "Fecha" and value.
+    // My previous code put title top value bottom in Row 1.
+
+    y += (rowH * 2) + 2
+
+    // --- 3. DETAILS TABLE (CODIGO PUC | CONCEPTO | VALOR) ---
+    // We use autoTable but styled to look like the grid
+    const tableY = y
+
+    // Prepare Data
+    const bodyData = data.invoices.map(inv => [
+        "2205", // Mock PUC
+        `Pago Factura ${inv.invoiceNumber} - ${inv.description || 'Sin descripción'}`,
         formatMoney(inv.amount)
     ])
 
-    // Calculate totals summary rows
-    const summaryRows = []
+    // Add retentions
+    if (data.retefuente > 0) bodyData.push(["2365", "RETENCION EN LA FUENTE", `(${formatMoney(data.retefuente)})`])
+    if (data.reteica > 0) bodyData.push(["2368", "RETENCION ICA", `(${formatMoney(data.reteica)})`])
 
-    if (data.retefuente > 0) {
-        summaryRows.push(['', '', '(-) Retención Fuente', `-${formatMoney(data.retefuente)}`])
-    }
-    if (data.reteica > 0) {
-        summaryRows.push(['', '', '(-) Retención ICA', `-${formatMoney(data.reteica)}`])
-    }
-
-    summaryRows.push(['', '', 'TOTAL GIRADO', formatMoney(data.netAmount)])
-
+    // AutoTable
     autoTable(doc, {
-        startY: yPos,
-        head: [['Número', 'Fecha', 'Concepto', 'Valor']],
-        body: [...invoiceRows, ...summaryRows],
-        theme: 'grid',
-        headStyles: {
-            fillColor: primaryColor,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'center'
-        },
-        columnStyles: {
-            0: { halign: 'left', cellWidth: 35 },
-            1: { halign: 'center', cellWidth: 35 },
-            2: { halign: 'left', cellWidth: 'auto' },
-            3: { halign: 'right', cellWidth: 40 }
-        },
+        startY: tableY,
+        head: [['CODIGO PUC', 'CONCEPTO', 'VALOR']],
+        body: bodyData,
+        theme: 'plain', // We want control
         styles: {
             fontSize: 9,
-            cellPadding: 4
+            cellPadding: 3,
+            lineColor: 0,
+            lineWidth: 0.1,
+            textColor: 0
         },
-        willDrawCell: (hookData) => {
-            // Style summary rows differently (no borders usually, or bold text)
-            if (hookData.row.index >= invoiceRows.length) {
-                if (hookData.column.index === 2) {
-                    hookData.cell.styles.fontStyle = 'bold'
-                    hookData.cell.styles.halign = 'right'
-                }
-                if (hookData.column.index === 3) {
-                    hookData.cell.styles.fontStyle = 'bold'
-                }
-
-                // Highlight final total row
-                if (hookData.row.index === invoiceRows.length + summaryRows.length - 1) {
-                    hookData.cell.styles.fillColor = [236, 253, 245] // Green-50
-                    hookData.cell.styles.textColor = [5, 150, 105] // Emerald-600
-                    hookData.cell.styles.fontSize = 10
-                }
-            }
-        }
+        headStyles: {
+            fillColor: [220, 220, 220], // Gray
+            fontStyle: 'bold',
+            halign: 'center',
+            lineWidth: 0.3,
+            lineColor: 0
+        },
+        columnStyles: {
+            0: { cellWidth: 30, halign: 'center' },
+            1: { cellWidth: 'auto' }, // Concepto
+            2: { cellWidth: 40, halign: 'right' }
+        },
+        margin: { left: margin, right: margin }
     })
 
-    // Payment method info
-    yPos = (doc as any).lastAutoTable.finalY + 15
+    y = (doc as any).lastAutoTable.finalY
 
-    if (data.paymentMethod || data.bankAccount || data.transactionRef) {
-        doc.setTextColor(...primaryColor)
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'bold')
-        doc.text('INFORMACIÓN DE PAGO', 14, yPos)
+    // --- 4. DETAILS FOOTER (Neto & Type) ---
+    const footerH = 8
+    drawRect(margin, y, contentWidth, footerH)
+    doc.line(margin + 100, y, margin + 100, y + footerH) // Split Type | Net
+    doc.line(margin + contentWidth - 40, y, margin + contentWidth - 40, y + footerH) // Split Label | Value
 
-        yPos += 8
-        doc.setTextColor(...darkColor)
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
+    drawText("Tipo de Pago:", margin + 2, y + 5.5, 9, true)
+    drawText(data.paymentMethod === 'TRANSFER' ? 'Transferencia' : 'Efectivo/Cheque', margin + 30, y + 5.5, 9, false)
 
-        const paymentInfo: string[] = []
-        if (data.paymentMethod) paymentInfo.push(`Método: ${data.paymentMethod}`)
-        if (data.bankAccount) paymentInfo.push(`Cuenta: ${data.bankAccount}`)
-        if (data.transactionRef) paymentInfo.push(`Ref. Transacción: ${data.transactionRef}`)
+    drawText("Pago Neto:", margin + contentWidth - 42, y + 5.5, 9, true, 'right')
+    drawText(formatMoney(data.netAmount), margin + contentWidth - 2, y + 5.5, 10, true, 'right')
 
-        doc.text(paymentInfo.join('  •  '), 14, yPos)
+    y += footerH + 2
+
+    // --- 5. VALOR EN LETRAS & OBS ---
+    const lettersH = 15
+    drawRect(margin, y, contentWidth, lettersH)
+    drawText("Valor en Letras:", margin + 2, y + 4, 8, true)
+    drawText(numeroALetras(data.netAmount), margin + 2, y + 10, 9, false)
+
+    y += lettersH
+    const obsH = 15
+    drawRect(margin, y, contentWidth, obsH)
+    drawText("Observaciones:", margin + 2, y + 4, 8, true)
+    if (data.transactionRef) {
+        drawText(`Ref: ${data.transactionRef}`, margin + 2, y + 10, 9, false)
     }
 
-    // Signatures area
-    yPos = 240
+    y += obsH + 5
 
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.3)
+    // --- 6. BANK & SIGNATURES GRID ---
+    // Reference has a bottom block.
+    // Row 1: Cheque | Efectivo | Firma
+    // Row 2: Banco | Sucursal | (Space)
+    // Row 3: Debitese | (Space)
+    // Row 4: Signatures Labels
+    // Row 5: Signatures Space
 
-    // Signature 1 - Prepared by
-    doc.line(14, yPos, 80, yPos)
-    doc.setFontSize(9)
-    doc.setTextColor(...grayColor)
-    doc.text('Elaboró', 47, yPos + 5, { align: 'center' })
+    const bankW = contentWidth * 0.6
+    const signW = contentWidth - bankW
 
-    // Signature 2 - Approved by
-    doc.line(90, yPos, 156, yPos)
-    doc.text('Revisó', 123, yPos + 5, { align: 'center' })
+    // Bank Block
+    drawRect(margin, y, bankW, 24) // 3 rows of 8
+    // Horizontal Lines
+    doc.line(margin, y + 8, margin + bankW, y + 8)
+    doc.line(margin, y + 16, margin + bankW, y + 16)
+    // Vertical Line split bank info labels
+    doc.line(margin + 30, y, margin + 30, y + 24) // Labels width
+    doc.line(margin + (bankW / 2), y, margin + (bankW / 2), y + 24) // Middle split
 
-    // Signature 3 - Received by
-    doc.line(166, yPos, pageWidth - 14, yPos)
-    doc.text('Recibí Conforme', (166 + pageWidth - 14) / 2, yPos + 5, { align: 'center' })
+    // Labels
+    drawText("Cheque No.", margin + 28, y + 5.5, 8, true, 'right')
+    drawText("Banco:", margin + 28, y + 13.5, 8, true, 'right')
+    drawText("Debítese a:", margin + 28, y + 21.5, 8, true, 'right')
 
-    // Footer
-    const footerY = 280
-    doc.setFontSize(8)
-    doc.setTextColor(...grayColor)
-    doc.text(
-        `Generado el ${new Date().toLocaleDateString('es-CO')} a las ${new Date().toLocaleTimeString('es-CO')}`,
-        pageWidth / 2,
-        footerY,
-        { align: 'center' }
-    )
-    doc.text(
-        'ContaResidencial - Sistema de Gestión Administrativa',
-        pageWidth / 2,
-        footerY + 5,
-        { align: 'center' }
-    )
+    drawText("Efectivo:", margin + (bankW / 2) + 28, y + 5.5, 8, true, 'right')
+    drawText("Sucursal:", margin + (bankW / 2) + 28, y + 13.5, 8, true, 'right')
+
+    // Values (Mock or Real)
+    drawText(data.transactionRef || "N/A", margin + 32, y + 5.5, 8)
+    if (data.bankAccount) drawText(data.bankAccount, margin + 32, y + 21.5, 8)
+
+    // Beneficiary Signature Block (Right)
+    drawRect(margin + bankW, y, signW, 24)
+    drawText("Firma y Sello del Beneficiario:", margin + bankW + 2, y + 5, 8, true)
+    // Small grid at bottom of sign block
+    const signGridY = y + 18
+    const signGridH = 6
+    doc.rect(margin + bankW, signGridY, signW, signGridH)
+    doc.line(margin + bankW + (signW * 0.25), signGridY, margin + bankW + (signW * 0.25), signGridY + signGridH)
+    doc.line(margin + bankW + (signW * 0.5), signGridY, margin + bankW + (signW * 0.5), signGridY + signGridH)
+    doc.line(margin + bankW + (signW * 0.75), signGridY, margin + bankW + (signW * 0.75), signGridY + signGridH)
+
+    drawText("C.C.", margin + bankW + 2, signGridY + 4, 7)
+    drawText("NIT.", margin + bankW + (signW * 0.25) + 2, signGridY + 4, 7)
+
+    y += 24
+
+    // Signatures Bottom Row
+    const sigH = 20
+    drawRect(margin, y, contentWidth, 6, true) // Header Gray
+    drawRect(margin, y + 6, contentWidth, sigH) // Body
+
+    // 4 Columns
+    const colSigW = contentWidth / 4
+    for (let i = 1; i < 4; i++) {
+        doc.line(margin + (colSigW * i), y, margin + (colSigW * i), y + 6 + sigH)
+    }
+
+    drawText("ELABORADO", margin + (colSigW * 0.5), y + 4.5, 8, true, 'center')
+    drawText("REVISADO", margin + (colSigW * 1.5), y + 4.5, 8, true, 'center')
+    drawText("APROBADO", margin + (colSigW * 2.5), y + 4.5, 8, true, 'center')
+    drawText("CONTABILIZADO", margin + (colSigW * 3.5), y + 4.5, 8, true, 'center')
+
+    // Add User Names if available or lines
+    // y + 6 + sigH - 5
+
+    // Footer Info
+    const footerY = height - 10
+    doc.setFontSize(7)
+    doc.setTextColor(100)
+    doc.text("Generado por ContaResidencial", margin, footerY)
+    doc.text(`Impreso: ${new Date().toLocaleString()}`, width - margin, footerY, { align: 'right' })
 
     return doc
 }
 
-// Generate receipt from payment data (helper for use with API response)
 export async function generateReceiptFromPayment(payment: {
     consecutiveNumber: number | null
     paymentDate: string
@@ -307,6 +408,8 @@ export async function generateReceiptFromPayment(payment: {
         nit: string
         dv: string
         bankAccount?: string
+        city?: string
+        phone?: string
     }
     invoiceItems?: Array<{
         amountApplied: number
@@ -322,24 +425,28 @@ export async function generateReceiptFromPayment(payment: {
     taxId: string
     address?: string
     logoUrl?: string
+    city?: string
 }) {
     // Map all invoice items
     const invoices: InvoiceInfo[] = (payment.invoiceItems || []).map(item => ({
         invoiceNumber: item.invoice.invoiceNumber,
         invoiceDate: item.invoice.invoiceDate,
         description: item.invoice.description,
-        amount: Number(item.amountApplied) // Use amount applied in this payment, not total invoice amount
+        amount: Number(item.amountApplied)
     }))
 
     await generatePaymentReceipt({
-        unitName: unit.name,
-        unitNit: unit.taxId,
+        unitName: unit.name || 'Edificio',
+        unitNit: unit.taxId || 'N/A',
         unitAddress: unit.address,
+        unitCity: unit.city || 'Cali - Colombia', // Mock default or prop
         consecutiveNumber: payment.consecutiveNumber,
         paymentDate: payment.paymentDate,
         providerName: payment.provider?.name || 'N/A',
         providerNit: payment.provider?.nit || '',
         providerDv: payment.provider?.dv || '',
+        providerCity: payment.provider?.city || 'Cali',
+        providerPhone: payment.provider?.phone || '',
         invoices: invoices,
         grossAmount: Number(payment.amountPaid),
         retefuente: Number(payment.retefuenteApplied),

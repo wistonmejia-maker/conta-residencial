@@ -5,13 +5,13 @@ import { getAuth } from 'firebase/auth'
 // Configuración reutilizada de inventory-system
 // Configuración reutilizada de inventory-system (Funcionando)
 const firebaseConfig = {
-    apiKey: "AIzaSyC0d3Zph-2UhZS0FdaDR0HOIOrFXVN_c20",
-    authDomain: "inventory-system-fed7f.firebaseapp.com",
-    projectId: "inventory-system-fed7f",
-    storageBucket: "inventory-system-fed7f.firebasestorage.app",
-    messagingSenderId: "97541456020",
-    appId: "1:97541456020:web:c68a40674a126a61257481",
-    measurementId: "G-99VLXTLCB3"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 }
 
 // Initialize Firebase
