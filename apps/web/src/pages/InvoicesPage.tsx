@@ -1,8 +1,8 @@
-import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, ChevronDown, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, Brain, Send, MessageSquare } from 'lucide-react'
+import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, MessageSquare } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus, sendAIFeedback } from '../lib/api/index'
+import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus } from '../lib/api/index'
 
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -94,15 +94,7 @@ function GmailPreviewModal({ unitId, onClose }: { unitId: string; onClose: () =>
                     Nota: El escaneo procesa correos con facturas (PDF/ZIP) recibidos desde la fecha configurada en los ajustes del conjunto.
                 </div>
             </div>
-            {showFeedbackModal && feedbackItem && (
-                <FeedbackModal
-                    isOpen={showFeedbackModal}
-                    onClose={() => setShowFeedbackModal(false)}
-                    unitId={unitId}
-                    documentType="INVOICE"
-                    referenceId={feedbackItem.id}
-                />
-            )}
+
         </div>
     )
 }
@@ -746,35 +738,7 @@ export default function InvoicesPage() {
     // Feedback State
     const [showFeedbackModal, setShowFeedbackModal] = useState(false)
     const [feedbackItem, setFeedbackItem] = useState<any>(null)
-    const [feedbackComment, setFeedbackComment] = useState('')
-    const [suggestedRule, setSuggestedRule] = useState('')
 
-    const handleOpenFeedback = (inv: any) => {
-        setFeedbackItem(inv)
-        setFeedbackComment('')
-        setSuggestedRule('')
-        setShowFeedbackModal(true)
-    }
-
-    const handleSendFeedback = async () => {
-        if (!feedbackItem || !feedbackComment) return;
-
-        try {
-            await sendAIFeedback({
-                unitId,
-                documentType: 'INVOICE',
-                invoiceId: feedbackItem.id,
-                comment: feedbackComment,
-                suggestedRule
-            });
-            alert('Gracias por tu feedback. Hemos registrado la regla para mejorar la IA.');
-            setShowFeedbackModal(false);
-            setFeedbackItem(null);
-        } catch (error) {
-            console.error('Error sending feedback:', error);
-            alert('Error al enviar feedback');
-        }
-    }
 
     return (
         <>
@@ -788,74 +752,6 @@ export default function InvoicesPage() {
                 onMinimize={minimizeScanUI}
             />
 
-            {/* Feedback Modal */}
-            {showFeedbackModal && feedbackItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-                                    <Brain className="w-5 h-5" />
-                                </div>
-                                <h3 className="text-xl font-bold text-gray-900">Ayúdanos a Mejorar</h3>
-                            </div>
-                            <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4 overflow-y-auto">
-                            <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
-                                <p><strong>Documento:</strong> {feedbackItem.invoiceNumber}</p>
-                                <p><strong>Fuente:</strong> {feedbackItem.source || 'GMAIL'}</p>
-                                <p><strong>Asunto:</strong> {feedbackItem.emailSubject || 'N/A'}</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">¿Qué está mal?</label>
-                                <textarea
-                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    rows={3}
-                                    placeholder="Ej: El proveedor no es correcto, clasificó mal la fecha..."
-                                    value={feedbackComment}
-                                    onChange={(e) => setFeedbackComment(e.target.value)}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Regla Sugerida (Opcional)</label>
-                                <textarea
-                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-indigo-50/50"
-                                    rows={2}
-                                    placeholder="Ej: Si el asunto dice 'Cuenta de Cobro', ignorar..."
-                                    value={suggestedRule}
-                                    onChange={(e) => setSuggestedRule(e.target.value)}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Esta regla se añadirá a nuestra base de conocimiento para entrenar a la IA.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowFeedbackModal(false)}
-                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSendFeedback}
-                                disabled={!feedbackComment}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                <Send className="w-4 h-4" />
-                                Enviar Feedback
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
 
             <div className="space-y-6 animate-fade-in">
@@ -1360,7 +1256,16 @@ export default function InvoicesPage() {
                         </div>
                     </div>
                 )}
-            </div >
+            </div>
+            {showFeedbackModal && feedbackItem && (
+                <FeedbackModal
+                    isOpen={showFeedbackModal}
+                    onClose={() => setShowFeedbackModal(false)}
+                    unitId={unitId}
+                    documentType="INVOICE"
+                    referenceId={feedbackItem.id}
+                />
+            )}
         </>
     )
 }
