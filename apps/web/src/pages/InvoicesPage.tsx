@@ -1046,10 +1046,12 @@ export default function InvoicesPage() {
                                             <div className="flex items-center justify-center gap-1">
                                                 {inv.fileUrl && (
                                                     <button
-                                                        onClick={(e) => {
+                                                        onClick={async (e) => {
                                                             e.stopPropagation()
                                                             try {
                                                                 const url = inv.fileUrl!
+
+                                                                // Handle Base64
                                                                 if (url.startsWith('data:')) {
                                                                     const parts = url.split(',')
                                                                     if (parts.length < 2) throw new Error('Invalid data URI')
@@ -1062,7 +1064,46 @@ export default function InvoicesPage() {
                                                                     }
                                                                     const blob = new Blob([ab], { type: mimeType })
                                                                     window.open(URL.createObjectURL(blob), '_blank')
+                                                                    return;
+                                                                }
+
+                                                                // Handle Cloudinary RAW files or _secure bypass files
+                                                                // We fetch them and enforce application/pdf type so browser renders them
+                                                                if (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf')) {
+
+                                                                    // Open window first to avoid popup blocker
+                                                                    const newWindow = window.open('', '_blank');
+                                                                    if (newWindow) {
+                                                                        newWindow.document.write(`
+                                                                            <html>
+                                                                                <head><title>Cargando PDF...</title></head>
+                                                                                <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;background:#f3f4f6;">
+                                                                                    <div style="text-align:center;">
+                                                                                        <div style="margin-bottom:10px;">Cargando documento...</div>
+                                                                                        <div style="font-size:12px;color:#6b7280;">Por favor espere</div>
+                                                                                    </div>
+                                                                                </body>
+                                                                            </html>
+                                                                        `);
+
+                                                                        try {
+                                                                            const response = await fetch(url);
+                                                                            const blob = await response.blob();
+                                                                            const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+                                                                            const pdfUrl = URL.createObjectURL(pdfBlob);
+                                                                            newWindow.location.href = pdfUrl;
+                                                                        } catch (fetchError) {
+                                                                            newWindow.close();
+                                                                            console.error('Fetch error:', fetchError);
+                                                                            alert('No se pudo cargar la vista previa. Descargando archivo...');
+                                                                            window.open(url, '_blank');
+                                                                        }
+                                                                    } else {
+                                                                        // Fallback if popup blocked
+                                                                        window.open(url, '_blank');
+                                                                    }
                                                                 } else {
+                                                                    // Standard behavior for normal files
                                                                     window.open(url, '_blank')
                                                                 }
                                                             } catch (err) {
