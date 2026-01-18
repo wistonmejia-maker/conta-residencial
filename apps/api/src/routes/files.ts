@@ -75,10 +75,22 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         if (useCloudinary) {
             // Upload to Cloudinary
             const result = await new Promise<any>((resolve, reject) => {
+                const safeName = req.file!.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                const isPdf = safeName.toLowerCase().endsWith('.pdf');
+
+                // For PDFs, we use 'raw' to avoid "Restricted media types" (401) issues.
+                // Additionally, we MUST change the extension/suffix because the account blocks ".pdf" 
+                // specifically, regardless of resource_type.
+                const resType: 'image' | 'auto' | 'raw' = isPdf ? 'raw' : 'auto';
+                const publicId = isPdf
+                    ? safeName + '_secure' // Appending suffix avoids ".pdf" strict block
+                    : safeName.replace(/\.[^/.]+$/, "");
+
                 const uploadStream = cloudinary.uploader.upload_stream(
                     {
                         folder: `conta-residencial/${folder}`,
-                        resource_type: 'auto'
+                        resource_type: resType,
+                        public_id: publicId
                     },
                     (error: Error | null, result: any) => {
                         if (error) reject(error)
