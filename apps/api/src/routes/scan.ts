@@ -50,10 +50,9 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
             const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const isPdf = filename.toLowerCase().endsWith('.pdf');
 
-            // For PDFs, 'image' resource_type is usually best for transformations,
-            // but for simple storage 'raw' can be used. However, account settings
-            // must allow PDF delivery.
-            const resType: 'image' | 'auto' | 'raw' = isPdf ? 'image' : 'auto';
+            // For PDFs, we use 'raw' to avoid "Restricted media types" (401) issues
+            // on accounts where PDF delivery is blocked by default and the setting is hidden.
+            const resType: 'image' | 'auto' | 'raw' = isPdf ? 'raw' : 'auto';
 
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
