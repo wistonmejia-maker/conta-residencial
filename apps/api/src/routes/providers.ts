@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
+import { createProviderSchema } from '../schemas/provider.schema'
 
 const router = Router()
 
@@ -133,17 +134,22 @@ router.get('/:id', async (req, res) => {
 // POST create provider (GLOBAL - no unitId needed)
 router.post('/', async (req, res) => {
     try {
+        const validation = createProviderSchema.safeParse(req.body)
+
+        if (!validation.success) {
+            return res.status(400).json({
+                error: 'Validation Error',
+                details: validation.error.format()
+            })
+        }
+
         const {
             name, taxType, nit, dv,
             email, phone, address, city,
             bankAccount, bankName, accountType,
             defaultRetefuentePerc, defaultReteicaPerc,
             isRecurring, recurringCategory, category
-        } = req.body
-
-        if (!name || !taxType || !nit) {
-            return res.status(400).json({ error: 'name, taxType, and nit are required' })
-        }
+        } = validation.data
 
         // Validar DV si se proporcionó
         const calculatedDV = calcularDV(nit)

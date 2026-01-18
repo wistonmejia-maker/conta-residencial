@@ -1,16 +1,15 @@
 import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check, MessageSquare } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment, scanGmail, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
+import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
 import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
-import { AIButton, FeedbackModal } from '../components/ui'
+import { FeedbackModal } from '../components/ui'
+import { formatMoney } from '../lib/format'
 
-const formatMoney = (value: number) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
 const statusStyles: Record<string, string> = {
     DRAFT: 'status-pending',
@@ -38,7 +37,6 @@ export default function PaymentsPage() {
     const [uploadPaymentId, setUploadPaymentId] = useState<string | null>(null)
     const [linkInvoicePayment, setLinkInvoicePayment] = useState<Payment | null>(null)
     const [editPayment, setEditPayment] = useState<any | null>(null)
-    const [scanningGmail, setScanningGmail] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [showFeedbackModal, setShowFeedbackModal] = useState(false)
@@ -111,23 +109,6 @@ export default function PaymentsPage() {
     const pendingSupportCount = payments.filter((p: Payment) => p.status === 'PAID_NO_SUPPORT').length
     const draftsCount = payments.filter((p: Payment) => p.status === 'DRAFT').length
 
-    const handleGmailScan = async () => {
-        if (!unitId) return
-        setScanningGmail(true)
-        try {
-            const res = await scanGmail(unitId)
-            if (res.success) {
-                alert('Escaneo iniciado en segundo plano. Te notificaremos cuando termine.');
-                // queryClient.invalidateQueries({ queryKey: ['payments'] }) // Don't invalidate yet, wait for completion or poll
-            }
-        } catch (error) {
-            console.error('Error scanning Gmail:', error)
-            alert('Error al escanear Gmail.')
-        } finally {
-            setScanningGmail(false)
-        }
-    }
-
     const handleApprovePayment = async (id: string) => {
         try {
             // If it's a draft payment from Gmail, we might want to mark it as PAID_NO_SUPPORT 
@@ -165,14 +146,14 @@ export default function PaymentsPage() {
                         </button>
                     )}
 
-                    <AIButton
-                        variant="secondary"
-                        loading={scanningGmail}
-                        disabled={!gmailStatus?.connected}
-                        onClick={handleGmailScan}
+                    <Link
+                        to="/"
+                        className="px-3 py-2 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-lg text-sm font-medium hover:bg-indigo-100 flex items-center gap-2"
+                        title="Escanea egresos desde el panel principal"
                     >
-                        {scanningGmail ? 'Escaneando...' : 'Escanear Inbox'}
-                    </AIButton>
+                        <Sparkles className="w-4 h-4" />
+                        Escanear Inbox →
+                    </Link>
 
 
                     <button
@@ -205,7 +186,7 @@ export default function PaymentsPage() {
                     </button>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Egreso
@@ -700,7 +681,7 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
                     <button
                         onClick={handleSubmit}
                         disabled={loading || !selectedInvoiceId}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button hover:bg-brand-700 disabled:opacity-50"
                     >
                         {loading ? 'Guardando...' : 'Asociar Factura'}
                     </button>
@@ -1264,7 +1245,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                         <button
                             onClick={handleSubmit}
                             disabled={createMutation.isPending || uploading || totalAmount <= 0}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
                         >
                             {uploading ? (
                                 <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>

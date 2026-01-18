@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../lib/prisma';
 import { fetchNewEmails, getAttachment, markAsRead, fetchRecentEmails, ensureLabel, markAsProcessed } from '../services/gmail.service';
 import { classifyAndExtractDocument } from '../services/ai.service';
+import { AccountingService } from '../services/accounting.service';
 import cloudinary from '../lib/cloudinary';
 import path from 'path';
 import fs from 'fs';
@@ -159,7 +160,14 @@ async function runBackgroundScan(jobId: string, unitId: string) {
             data: { totalItems: emails.length, progress: 10 }
         });
 
-        const processedLabelId = await ensureLabel(unitId);
+        // Get label ID only if labeling is enabled
+        let processedLabelId = '';
+        if (unit.gmailLabelingEnabled && unit.gmailProcessedLabel) {
+            processedLabelId = await ensureLabel(unitId, unit.gmailProcessedLabel);
+            console.log(`[Gmail] Labeling enabled. Using label: "${unit.gmailProcessedLabel}" (ID: ${processedLabelId})`);
+        } else {
+            console.log('[Gmail] Labeling is disabled or no label configured. Emails will NOT be marked.');
+        }
 
         if (emails.length === 0) {
             await prisma.scanningJob.update({
@@ -215,7 +223,7 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                             continue;
                         }
 
-                        const analysis = await classifyAndExtractDocument(buffer, finalMimeType);
+                        const analysis = await classifyAndExtractDocument(buffer, finalMimeType, unitId);
 
                         if (analysis.type === 'INVOICE' && analysis.data) {
                             const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept } = analysis.data;
@@ -257,11 +265,26 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                 const invDate = parseRobusDate(date);
                                 const total = parseRobustAmount(totalAmount);
 
+                                // Calculate Taxes (Retefuente & ReteICA)
+                                const retefuente = AccountingService.calculateRetefuente(total, {
+                                    defaultRetefuentePerc: provider.defaultRetefuentePerc,
+                                    taxType: provider.taxType
+                                });
+
+                                const reteica = AccountingService.calculateReteica(total, {
+                                    defaultReteicaPerc: provider.defaultReteicaPerc
+                                });
+
                                 const inv = await prisma.invoice.create({
                                     data: {
                                         unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
                                         invoiceDate: invDate,
-                                        totalAmount: total, subtotal: total, status: 'DRAFT',
+                                        totalAmount: total,
+                                        subtotal: total, // Assuming total is subtotal for now as AI doesn't split IVA yet
+                                        taxIva: 0,
+                                        retefuenteAmount: retefuente,
+                                        reteicaAmount: reteica,
+                                        status: 'DRAFT',
                                         description: finalDescription,
                                         pdfUrl: fileUrl, fileUrl,
                                         source: 'GMAIL',
@@ -308,7 +331,10 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                 }
             }
 
-            if (emailProcessed) await markAsProcessed(unitId, email.id, processedLabelId);
+            // Only mark as processed if labeling is enabled and we have a valid labelId
+            if (emailProcessed && processedLabelId) {
+                await markAsProcessed(unitId, email.id, processedLabelId);
+            }
 
             processedCount++;
             const progress = Math.round(10 + (processedCount / emails.length) * 85);
@@ -352,12 +378,89 @@ router.post('/scan-gmail', async (req, res) => {
 });
 
 router.post('/analyze', upload.single('file'), async (req, res) => {
+    const { unitId } = req.query;
+    if (!unitId) return res.status(400).json({ error: 'Unit ID is required' });
+
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-        const analysis = await classifyAndExtractDocument(req.file.buffer, req.file.mimetype);
+        const analysis = await classifyAndExtractDocument(req.file.buffer, req.file.mimetype, unitId as string);
         res.json(analysis);
     } catch (error) {
         res.status(500).json({ error: 'Error analyzing document' });
+    }
+});
+
+// ============================================
+// CRON ENDPOINT - Auto-scan all enabled units
+// ============================================
+// POST /api/scan/cron/scan-all
+// Protected by CRON_SECRET header
+router.post('/cron/scan-all', async (req, res) => {
+    // Verify cron secret (optional security layer)
+    const cronSecret = req.headers['x-cron-secret'] || req.query.secret;
+    const expectedSecret = process.env.CRON_SECRET;
+
+    if (expectedSecret && cronSecret !== expectedSecret) {
+        console.log('[Cron] Unauthorized cron request');
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('[Cron] Starting auto-scan for all enabled units...');
+
+    try {
+        // Find all units with auto-scan enabled and Gmail connected
+        const units = await prisma.unit.findMany({
+            where: {
+                gmailAutoScanEnabled: true,
+                gmailToken: { isNot: null } // Only units with Gmail connected
+            },
+            include: {
+                gmailToken: true
+            }
+        });
+
+        console.log(`[Cron] Found ${units.length} units with auto-scan enabled`);
+
+        if (units.length === 0) {
+            return res.json({ success: true, message: 'No units with auto-scan enabled', scanned: 0 });
+        }
+
+        const results: { unitId: string; unitName: string; jobId: string }[] = [];
+
+        for (const unit of units) {
+            try {
+                // Create a scanning job for this unit
+                const job = await prisma.scanningJob.create({
+                    data: { unitId: unit.id, status: 'PENDING' }
+                });
+
+                // Update last auto-scan timestamp
+                await prisma.unit.update({
+                    where: { id: unit.id },
+                    data: { gmailLastAutoScan: new Date() }
+                });
+
+                // Trigger background scan (non-blocking)
+                runBackgroundScan(job.id, unit.id);
+
+                results.push({ unitId: unit.id, unitName: unit.name, jobId: job.id });
+                console.log(`[Cron] Started scan for unit: ${unit.name} (Job: ${job.id})`);
+
+            } catch (unitError: any) {
+                console.error(`[Cron] Error starting scan for unit ${unit.name}:`, unitError.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Auto-scan started for ${results.length} units`,
+            scanned: results.length,
+            jobs: results
+        });
+
+    } catch (error: any) {
+        console.error('[Cron] Error in auto-scan:', error.message);
+        res.status(500).json({ error: 'Error running auto-scan', details: error.message });
     }
 });
 

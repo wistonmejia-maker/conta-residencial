@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatMoney } from './format'
 
 interface InvoiceInfo {
     invoiceNumber: string
@@ -46,8 +47,6 @@ interface PaymentReceiptData {
     logoUrl?: string
 }
 
-const formatMoney = (value: number) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
 const formatDate = (dateStr: string) => {
     if (!dateStr) return ''

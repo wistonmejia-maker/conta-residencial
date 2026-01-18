@@ -47,17 +47,35 @@ export async function fetchNewEmails(unitId: string) {
 
     console.log(`[Gmail] Fetching unread emails for unit ${unitId}...`);
 
-    // Get unit config for date
+    // Get unit config for date filtering
     const unit = await prisma.unit.findUnique({ where: { id: unitId } });
+
+    // Build date filter: prefer relative days, fallback to fixed date, then default 1 day
     let dateFilter = 'newer_than:1d';
 
-    if (unit?.gmailScanStartDate) {
+    if (unit?.gmailScanDaysBack && unit.gmailScanDaysBack > 0) {
+        // Use relative days (e.g., "newer_than:7d")
+        dateFilter = `newer_than:${unit.gmailScanDaysBack}d`;
+        console.log(`[Gmail] Using relative date filter: ${dateFilter}`);
+    } else if (unit?.gmailScanStartDate) {
+        // Fallback to fixed date
         const date = new Date(unit.gmailScanStartDate);
         const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
         dateFilter = `after:${yyyy}/${mm}/${dd}`;
+        console.log(`[Gmail] Using fixed date filter: ${dateFilter}`);
     }
+
+    // Exclude already-labeled emails if labeling is enabled
+    let labelExclusion = '';
+    if (unit?.gmailLabelingEnabled && unit?.gmailProcessedLabel) {
+        labelExclusion = ` -label:${unit.gmailProcessedLabel.replace(/\s+/g, '-')}`;
+        console.log(`[Gmail] Excluding emails with label: ${unit.gmailProcessedLabel}`);
+    }
+
+    const query = `has:attachment ${dateFilter}${labelExclusion}`;
+    console.log(`[Gmail] Full query: ${query}`);
 
     // Get all relevant emails with pagination
     let allMessages: any[] = [];
@@ -67,7 +85,7 @@ export async function fetchNewEmails(unitId: string) {
         console.log(`[Gmail] Fetching page with token: ${nextPageToken || 'Start'}`);
         const response: any = await gmail.users.messages.list({
             userId: 'me',
-            q: `has:attachment ${dateFilter}`,
+            q: query,
             maxResults: 500, // Increased max per page
             pageToken: nextPageToken,
         });
@@ -206,24 +224,34 @@ export async function markAsRead(unitId: string, messageId: string) {
     });
 }
 
-const PROCESSED_LABEL_NAME = 'MejIA_Processed';
+/**
+ * Ensure a label exists in Gmail, creating it if needed
+ * @param unitId - Unit ID to get Gmail client
+ * @param labelName - Custom label name (from Unit config)
+ * @returns Label ID or empty string on failure
+ */
+export async function ensureLabel(unitId: string, labelName: string): Promise<string> {
+    if (!labelName || labelName.trim() === '') {
+        console.log('[Gmail] No label name provided, skipping label creation');
+        return '';
+    }
 
-export async function ensureLabel(unitId: string): Promise<string> {
     const gmail = await getGmailClient(unitId);
     try {
         const res = await gmail.users.labels.list({ userId: 'me' });
-        const label = res.data.labels?.find(l => l.name === PROCESSED_LABEL_NAME);
+        const label = res.data.labels?.find(l => l.name === labelName);
         if (label?.id) return label.id;
 
         // Create if not exists
         const created = await gmail.users.labels.create({
             userId: 'me',
             requestBody: {
-                name: PROCESSED_LABEL_NAME,
+                name: labelName,
                 labelListVisibility: 'labelShow',
                 messageListVisibility: 'show'
             }
         });
+        console.log(`[Gmail] Created label "${labelName}" with ID: ${created.data.id}`);
         return created.data.id!;
     } catch (e) {
         console.error('Error ensuring label:', e);

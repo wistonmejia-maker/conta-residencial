@@ -1,4 +1,4 @@
-import { API_BASE } from './common'
+import { API_BASE, handleResponse } from './common'
 
 export interface Provider {
     id: string
@@ -73,7 +73,7 @@ export async function createProvider(data: Partial<Provider>) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse(res, 'Error al crear proveedor')
 }
 
 export async function updateProvider(id: string, data: Partial<Provider>) {
@@ -82,7 +82,7 @@ export async function updateProvider(id: string, data: Partial<Provider>) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return res.json()
+    return handleResponse(res, 'Error al actualizar proveedor')
 }
 
 export async function deleteProvider(id: string) {

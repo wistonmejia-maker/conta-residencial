@@ -1,0 +1,10 @@
+{
+    "name": "cron-scanner",
+    "version": "1.0.0",
+    "description": "Cron job to trigger Gmail auto-scan",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {}
+}

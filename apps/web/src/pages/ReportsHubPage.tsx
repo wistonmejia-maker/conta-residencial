@@ -518,12 +518,12 @@ export default function ReportsHubPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Centro de Reportes</h1>
                     <p className="text-sm text-gray-500 mt-1">Reportes especializados y exportación de datos para inteligencia de negocios</p>
                 </div>
-                <div className="p-2 bg-indigo-50 rounded-lg">
+                <div className="p-2 bg-brand-50 rounded-button">
                     <PieChart className="w-6 h-6 text-indigo-600" />
                 </div>
             </div>
 
-            <div className="card p-6 bg-indigo-50 border-indigo-100 shadow-sm border-2">
+            <div className="card p-6 bg-brand-50 border-brand-100 shadow-sm border-2">
                 <div className="flex items-center gap-2 mb-4 text-indigo-700">
                     <Filter className="w-5 h-5" />
                     <h2 className="font-bold text-indigo-900">Configuración de Reportes Especializados</h2>
@@ -608,8 +608,8 @@ export default function ReportsHubPage() {
                             className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all ${report.comingSoon
                                 ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
                                 : (report.requiresProvider && !selectedProviderId)
-                                    ? 'bg-indigo-50 text-indigo-300 cursor-not-allowed'
-                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                                    ? 'bg-brand-50 text-brand-300 cursor-not-allowed'
+                                    : 'bg-brand-primary text-white hover:bg-brand-700 shadow-sm'
                                 }`}
                         >
                             {report.loading ? (
@@ -676,7 +676,7 @@ export default function ReportsHubPage() {
                 </DialogContent>
             </Dialog>
 
-            <div className="card p-8 bg-indigo-900 text-white overflow-hidden relative">
+            <div className="card p-8 bg-brand-900 text-white overflow-hidden relative">
                 <div className="relative z-10 max-w-lg">
                     <h2 className="text-xl font-bold mb-2">¿Necesitas un reporte a medida?</h2>
                     <p className="text-indigo-100 text-sm mb-6">

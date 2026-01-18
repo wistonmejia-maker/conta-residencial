@@ -15,9 +15,8 @@ import { useUnit } from '../lib/UnitContext'
 import { toast } from '../components/ui/Toast'
 import { getAuditPreview } from '../lib/api/reports'
 import { openPaymentReceiptPreview } from '../lib/pdfGenerator'
+import { formatMoney } from '../lib/format'
 
-const formatMoney = (value: number) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
 const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-CO')
@@ -867,7 +866,7 @@ export default function MonthlyClosurePage() {
                             <button
                                 onClick={handleDownloadAccountantPackage}
                                 disabled={filteredPayments.length === 0 || generating}
-                                className="px-4 py-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                className="px-4 py-2 bg-brand-100 text-brand-700 hover:bg-brand-200 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
                                 title="Descargar Excel + PDF de Soportes (para Contador)"
                             >
                                 <Briefcase className="w-4 h-4" />
@@ -876,7 +875,7 @@ export default function MonthlyClosurePage() {
                             <button
                                 onClick={handleGenerateFolder}
                                 disabled={filteredPayments.length === 0 || generating}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
                             >
                                 <FolderDown className="w-4 h-4" />
                                 {generating ? 'Generando...' : 'Carpeta Mensual'}

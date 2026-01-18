@@ -71,7 +71,7 @@ export default function ProvidersPage() {
                     </button>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
                         Nuevo Proveedor
@@ -244,7 +244,7 @@ function ProviderModal({ provider, onClose, onSuccess }: {
 
     const [form, setForm] = useState({
         name: provider?.name || '',
-        taxType: provider?.taxType || 'Juridica',
+        taxType: provider?.taxType || 'NIT',
         nit: provider?.nit || '',
         dv: provider?.dv || '',
         email: provider?.email || '',
@@ -378,9 +378,10 @@ function ProviderModal({ provider, onClose, onSuccess }: {
                                         onChange={(e) => setForm(f => ({ ...f, taxType: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                                     >
-                                        <option value="Persona Natural">Persona Natural</option>
-                                        <option value="Juridica">Persona Jurídica</option>
-                                        <option value="Gran Contribuyente">Gran Contribuyente</option>
+                                        <option value="NIT">NIT (Persona Jurídica)</option>
+                                        <option value="CC">Cédula de Ciudadanía</option>
+                                        <option value="CE">Cédula de Extranjería</option>
+                                        <option value="RUT">RUT (Persona Natural)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -488,8 +489,8 @@ function ProviderModal({ provider, onClose, onSuccess }: {
                                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
                                         >
                                             <option value="">Seleccionar...</option>
-                                            <option value="Ahorros">Ahorros</option>
-                                            <option value="Corriente">Corriente</option>
+                                            <option value="AHORROS">Ahorros</option>
+                                            <option value="CORRIENTE">Corriente</option>
                                         </select>
                                     </div>
                                 </div>
@@ -532,7 +533,7 @@ function ProviderModal({ provider, onClose, onSuccess }: {
                                 <button
                                     type="submit"
                                     disabled={isPending || !form.name || !form.nit || nitExists}
-                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
                                 >
                                     {isPending ? 'Guardando...' : isEditing ? 'Actualizar' : 'Guardar Proveedor'}
                                 </button>
@@ -641,7 +642,7 @@ function DocumentsTab({ providerId }: { providerId: string }) {
                 {!showUploadForm && (
                     <button
                         onClick={() => setShowUploadForm(true)}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 flex items-center gap-1"
+                        className="px-3 py-1.5 bg-brand-primary text-white rounded-button text-xs font-medium hover:bg-brand-700 flex items-center gap-1"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         Agregar Documento
@@ -683,7 +684,7 @@ function DocumentsTab({ providerId }: { providerId: string }) {
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                             onChange={handleFileChange}
-                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-button file:border-0 file:text-sm file:font-medium file:bg-brand-100 file:text-brand-700 hover:file:bg-brand-200"
                         />
                         {uploadForm.file && (
                             <p className="text-xs text-gray-500 mt-1">{uploadForm.file.name} ({(uploadForm.file.size / 1024).toFixed(1)} KB)</p>

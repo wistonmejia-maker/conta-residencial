@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink, Tag, AlertCircle, ToggleLeft, ToggleRight, Clock, Calendar } from 'lucide-react'
 import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail } from '../lib/api'
 
 import { useUnit } from '../lib/UnitContext'
@@ -30,6 +30,10 @@ interface Unit {
     adminId?: string
     fiscalRevisorId?: string
     gmailScanStartDate?: string
+    gmailProcessedLabel?: string
+    gmailLabelingEnabled?: boolean
+    gmailScanDaysBack?: number
+    gmailAutoScanEnabled?: boolean
 }
 
 export default function UnitsPage() {
@@ -115,7 +119,7 @@ export default function UnitsPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
                     Nueva Unidad
@@ -179,7 +183,7 @@ export default function UnitsPage() {
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={(e) => openEditModal(e, unit)}
-                                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-button transition-colors"
                                         title="Editar"
                                     >
                                         <Pencil className="w-4 h-4" />
@@ -269,7 +273,11 @@ function UnitModal({
         accountantId: unit?.accountantId || '',
         adminId: unit?.adminId || '',
         fiscalRevisorId: unit?.fiscalRevisorId || '',
-        gmailScanStartDate: unit?.gmailScanStartDate || ''
+        gmailScanStartDate: unit?.gmailScanStartDate || '',
+        gmailProcessedLabel: unit?.gmailProcessedLabel || 'Procesado',
+        gmailLabelingEnabled: unit?.gmailLabelingEnabled ?? true,
+        gmailScanDaysBack: unit?.gmailScanDaysBack ?? 7,
+        gmailAutoScanEnabled: unit?.gmailAutoScanEnabled ?? false
     })
 
     // Fetch Providers for Team Selection
@@ -314,7 +322,7 @@ function UnitModal({
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                        <div className="p-2 bg-brand-50 rounded-button text-brand-600">
                             <Building2 className="w-6 h-6" />
                         </div>
                         <div>
@@ -622,50 +630,170 @@ function UnitModal({
                             </div>
                         )}
 
-                        {/* INTEGRATIONS TAB */}
+                        {/* INTEGRATIONS TAB - Enhanced Gmail Settings */}
                         {activeTab === 'integrations' && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Integraciones Externas</h3>
+                            <div className="space-y-6">
+                                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">
+                                    Integraciones Externas
+                                </h3>
 
-                                <div className="card p-4 border-indigo-100 bg-indigo-50/30">
+                                {/* Gmail Integration Card */}
+                                <div className="bg-brand-50 border border-brand-100 rounded-card p-6 shadow-card">
+                                    {/* Header */}
                                     <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-white rounded-xl shadow-sm border border-indigo-100">
-                                            <Mail className="w-6 h-6 text-indigo-600" />
+                                        <div className="p-3 bg-brand-surface rounded-button shadow-card border border-brand-100">
+                                            <Mail className="w-6 h-6 text-brand-primary" />
                                         </div>
                                         <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-900">Google Gmail</h4>
+                                            <h4 className="font-semibold text-gray-900 text-lg">Google Gmail</h4>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 Conecta el correo de la copropiedad para escanear facturas automáticamente usando IA.
                                             </p>
+                                        </div>
+                                    </div>
 
-                                            {unit ? (
-                                                <>
-                                                    <div className="mt-4 pt-4 border-t border-indigo-100/50">
-                                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                                            Fecha de inicio de escaneo
-                                                        </label>
-                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    {unit ? (
+                                        <div className="mt-6 space-y-6">
+                                            {/* Scan Configuration Section */}
+                                            <div className="bg-brand-surface rounded-button p-4 border border-brand-100/50 space-y-5">
+                                                <h5 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                                    <Settings className="w-3.5 h-3.5" />
+                                                    Configuración del Escáner
+                                                </h5>
+
+                                                {/* Scan Range Section */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                        Rango de Búsqueda
+                                                    </label>
+
+                                                    {/* Relative Days Option */}
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <Clock className="w-4 h-4 text-brand-primary" />
+                                                                <span className="text-sm text-gray-700">Últimos</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max="30"
+                                                                    value={form.gmailScanDaysBack || 7}
+                                                                    onChange={e => handleChange('gmailScanDaysBack', parseInt(e.target.value) || 7)}
+                                                                    className="w-16 px-2 py-1.5 border border-gray-200 rounded-input text-sm text-center bg-brand-surface focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
+                                                                />
+                                                                <span className="text-sm text-gray-700">días</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            O usa fecha fija (opcional):
                                                             <input
                                                                 type="date"
                                                                 value={form.gmailScanStartDate ? new Date(form.gmailScanStartDate).toISOString().split('T')[0] : ''}
-                                                                onChange={e => handleChange('gmailScanStartDate', e.target.value)}
-                                                                className="px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/10 outline-none w-full sm:w-auto"
+                                                                onChange={e => {
+                                                                    handleChange('gmailScanStartDate', e.target.value);
+                                                                    if (e.target.value) handleChange('gmailScanDaysBack', 0);
+                                                                }}
+                                                                className="ml-2 px-2 py-1 border border-gray-200 rounded text-xs bg-white"
                                                             />
-                                                            <p className="text-[10px] text-gray-500 leading-relaxed">
-                                                                Solo se procesarán correos recibidos <strong>a partir de</strong> esta fecha.
-                                                            </p>
-                                                        </div>
+                                                        </p>
                                                     </div>
-                                                    <GmailStatusManager unitId={unit.id} />
-                                                </>
-                                            ) : (
-                                                <div className="mt-4 p-3 bg-amber-50 text-amber-700 rounded-lg text-xs flex items-center gap-2">
-                                                    <Settings className="w-4 h-4" />
-                                                    Primero debes crear la unidad para activar esta integración.
                                                 </div>
-                                            )}
+
+                                                {/* Divider */}
+                                                <div className="border-t border-gray-100" />
+
+                                                {/* Auto-Scan Toggle */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700">
+                                                            Escaneo Automático
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleChange('gmailAutoScanEnabled', !form.gmailAutoScanEnabled)}
+                                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-button text-xs font-medium transition-all ${form.gmailAutoScanEnabled
+                                                                    ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
+                                                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                }`}
+                                                        >
+                                                            {form.gmailAutoScanEnabled ? (
+                                                                <><ToggleRight className="w-4 h-4" /> Activo</>
+                                                            ) : (
+                                                                <><ToggleLeft className="w-4 h-4" /> Desactivado</>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                    <p className={`text-xs flex items-start gap-1.5 ${form.gmailAutoScanEnabled ? 'text-brand-600' : 'text-gray-500'
+                                                        }`}>
+                                                        <Clock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                                        <span>
+                                                            {form.gmailAutoScanEnabled
+                                                                ? `El sistema escaneará automáticamente cada hora los últimos ${form.gmailScanDaysBack || 7} días.`
+                                                                : 'El escaneo solo se ejecutará cuando lo solicites manualmente.'
+                                                            }
+                                                        </span>
+                                                    </p>
+                                                </div>
+
+                                                {/* Divider */}
+                                                <div className="border-t border-gray-100" />
+
+                                                {/* Processed Email Label */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700">
+                                                            Etiqueta para Correos Procesados
+                                                        </label>
+                                                        {/* Toggle Switch */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleChange('gmailLabelingEnabled', !form.gmailLabelingEnabled)}
+                                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-button text-xs font-medium transition-all ${form.gmailLabelingEnabled
+                                                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                }`}
+                                                        >
+                                                            {form.gmailLabelingEnabled ? (
+                                                                <><ToggleRight className="w-4 h-4" /> Activo</>
+                                                            ) : (
+                                                                <><ToggleLeft className="w-4 h-4" /> Desactivado</>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={form.gmailProcessedLabel || ''}
+                                                        onChange={e => handleChange('gmailProcessedLabel', e.target.value)}
+                                                        placeholder="Procesado"
+                                                        disabled={!form.gmailLabelingEnabled}
+                                                        className={`px-3 py-2.5 border border-gray-200 rounded-input text-sm bg-brand-surface focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all w-full ${!form.gmailLabelingEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                                                            }`}
+                                                    />
+                                                    <p className={`text-xs mt-2 flex items-start gap-1.5 ${form.gmailLabelingEnabled ? 'text-gray-500' : 'text-amber-600'
+                                                        }`}>
+                                                        <Tag className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${form.gmailLabelingEnabled ? 'text-brand-accent' : 'text-amber-500'
+                                                            }`} />
+                                                        <span>
+                                                            {form.gmailLabelingEnabled
+                                                                ? 'El sistema agregará esta etiqueta a los correos procesados para evitar reprocesarlos.'
+                                                                : '⚠️ Modo de prueba: Los correos NO serán marcados. Puede escanear múltiples veces el mismo correo.'
+                                                            }
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Connection Status */}
+                                            <GmailStatusManager unitId={unit.id} />
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="mt-4 p-4 bg-amber-50 border border-amber-100 text-amber-700 rounded-button text-sm flex items-center gap-3">
+                                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                            <span>Primero debes crear la unidad para activar esta integración.</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

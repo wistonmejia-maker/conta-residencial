@@ -184,7 +184,7 @@ export default function RecurrenceConfigPage() {
                 </div>
                 <button
                     onClick={() => setShowAddModal(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                 >
                     <Plus className="w-4 h-4" />
                     Agregar Proveedor
@@ -217,7 +217,7 @@ export default function RecurrenceConfigPage() {
                     </p>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700"
                     >
                         Agregar Primer Proveedor
                     </button>
@@ -395,7 +395,7 @@ function AddRecurringModal({
                         <button
                             type="submit"
                             disabled={isLoading || !selectedProvider}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
                         >
                             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                             <Check className="w-4 h-4" />

@@ -3,9 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, FileText, CreditCard, FolderOpen, ExternalLink, Loader2, User, Building2 } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
 import { getProviderDetail } from '../lib/api'
+import { formatMoney } from '../lib/format'
 
-const formatMoney = (value: number) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
 const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })

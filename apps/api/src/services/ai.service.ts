@@ -1,36 +1,16 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../lib/prisma';
 
+
+import { UnitContextService } from './unitContext.service';
+
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Helper to get dynamic rules from DB
-async function getDynamicRules(): Promise<string> {
-    try {
-        const rules = await prisma.aIFeedback.findMany({
-            where: {
-                suggestedRule: { not: null },
-                // You might want to filter by status='APPLIED' later, but for now take all to support "immediate" feedback
-            },
-            select: { suggestedRule: true }
-        });
-
-        if (rules.length === 0) return "";
-
-        return rules
-            .map(r => r.suggestedRule)
-            .filter(r => r && r.trim().length > 0)
-            .map(r => `- ${r}`)
-            .join('\n');
-    } catch (error) {
-        console.warn("Could not fetch dynamic AI rules:", error);
-        return "";
-    }
-}
-
 export async function classifyAndExtractDocument(
     fileBuffer: Buffer,
-    mimeType: string
+    mimeType: string,
+    unitId: string
 ): Promise<{
     type: 'INVOICE' | 'PAYMENT_RECEIPT' | 'OTHER';
     data?: {
@@ -54,28 +34,12 @@ export async function classifyAndExtractDocument(
         model: 'gemini-2.0-flash',
     });
 
-    // 1. Fetch Dynamic Rules
-    const dynamicRules = await getDynamicRules();
+    // 1. Fetch Dynamic Context (Prompt + Rules)
+    const { description: contextDescription, rules: dynamicRules } = await UnitContextService.getUnitContext(unitId);
 
     const prompt = `Analiza este documento y determina su tipo y extrae la información relevante. NO INVENTES INFORMACIÓN.
 
-    CONTEXTO:
-    Eres el asistente contable de un Conjunto Residencial. Tu trabajo es procesar GASTOS (Salidas de dinero).
-    El conjunto tiene cuenta en Banco AV Villas.
-
-    TIPOS SOPORTADOS:
-    1. "INVOICE": Facturas de venta o Cuentas de cobro emitidas POR PROVEEDORES hacia el conjunto.
-    2. "PAYMENT_RECEIPT": Comprobantes de EGRESO o TRANSFERENCIA (Salidas de dinero desde la cuenta del conjunto hacia un tercero).
-       - IMPORTANTE: Debe ser dinero COMPROBADO que SALIÓ de la cuenta.
-    3. "OTHER": Cualquier otro documento, incluyendo:
-       - Recibos de CAJA o RECAUDO (Dinero que ENTRA al conjunto).
-       - Consignaciones de residentes o propietarios (Pagos de administración).
-       - Estados de cuenta.
-
-    REGLA DE EXCLUSIÓN CRÍTICA (TIPO "OTHER"):
-    - Si el documento dice "COMPROBANTE DE RECAUDO", "CONSIGNACIÓN", "DEPÓSITO".
-    - Si muestra que un residente (ej: "Apto 501", "Torre A") le pagó al conjunto.
-    - **MUY IMPORTANTE**: Si el EMISOR del documento (encabezado) es el propio conjunto (ej: "CONJUNTO RESIDENCIAL TREVISO", "CIUDAD JARDÍN") y le está cobrando a una persona ("Señor Propietario"), eso es una CUENTA DE COBRO DE ADMINISTRACIÓN (Ingreso). CLASIFÍCALO COMO "OTHER". Solo procesa facturas donde un TERCERO le cobra al conjunto.
+    ${contextDescription}
     
     ${dynamicRules ? `
     REGLAS DE APRENDIZAJE (Exclusiones dinámicas):

@@ -1,6 +1,6 @@
-import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, MessageSquare } from 'lucide-react'
+import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, MessageSquare } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE } from '../lib/api/index'
 
@@ -9,18 +9,10 @@ import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
 import { useAI } from '../lib/AIContext'
 import { AIButton, AIProcessingOverlay, AIConfidenceIndicator, FeedbackModal } from '../components/ui'
+import { formatMoney } from '../lib/format'
 
 import type { Invoice, Provider } from '../lib/api/index'
 
-// Helper for formatting money
-const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount)
-}
 
 const statusLabels: Record<string, string> = {
     DRAFT: 'Borrador',
@@ -570,7 +562,7 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                         <button
                             type="submit"
                             disabled={uploading || !form.providerId || !form.invoiceNumber || !form.subtotal}
-                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-6 py-2 bg-brand-primary hover:bg-brand-700 text-white text-sm font-medium rounded-button shadow-sm shadow-brand-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {uploading ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Registrar Factura')}
                         </button>
@@ -770,15 +762,14 @@ export default function InvoicesPage() {
                             </button>
                         )}
 
-                        <button
-                            onClick={() => setShowPreviewModal(true)}
-                            disabled={!gmailStatus?.connected}
-                            className="px-3 py-2 border border-gray-200 text-gray-700 bg-white rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-                            title="Ver últimos correos para verificar acceso"
+                        <Link
+                            to="/"
+                            className="px-3 py-2 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-lg text-sm font-medium hover:bg-indigo-100 flex items-center gap-2"
+                            title="Escanea facturas desde el panel principal"
                         >
-                            <Eye className="w-4 h-4" />
-                            Buzón
-                        </button>
+                            <Sparkles className="w-4 h-4" />
+                            Escanear Inbox →
+                        </Link>
 
                         {/* AI Scan Config moved to global or per-unit settings */}
 
@@ -814,7 +805,7 @@ export default function InvoicesPage() {
                         </button>
                         <button
                             onClick={() => setShowModal(true)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                         >
                             <Plus className="w-4 h-4" />
                             Registrar Factura
