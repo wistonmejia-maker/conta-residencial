@@ -1,8 +1,8 @@
-import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye, Loader2 } from 'lucide-react' // Added Loader2
-import { useState, useEffect } from 'react' // Added useEffect
+import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getProviders, createProvider, updateProvider, validateNit, DOCUMENT_TYPE_LABELS, API_BASE } from '../lib/api'
+import { getProviders, createProvider, updateProvider, validateNit, API_BASE } from '../lib/api'
 
 import type { Provider } from '../lib/api'
 import { uploadFileToStorage } from '../lib/storage'

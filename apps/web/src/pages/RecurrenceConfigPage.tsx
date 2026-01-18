@@ -120,7 +120,7 @@ export default function RecurrenceConfigPage() {
     })
 
     const configs = configsData?.configs || []
-    const recurringConfigs = configs.filter(c => c.isRecurring)
+    const recurringConfigs = configs.filter((c: any) => c.isRecurring)
 
     // Get all providers for adding new configs
     const { data: providersData } = useQuery({
@@ -132,7 +132,7 @@ export default function RecurrenceConfigPage() {
 
     // Providers that don't have a recurring config for this unit
     const availableProviders = allProviders.filter(
-        p => !recurringConfigs.some(c => c.providerId === p.id)
+        p => !recurringConfigs.some((c: any) => c.providerId === p.id)
     )
 
     const updateMutation = useMutation({
@@ -234,26 +234,26 @@ export default function RecurrenceConfigPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {recurringConfigs.map(config => (
-                                <tr key={config.id} className="hover:bg-gray-50/50">
+                            {recurringConfigs.map((c: any) => (
+                                <tr key={c.id} className="hover:bg-gray-50/50">
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-2">
                                             <RefreshCw className="w-4 h-4 text-indigo-500" />
-                                            <span className="font-medium text-gray-900">{config.provider.name}</span>
+                                            <span className="font-medium text-gray-900">{c.provider.name}</span>
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                                        {config.provider.nit}
+                                        {c.provider.nit}
                                     </td>
                                     <td className="px-4 py-3">
                                         <select
-                                            value={config.category || ''}
-                                            onChange={(e) => handleCategoryChange(config, e.target.value)}
-                                            className={`px-2 py-1 text-xs font-medium rounded-lg border-0 cursor-pointer ${categoryOptions.find(c => c.value === config.category)?.color || 'bg-gray-100 text-gray-600'
+                                            value={c.category || ''}
+                                            onChange={(e) => handleCategoryChange(c, e.target.value)}
+                                            className={`px-2 py-1 text-xs font-medium rounded-lg border-0 cursor-pointer ${categoryOptions.find(o => o.value === c.category)?.color || 'bg-gray-100 text-gray-600'
                                                 }`}
                                         >
                                             <option value="">Sin categoría</option>
-                                            {categoryOptions.map(cat => (
+                                            {categoryOptions.map((cat: { value: string; label: string }) => (
                                                 <option key={cat.value} value={cat.value}>
                                                     {cat.label}
                                                 </option>
@@ -262,7 +262,7 @@ export default function RecurrenceConfigPage() {
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <button
-                                            onClick={() => handleRemove(config)}
+                                            onClick={() => handleRemove(c)}
                                             disabled={deleteMutation.isPending}
                                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                                             title="Quitar de recurrentes"

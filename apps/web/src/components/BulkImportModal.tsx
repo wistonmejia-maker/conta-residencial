@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { bulkImportProviders } from '../lib/api'
-import type { Provider } from '../lib/api'
+
 
 interface BulkImportModalProps {
     onClose: () => void

@@ -1,6 +1,6 @@
 import { API_BASE, handleResponse } from './common'
 
-import type { Invoice } from './invoices'
+
 
 export function connectGmail(unitId: string) {
     window.open(`${API_BASE}/auth/google?unitId=${unitId}`, 'gmail-auth', 'width=600,height=700');

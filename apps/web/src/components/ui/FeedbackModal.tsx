@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X, Send, MessageSquare } from 'lucide-react'
-import { sendAIFeedback } from '../lib/api/index'
+import { sendAIFeedback } from '../../lib/api/index'
 
 interface FeedbackModalProps {
     isOpen: boolean

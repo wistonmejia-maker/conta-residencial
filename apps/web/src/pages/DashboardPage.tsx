@@ -110,7 +110,7 @@ export default function DashboardPage() {
                                 {missingInvoices.length} factura{missingInvoices.length > 1 ? 's' : ''} recurrente{missingInvoices.length > 1 ? 's' : ''} sin registrar este mes
                             </h4>
                             <div className="mt-2 flex flex-wrap gap-2">
-                                {missingInvoices.slice(0, 5).map((alert) => (
+                                {missingInvoices.slice(0, 5).map((alert: any) => (
                                     <Link
                                         key={alert.providerId}
                                         to="/invoices"
@@ -120,9 +120,11 @@ export default function DashboardPage() {
                                         {alert.providerName}
                                     </Link>
                                 ))}
-                                {missingInvoices.length > 5 && (
-                                    <span className="text-sm text-amber-600">y {missingInvoices.length - 5} más...</span>
-                                )}
+                                {
+                                    missingInvoices.length > 5 && (
+                                        <span className="text-sm text-amber-600">y {missingInvoices.length - 5} más...</span>
+                                    )
+                                }
                             </div>
                         </div>
                         <Link

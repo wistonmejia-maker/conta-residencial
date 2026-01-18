@@ -31,13 +31,7 @@ export default function PaymentsPage() {
     const unitId = selectedUnit?.id || ''
     const [searchParams] = useSearchParams()
 
-    // Unit info for PDF receipts (dynamic from context)
-    const UNIT_INFO = {
-        name: selectedUnit?.name || 'Unidad',
-        taxId: selectedUnit?.taxId || 'N/A',
-        address: selectedUnit?.address || '',
-        logoUrl: selectedUnit?.logoUrl
-    }
+
 
     const [search, setSearch] = useState(searchParams.get('search') || '')
     const [showModal, setShowModal] = useState(false)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileSpreadsheet, Download, Calendar, Filter, FolderDown, FileText, Eye, Trash2, X, CheckCircle2, Briefcase, Upload, Loader2 } from 'lucide-react'
+import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2 } from 'lucide-react'
 // ... (existing imports)
 
 // ... (existing functions)
@@ -14,7 +14,6 @@ import { uploadFileToStorage } from '../lib/storage'
 import { useUnit } from '../lib/UnitContext'
 import { toast } from '../components/ui/Toast'
 import { getAuditPreview } from '../lib/api/reports'
-import { Brain, AlertOctagon, TrendingUp, CheckCircle, FileWarning } from 'lucide-react'
 import { openPaymentReceiptPreview } from '../lib/pdfGenerator'
 
 const formatMoney = (value: number) =>
@@ -70,7 +69,7 @@ export default function MonthlyClosurePage() {
     const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
 
     // AI Audit State
-    const { data: auditData, isLoading: isLoadingAudit, refetch: refetchAudit } = useQuery({
+    const { data: auditData, isLoading: isLoadingAudit } = useQuery({
         queryKey: ['audit-preview', unitId, dateFrom],
         queryFn: () => {
             const date = new Date(dateFrom)
@@ -227,7 +226,7 @@ export default function MonthlyClosurePage() {
                     'CE': p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXTERNO',
                     'Fecha': new Date(p.paymentDate).toLocaleDateString(),
                     'Beneficiario': provider?.name || 'N/A',
-                    'NIT': provider?.nit || '-',
+                    'NIT': (p.provider as any)?.nit || '',
                     'Factura(s)': invoiceNums,
                     'Valor Bruto': Number(p.amountPaid),
                     'ReteFuente': Number(p.retefuenteApplied || 0),
@@ -387,7 +386,7 @@ export default function MonthlyClosurePage() {
         queryFn: () => getProviders()
     })
 
-    const payments: (Payment & { provider?: { id: string; name: string; nit: string } })[] = paymentsData?.payments || []
+    const [payments] = useState<Payment[]>(paymentsData?.payments || [])
     const providers: Provider[] = providersData?.providers || []
 
     const filteredPayments = payments.filter(p => {
@@ -396,9 +395,8 @@ export default function MonthlyClosurePage() {
         const to = new Date(dateTo + 'T23:59:59')
 
         const inDateRange = paymentDate >= from && paymentDate <= to
-        const matchesProvider = !selectedProvider || p.provider?.id === selectedProvider
-
-        return inDateRange && matchesProvider
+        if (selectedProvider && (p.provider as any)?.id !== selectedProvider) return false
+        return inDateRange
     })
 
     // Filter PENDING INVOICES (Accounts Payable)
@@ -440,7 +438,7 @@ export default function MonthlyClosurePage() {
             'CE': p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXTERNO',
             'Fecha': formatDate(p.paymentDate),
             'Beneficiario': p.provider?.name || 'N/A',
-            'NIT': p.provider?.nit || '',
+            'NIT': (p.provider as any)?.nit || '',
             'Valor Bruto': Number(p.amountPaid),
             'ReteFuente': Number(p.retefuenteApplied),
             'ReteICA': Number(p.reteicaApplied),
@@ -616,7 +614,7 @@ export default function MonthlyClosurePage() {
                 consecutiveNumber: payment.consecutiveNumber,
                 paymentDate: payment.paymentDate,
                 providerName: payment.provider?.name || 'N/A',
-                providerNit: payment.provider?.nit || '',
+                providerNit: (payment.provider as any)?.nit || 'SIN_NIT',
                 providerDv: payment.provider?.dv || '',
                 invoices: invoices,
                 grossAmount: Number(payment.amountPaid),
@@ -1050,7 +1048,7 @@ export default function MonthlyClosurePage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-600">{formatDate(payment.paymentDate)}</td>
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{payment.provider?.name || 'N/A'}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500 font-mono">{payment.provider?.nit || '-'}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-500 font-mono">{(payment.provider as any)?.nit || '-'}</td>
                                                 <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{formatMoney(Number(payment.amountPaid))}</td>
                                                 <td className="px-4 py-3 text-sm text-right text-red-600">
                                                     {Number(payment.retefuenteApplied) > 0 ? `-${formatMoney(Number(payment.retefuenteApplied))}` : '-'}

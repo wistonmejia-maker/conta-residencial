@@ -247,24 +247,25 @@ export default function AppLayout() {
             {/* Bottom Navigation - Mobile Only */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-30">
                 <div className="flex justify-around items-center h-16">
-                    {bottomNavItems.map(item => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            onClick={(e) => handleLinkClick(e, item.to)}
-                            className={({ isActive }) =>
-                                `flex flex-col items-center justify-center flex-1 h-full py-2 transition-colors ${!isLinkEnabled(item.to)
+                    {bottomNavItems.map(item => {
+                        const isActive = location.pathname === item.to
+                        return (
+                            <NavLink
+                                key={item.to}
+                                to={item.to}
+                                onClick={(e) => handleLinkClick(e, item.to)}
+                                className={`flex flex-col items-center justify-center flex-1 h-full py-2 transition-colors ${!isLinkEnabled(item.to)
                                     ? 'opacity-40 cursor-not-allowed text-gray-300'
                                     : isActive
                                         ? 'text-indigo-600'
                                         : 'text-gray-500'
-                                }`
-                            }
-                        >
-                            <item.icon className="w-5 h-5 mb-1" strokeWidth={isActive => isActive ? 2 : 1.5} />
-                            <span className="text-[10px] font-medium">{item.label}</span>
-                        </NavLink>
-                    ))}
+                                    }`}
+                            >
+                                <item.icon className="w-5 h-5 mb-1" strokeWidth={isActive ? 2 : 1.5} />
+                                <span className="text-[10px] font-medium">{item.label}</span>
+                            </NavLink>
+                        )
+                    })}
                     {/* More menu */}
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -274,7 +275,7 @@ export default function AppLayout() {
                         <span className="text-[10px] font-medium">Más</span>
                     </button>
                 </div>
-            </nav>
-        </div>
+            </nav >
+        </div >
     )
 }

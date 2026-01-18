@@ -4,56 +4,6 @@ import { ArrowLeft, FileText, CreditCard, FolderOpen, ExternalLink, Loader2, Use
 import { useUnit } from '../lib/UnitContext'
 import { getProviderDetail } from '../lib/api'
 
-interface ProviderDetail {
-    provider: {
-        id: string
-        name: string
-        nit: string
-        dv: string
-        taxType: string
-        email?: string
-        phone?: string
-        address?: string
-        city?: string
-        bankName?: string
-        bankAccount?: string
-        accountType?: string
-        documents: Array<{
-            id: string
-            type: string
-            fileName: string
-            fileUrl: string
-            uploadedAt: string
-        }>
-    }
-    invoices: Array<{
-        id: string
-        invoiceNumber: string
-        invoiceDate: string
-        description?: string
-        totalAmount: number
-        status: string
-        fileUrl?: string
-        unit: { name: string }
-    }>
-    payments: Array<{
-        id: string
-        consecutiveNumber: number
-        paymentDate: string
-        netValue: number
-        supportFileUrl?: string
-        invoicesIncluded: string[]
-        unit: { name: string }
-    }>
-    stats: {
-        totalInvoiced: number
-        totalPending: number
-        totalPaid: number
-        invoiceCount: number
-        paymentCount: number
-    }
-}
-
 const formatMoney = (value: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
 
@@ -195,7 +145,7 @@ export default function ProviderDetailPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {invoices.map(inv => (
+                                {provider.invoices?.map((inv: any) => (
                                     <tr key={inv.id} className="hover:bg-gray-50/50">
                                         <td className="px-4 py-2 font-mono">{inv.invoiceNumber}</td>
                                         <td className="px-4 py-2">{formatDate(inv.invoiceDate)}</td>
@@ -244,7 +194,7 @@ export default function ProviderDetailPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {payments.map(pay => (
+                                {provider.payments?.map((pay: any) => (
                                     <tr key={pay.id} className="hover:bg-gray-50/50">
                                         <td className="px-4 py-2 font-mono">CE-{String(pay.consecutiveNumber).padStart(4, '0')}</td>
                                         <td className="px-4 py-2">{formatDate(pay.paymentDate)}</td>
@@ -281,7 +231,7 @@ export default function ProviderDetailPage() {
                     <p className="p-4 text-gray-500 text-sm">No hay documentos cargados</p>
                 ) : (
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {provider.documents.map(doc => (
+                        {provider.documents?.map((doc: any) => (
                             <a key={doc.id} href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                 <FileText className="w-8 h-8 text-indigo-500" />

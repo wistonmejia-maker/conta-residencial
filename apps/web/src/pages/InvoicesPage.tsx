@@ -2,7 +2,7 @@ import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, C
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus } from '../lib/api/index'
+import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE } from '../lib/api/index'
 
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -594,7 +594,7 @@ export default function InvoicesPage() {
     const [uploadingFile, setUploadingFile] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<Invoice & { provider?: { name: string } } | null>(null)
-    const [scanningGmail, setScanningGmail] = useState(false)
+    // const [scanningGmail, setScanningGmail] = useState(false)
     const [editingInvoice, setEditingInvoice] = useState<(Invoice & { provider?: { name: string } }) | null>(null)
 
     // Data fetching
@@ -680,7 +680,7 @@ export default function InvoicesPage() {
     }
 
     // Use global AI context for scanning
-    const { startBackgroundScan, scanState, minimizeScanUI, maximizeScanUI, dismissScanUI } = useAI()
+    const { scanState, minimizeScanUI, maximizeScanUI, dismissScanUI } = useAI()
 
     // Derived state for local UI
     const isScanning = scanState.status === 'PROCESSING' || scanState.status === 'PENDING';
@@ -709,16 +709,7 @@ export default function InvoicesPage() {
     }, [scanState.status, scanState.processedEmails, lastProcessedCount, queryClient])
 
 
-    const handleGmailScan = async () => {
-        if (!unitId) return
 
-        if (startBackgroundScan) {
-            await startBackgroundScan(unitId);
-        } else {
-            // Fallback if context not ready (shouldn't happen)
-            console.error("AI Context not ready");
-        }
-    }
 
     const handleApproveInvoice = async (id: string) => {
         try {
@@ -789,14 +780,7 @@ export default function InvoicesPage() {
                             Buzón
                         </button>
 
-                        <AIButton
-                            variant="secondary"
-                            loading={scanningGmail}
-                            disabled={!gmailStatus?.connected}
-                            onClick={handleGmailScan}
-                        >
-                            {scanningGmail ? 'Escaneando...' : 'Escanear Inbox'}
-                        </AIButton>
+                        {/* AI Scan Config moved to global or per-unit settings */}
 
                         <button
                             onClick={() => {

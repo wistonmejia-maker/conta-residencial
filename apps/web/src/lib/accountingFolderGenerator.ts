@@ -396,14 +396,15 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
                         drawBottomWatermark(newPage, watermarkText, font, fontSize)
                     }
                 } else {
-                    // Image
-                    const url = payment.supportFileUrl.toLowerCase()
-                    const isPng = url.includes('.png')
-                    const isJpg = url.includes('.jpg') || url.includes('.jpeg')
+                    if (payment.supportFileUrl) {
+                        const url = payment.supportFileUrl.toLowerCase()
+                        const isPng = url.includes('.png')
+                        const isJpg = url.includes('.jpg') || url.includes('.jpeg')
 
-                    if (isPng) await embedImageToPdf(mergedPdf, fileBytes, 'png', watermarkText)
-                    else if (isJpg) await embedImageToPdf(mergedPdf, fileBytes, 'jpg', watermarkText)
-                    else await embedImageToPdf(mergedPdf, fileBytes, 'jpg', watermarkText)
+                        if (isPng) await embedImageToPdf(mergedPdf, fileBytes, 'png', watermarkText)
+                        else if (isJpg) await embedImageToPdf(mergedPdf, fileBytes, 'jpg', watermarkText)
+                        else await embedImageToPdf(mergedPdf, fileBytes, 'jpg', watermarkText)
+                    }
                 }
             } catch (error) {
                 console.error('Error attaching support file:', error)
@@ -429,9 +430,8 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
                     }
                 } else {
                     // Image
-                    const url = payment.pilaFileUrl.toLowerCase()
+                    const url = ((payment as any).pilaFileUrl || '').toLowerCase()
                     const isPng = url.includes('.png')
-                    const isJpg = url.includes('.jpg') || url.includes('.jpeg')
 
                     if (isPng) await embedImageToPdf(mergedPdf, fileBytes, 'png', watermarkText)
                     else await embedImageToPdf(mergedPdf, fileBytes, 'jpg', watermarkText)
