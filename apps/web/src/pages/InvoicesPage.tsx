@@ -1,12 +1,13 @@
-import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, ChevronDown, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye } from 'lucide-react'
+import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, ChevronDown, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, Brain, Send } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus } from '../lib/api/index'
+import { getInvoices, getProviders, getInvoiceStats, updateInvoice, getNextCCNumber, deleteInvoice, scanGmail, connectGmail, getGmailStatus, getGmailPreview, analyzeDocument, createProvider, API_BASE, getScanStatus, sendAIFeedback } from '../lib/api/index'
 
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
+import { useAI } from '../lib/AIContext'
 import { AIButton, AIProcessingOverlay, AIConfidenceIndicator } from '../components/ui'
 
 import type { Invoice, Provider } from '../lib/api/index'
