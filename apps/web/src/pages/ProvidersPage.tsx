@@ -54,183 +54,190 @@ export default function ProvidersPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
-                    <p className="text-sm text-gray-500 mt-1">Gestiona los terceros (disponibles para todas las unidades)</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setShowBulkImport(true)}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
-                    >
-                        <FileSpreadsheet className="w-4 h-4" />
-                        Importar Excel
-                    </button>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Nuevo Proveedor
-                    </button>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="card p-4">
-                <div className="flex items-center gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nombre o NIT..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        />
+        <>
+            <div className="space-y-6 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
+                        <p className="text-sm text-gray-500 mt-1">Gestiona los terceros (disponibles para todas las unidades)</p>
                     </div>
-                    <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    >
-                        <option value="">Todas las categorías</option>
-                        <option value="servicios_publicos">Servicios Públicos</option>
-                        <option value="seguridad">Seguridad</option>
-                        <option value="aseo">Aseo</option>
-                        <option value="mantenimiento">Mantenimiento</option>
-                        <option value="seguros">Seguros</option>
-                        <option value="legales">Legales</option>
-                        <option value="insumos">Insumos</option>
-                        <option value="otro">Otro</option>
-                    </select>
-
-                    <div className="text-sm text-gray-500">
-                        {filtered.length} de {providers.length} proveedores
-                    </div>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="card overflow-x-auto">
-                {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">Cargando proveedores...</div>
-                ) : providers.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-gray-500">No hay proveedores registrados</p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowBulkImport(true)}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            Importar Excel
+                        </button>
                         <button
                             onClick={() => setShowModal(true)}
-                            className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                         >
-                            + Agregar primer proveedor
+                            <Plus className="w-4 h-4" />
+                            Nuevo Proveedor
                         </button>
                     </div>
-                ) : (
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Proveedor</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">NIT</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Tipo</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Categoría</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">ReteFte</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Docs</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
-                                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {filtered.map((provider: Provider) => (
-                                <tr key={provider.id} className="hover:bg-gray-50/50">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-medium text-gray-900">{provider.name}</p>
-                                            {provider.isRecurring && (
-                                                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
-                                                    🔄
-                                                </span>
-                                            )}
-                                        </div>
-                                        {provider.email && (
-                                            <p className="text-xs text-gray-500">{provider.email}</p>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="font-mono text-sm text-gray-600">{provider.nit}-{provider.dv}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="text-sm text-gray-600">{provider.taxType}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="text-sm text-gray-600 capitalize">{provider.category?.replace('_', ' ') || '-'}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="text-sm text-gray-600">{provider.defaultRetefuentePerc}%</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full ${(provider._count?.documents || 0) > 0
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-gray-100 text-gray-500'
-                                            }`}>
-                                            {provider._count?.documents || 0} docs
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`status-pill ${provider.status === 'ACTIVE' ? 'status-paid' : 'status-pending'}`}>
-                                            {provider.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Link
-                                                to={`/providers/${provider.id}`}
-                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
-                                                title="Ver detalle"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </Link>
-                                            <button
-                                                onClick={() => handleEdit(provider)}
-                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
-                                                title="Editar"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
+                </div>
+
+                {/* Filters */}
+                <div className="card p-4">
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar por nombre o NIT..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                        </div>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                        >
+                            <option value="">Todas las categorías</option>
+                            <option value="servicios_publicos">Servicios Públicos</option>
+                            <option value="seguridad">Seguridad</option>
+                            <option value="aseo">Aseo</option>
+                            <option value="mantenimiento">Mantenimiento</option>
+                            <option value="seguros">Seguros</option>
+                            <option value="legales">Legales</option>
+                            <option value="insumos">Insumos</option>
+                            <option value="otro">Otro</option>
+                        </select>
+
+                        <div className="text-sm text-gray-500">
+                            {filtered.length} de {providers.length} proveedores
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div className="card overflow-x-auto">
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500">Cargando proveedores...</div>
+                    ) : providers.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <p className="text-gray-500">No hay proveedores registrados</p>
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                            >
+                                + Agregar primer proveedor
+                            </button>
+                        </div>
+                    ) : (
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Proveedor</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">NIT</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Tipo</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Categoría</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">ReteFte</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Docs</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
+                                    <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filtered.map((provider: Provider) => (
+                                    <tr key={provider.id} className="hover:bg-gray-50/50">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium text-gray-900">{provider.name}</p>
+                                                {provider.isRecurring && (
+                                                    <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                                                        🔄
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {provider.email && (
+                                                <p className="text-xs text-gray-500">{provider.email}</p>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="font-mono text-sm text-gray-600">{provider.nit}-{provider.dv}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-gray-600">{provider.taxType}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-gray-600 capitalize">{provider.category?.replace('_', ' ') || '-'}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="text-sm text-gray-600">{provider.defaultRetefuentePerc}%</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${(provider._count?.documents || 0) > 0
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                {provider._count?.documents || 0} docs
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`status-pill ${provider.status === 'ACTIVE' ? 'status-paid' : 'status-pending'}`}>
+                                                {provider.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Link
+                                                    to={`/providers/${provider.id}`}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
+                                                    title="Ver detalle"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
+                                                <button
+                                                    onClick={() => handleEdit(provider)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
             </div>
 
-            {/* Modal */}
-            {showModal && (
-                <ProviderModal
-                    provider={editingProvider}
-                    onClose={handleCloseModal}
-                    onSuccess={() => {
-                        handleCloseModal()
-                        queryClient.invalidateQueries({ queryKey: ['providers'] })
-                    }}
-                />
-            )}
+            {/* Modal - Moved outside animate-fade-in to prevent fixed positioning context issues */}
+            {
+                showModal && (
+                    <ProviderModal
+                        provider={editingProvider}
+                        onClose={handleCloseModal}
+                        onSuccess={() => {
+                            handleCloseModal()
+                            queryClient.invalidateQueries({ queryKey: ['providers'] })
+                        }}
+                    />
+                )
+            }
 
             {/* Bulk Import Modal */}
-            {showBulkImport && (
-                <BulkImportModal
-                    onClose={() => setShowBulkImport(false)}
-                    onSuccess={() => {
-                        setShowBulkImport(false)
-                        queryClient.invalidateQueries({ queryKey: ['providers'] })
-                    }}
-                />
-            )}
-        </div>
+            {
+                showBulkImport && (
+                    <BulkImportModal
+                        onClose={() => setShowBulkImport(false)}
+                        onSuccess={() => {
+                            setShowBulkImport(false)
+                            queryClient.invalidateQueries({ queryKey: ['providers'] })
+                        }}
+                    />
+                )
+            }
+        </>
     )
 }
 
