@@ -190,15 +190,21 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                             });
 
                             if (!existing) {
+                                // Prefer AI concept, fallback to email subject
+                                const finalDescription = (concept && concept.length > 3)
+                                    ? concept
+                                    : `Importado: ${(email.subject || 'Sin Asunto').substring(0, 100)}`;
+
                                 const inv = await prisma.invoice.create({
                                     data: {
                                         unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
                                         invoiceDate: date ? new Date(date) : new Date(),
                                         totalAmount, subtotal: totalAmount, status: 'DRAFT',
-                                        description: `Importado: ${email.subject}`, pdfUrl: fileUrl, fileUrl,
+                                        description: finalDescription,
+                                        pdfUrl: fileUrl, fileUrl,
                                         source: 'GMAIL',
-                                        emailSubject: email.subject,
-                                        emailSender: email.from,
+                                        emailSubject: email.subject || 'Sin Asunto',
+                                        emailSender: email.from || 'Desconocido',
                                         emailDate: email.date ? new Date(email.date) : new Date()
                                     }
                                 });

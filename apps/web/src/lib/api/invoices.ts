@@ -19,6 +19,8 @@ export interface Invoice {
     paidAmount?: number
     balance?: number
     monthlyReportId?: string
+    emailSubject?: string
+    source?: string
 }
 
 export async function getInvoices(filters?: { unitId?: string; providerId?: string; status?: string }): Promise<{ invoices: Invoice[] }> {

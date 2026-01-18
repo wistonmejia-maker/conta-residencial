@@ -1004,6 +1004,25 @@ export default function InvoicesPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-gray-900">{inv.provider?.name || 'N/A'}</p>
+                                            {inv.source === 'GMAIL' && inv.emailSubject && (
+                                                <p
+                                                    className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] cursor-pointer hover:text-blue-600 hover:bg-blue-50 rounded px-1 -ml-1 transition-colors flex items-center gap-1 group"
+                                                    title="Clic para copiar asunto"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(inv.emailSubject || '');
+                                                        // Optional: could add a toast here, for now simple browser implementation
+                                                        const el = e.currentTarget;
+                                                        const originalText = el.innerHTML;
+                                                        el.innerHTML = '<span class="font-medium text-emerald-600">¡Copiado!</span>';
+                                                        setTimeout(() => {
+                                                            el.innerHTML = originalText;
+                                                        }, 1000);
+                                                    }}
+                                                >
+                                                    <span className="font-medium text-blue-600 group-hover:underline">Asunto:</span> {inv.emailSubject}
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{new Date(inv.invoiceDate).toLocaleDateString('es-CO')}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-CO') : '-'}</td>

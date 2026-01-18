@@ -94,7 +94,7 @@ export async function classifyAndExtractDocument(
             "invoiceNumber": "Número de factura",
             "totalAmount": 1000,
             "date": "YYYY-MM-DD",
-            "concept": "Genera una descripción profesional basada en los ítems."
+            "concept": "Resumen corto (max 10 palabras) EXACTO de los servicios o trabajos facturados (ej: 'Mantenimiento ascensores', 'Vigilancia Enero', 'Insumos Aseo'). NO uses 'Pago factura' ni cosas genéricas."
         }
     }
 
