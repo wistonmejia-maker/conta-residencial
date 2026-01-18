@@ -291,13 +291,21 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                 })
 
                 if (!response.ok) {
-                    const data = await response.json()
+                    const text = await response.text()
+                    let data
+                    try {
+                        data = JSON.parse(text)
+                    } catch (e) {
+                        // If response is not JSON, use the text as the error message
+                        throw new Error(text || `Error del servidor (${response.status})`)
+                    }
+
                     if (data.error === 'DUPLICATE_INVOICE') {
                         setError(data.message)
                         setUploading(false)
                         return
                     }
-                    throw new Error(data.error || 'Error al crear factura')
+                    throw new Error(data.error || data.message || 'Error al crear factura')
                 }
             }
 
