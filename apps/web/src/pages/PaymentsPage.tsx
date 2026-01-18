@@ -46,7 +46,6 @@ export default function PaymentsPage() {
     const [editPayment, setEditPayment] = useState<any | null>(null)
     const [scanningGmail, setScanningGmail] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [showFeedbackModal, setShowFeedbackModal] = useState(false)
     const [feedbackItem, setFeedbackItem] = useState<{ id: string, type: 'INVOICE' | 'PAYMENT' } | null>(null)
@@ -123,12 +122,9 @@ export default function PaymentsPage() {
         setScanningGmail(true)
         try {
             const res = await scanGmail(unitId)
-            if (res.processedCount > 0) {
-                alert(`¡Éxito! Se han importado ${res.processedCount} documentos. Por favor revisa los BORRADORES.`)
-                queryClient.invalidateQueries({ queryKey: ['payments'] })
-                queryClient.invalidateQueries({ queryKey: ['invoices'] })
-            } else {
-                alert('No se encontraron nuevos soportes o facturas en los correos no leídos.')
+            if (res.success) {
+                alert('Escaneo iniciado en segundo plano. Te notificaremos cuando termine.');
+                // queryClient.invalidateQueries({ queryKey: ['payments'] }) // Don't invalidate yet, wait for completion or poll
             }
         } catch (error) {
             console.error('Error scanning Gmail:', error)
