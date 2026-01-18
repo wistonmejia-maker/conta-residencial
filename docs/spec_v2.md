@@ -182,7 +182,7 @@ Sistema de escaneo programado con rango de búsqueda configurable.
 - **Prioridad de filtro**: Días relativos > Fecha fija > Default 1 día
 
 # 11. Motor de Inferencia Fiscal (IA Híbrida)
-Sistema inteligente para la sugerencia de retenciones fiscales en facturas.
+> **Implementado**: Sistema inteligente para la sugerencia de retenciones fiscales en facturas.
 
 - **Objetivo**: Reducir la carga operativa sugiriendo valores contables (Retefuente, ReteICA) basados en el análisis del documento y normas nacionales.
 - **Componentes**:
@@ -204,7 +204,7 @@ El sistema decide qué valor mostrar en los campos de retención siguiendo este 
     - El usuario siempre puede editar el campo final.
 
 # 12. Asistente Financiero (CFO Virtual)
-Interfaz de chat flotante para consultas en lenguaje natural sobre el estado financiero.
+> **Implementado**: Interfaz de chat flotante para consultas en lenguaje natural sobre el estado financiero.
 
 - **Componente UI**: `AIChatWidget.tsx` (Botón flotante en esquina inferior derecha).
 - **Estilos**: Requiere clases `.ai-gradient` y `.ai-pulse` en `index.css`.
@@ -225,3 +225,16 @@ Interfaz de chat flotante para consultas en lenguaje natural sobre el estado fin
   - Endpoint `/chat`: Retorna nuevas sugerencias basadas en el historial tras cada mensaje.
   - **Lógica**: Análisis de frecuencia de las últimas 50 consultas de la Unidad.
 - **UX**: Sugerencias persistentes (Chips) que no desaparecen, facilitando la navegación continua.
+
+# 14. Futuro / Roadmap (Pendientes)
+Funcionalidades soportadas por la Base de Datos pero aún no implementadas en el Frontend/Backend completo.
+
+## 14.1. Feedback Explícito (Reglas de Negocio)
+> **Estado**: Planificado (Schema Ready)
+
+- **Objetivo**: Permitir al usuario corregir a la IA cuando sugiere una regla contable incorrecta.
+- **Persistencia**: Tabla `AIFeedback` (Ya existe en Schema).
+- **Flujo**:
+  1. Usuario marca "Regla Incorrecta" en UI.
+  2. Se crea registro en `AIFeedback` con `suggestedRule` y `comment`.
+  3. Sistema de "re-entrenamiento" o ajuste de prompts en batch.
