@@ -81,34 +81,57 @@ router.get('/next-cc-number', async (req, res) => {
     }
 })
 
-// GET single invoice
-router.get('/:id', async (req, res) => {
+// GET invoice summary stats
+router.get('/stats/summary', async (req, res) => {
     try {
-        const invoice = await prisma.invoice.findUnique({
-            where: { id: req.params.id },
-            include: {
-                provider: true,
-                unit: true,
-                paymentItems: {
-                    include: {
-                        payment: true
-                    }
-                }
+        const { unitId } = req.query
+
+        const where: any = unitId ? { unitId: String(unitId) } : {}
+
+        const [pending, partiallyPaid, paid, drafts] = await Promise.all([
+            prisma.invoice.aggregate({
+                where: { ...where, status: 'PENDING' },
+                _sum: { totalAmount: true },
+                _count: true
+            }),
+            prisma.invoice.aggregate({
+                where: { ...where, status: 'PARTIALLY_PAID' },
+                _sum: { totalAmount: true },
+                _count: true
+            }),
+            prisma.invoice.aggregate({
+                where: { ...where, status: 'PAID' },
+                _sum: { totalAmount: true },
+                _count: true
+            }),
+            prisma.invoice.aggregate({
+                where: { ...where, status: 'DRAFT' },
+                _sum: { totalAmount: true },
+                _count: true
+            })
+        ])
+
+        res.json({
+            pending: {
+                count: pending._count + drafts._count,
+                total: Number(pending._sum.totalAmount || 0) + Number(drafts._sum.totalAmount || 0)
+            },
+            partiallyPaid: {
+                count: partiallyPaid._count,
+                total: Number(partiallyPaid._sum.totalAmount || 0)
+            },
+            paid: {
+                count: paid._count,
+                total: Number(paid._sum.totalAmount || 0)
+            },
+            drafts: {
+                count: drafts._count,
+                total: Number(drafts._sum.totalAmount || 0)
             }
         })
-        if (!invoice) {
-            return res.status(404).json({ error: 'Invoice not found' })
-        }
-
-        const paid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
-        res.json({
-            ...invoice,
-            paidAmount: paid,
-            balance: Number(invoice.totalAmount) - paid
-        })
     } catch (error) {
-        console.error('Error fetching invoice:', error)
-        res.status(500).json({ error: 'Error fetching invoice' })
+        console.error('Error fetching invoice stats:', error)
+        res.status(500).json({ error: 'Error fetching stats' })
     }
 })
 
@@ -237,48 +260,34 @@ router.delete('/:id', async (req, res) => {
     }
 })
 
-// GET invoice summary stats
-router.get('/stats/summary', async (req, res) => {
+// GET single invoice
+router.get('/:id', async (req, res) => {
     try {
-        const { unitId } = req.query
-
-        const where: any = unitId ? { unitId: String(unitId) } : {}
-
-        const [pending, partiallyPaid, paid] = await Promise.all([
-            prisma.invoice.aggregate({
-                where: { ...where, status: 'PENDING' },
-                _sum: { totalAmount: true },
-                _count: true
-            }),
-            prisma.invoice.aggregate({
-                where: { ...where, status: 'PARTIALLY_PAID' },
-                _sum: { totalAmount: true },
-                _count: true
-            }),
-            prisma.invoice.aggregate({
-                where: { ...where, status: 'PAID' },
-                _sum: { totalAmount: true },
-                _count: true
-            })
-        ])
-
-        res.json({
-            pending: {
-                count: pending._count,
-                total: Number(pending._sum.totalAmount || 0)
-            },
-            partiallyPaid: {
-                count: partiallyPaid._count,
-                total: Number(partiallyPaid._sum.totalAmount || 0)
-            },
-            paid: {
-                count: paid._count,
-                total: Number(paid._sum.totalAmount || 0)
+        const invoice = await prisma.invoice.findUnique({
+            where: { id: req.params.id },
+            include: {
+                provider: true,
+                unit: true,
+                paymentItems: {
+                    include: {
+                        payment: true
+                    }
+                }
             }
         })
+        if (!invoice) {
+            return res.status(404).json({ error: 'Invoice not found' })
+        }
+
+        const paid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
+        res.json({
+            ...invoice,
+            paidAmount: paid,
+            balance: Number(invoice.totalAmount) - paid
+        })
     } catch (error) {
-        console.error('Error fetching invoice stats:', error)
-        res.status(500).json({ error: 'Error fetching stats' })
+        console.error('Error fetching invoice:', error)
+        res.status(500).json({ error: 'Error fetching invoice' })
     }
 })
 

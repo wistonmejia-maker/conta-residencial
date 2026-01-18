@@ -694,603 +694,601 @@ export default function InvoicesPage() {
             queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
         }
     }, [scanState.status, scanState.processedEmails, lastProcessedCount, queryClient])
-}
-    }, [scanState.status, scanState.processedEmails, queryClient]);
 
 
-const handleGmailScan = async () => {
-    if (!unitId) return
+    const handleGmailScan = async () => {
+        if (!unitId) return
 
-    if (startBackgroundScan) {
-        await startBackgroundScan(unitId);
-    } else {
-        // Fallback if context not ready (shouldn't happen)
-        console.error("AI Context not ready");
+        if (startBackgroundScan) {
+            await startBackgroundScan(unitId);
+        } else {
+            // Fallback if context not ready (shouldn't happen)
+            console.error("AI Context not ready");
+        }
     }
-}
 
-const handleApproveInvoice = async (id: string) => {
-    try {
-        await updateInvoice(id, { status: 'PENDING' })
-        queryClient.invalidateQueries({ queryKey: ['invoices'] })
-        queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
-    } catch (error) {
-        console.error('Error approving invoice:', error)
-        alert('Error al aprobar la factura.')
+    const handleApproveInvoice = async (id: string) => {
+        try {
+            await updateInvoice(id, { status: 'PENDING' })
+            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+        } catch (error) {
+            console.error('Error approving invoice:', error)
+            alert('Error al aprobar la factura.')
+        }
     }
-}
 
-if (!unitId) {
-    return <div className="p-8 text-center text-gray-500">Selecciona una copropiedad para continuar.</div>
-}
-
-// Feedback State
-const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-const [feedbackItem, setFeedbackItem] = useState<any>(null)
-const [feedbackComment, setFeedbackComment] = useState('')
-const [suggestedRule, setSuggestedRule] = useState('')
-
-const handleOpenFeedback = (inv: any) => {
-    setFeedbackItem(inv)
-    setFeedbackComment('')
-    setSuggestedRule('')
-    setShowFeedbackModal(true)
-}
-
-const handleSendFeedback = async () => {
-    if (!feedbackItem || !feedbackComment) return;
-
-    try {
-        await sendAIFeedback({
-            unitId,
-            documentType: 'INVOICE',
-            invoiceId: feedbackItem.id,
-            comment: feedbackComment,
-            suggestedRule
-        });
-        alert('Gracias por tu feedback. Hemos registrado la regla para mejorar la IA.');
-        setShowFeedbackModal(false);
-        setFeedbackItem(null);
-    } catch (error) {
-        console.error('Error sending feedback:', error);
-        alert('Error al enviar feedback');
+    if (!unitId) {
+        return <div className="p-8 text-center text-gray-500">Selecciona una copropiedad para continuar.</div>
     }
-}
 
-return (
-    <>
-        {/* AI Processing Overlay for Gmail Scan */}
-        <AIProcessingOverlay
-            visible={showOverlay}
-            message={scanState.message || 'Iniciando escaneo...'}
-            subMessage="Esto puede tomar unos minutos dependiendo de la cantidad de correos."
-            progress={scanState.progress > 0 ? scanState.progress : undefined}
-            estimatedTime={undefined}
-            onMinimize={minimizeScanUI}
-        />
+    // Feedback State
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+    const [feedbackItem, setFeedbackItem] = useState<any>(null)
+    const [feedbackComment, setFeedbackComment] = useState('')
+    const [suggestedRule, setSuggestedRule] = useState('')
 
-        {/* Feedback Modal */}
-        {showFeedbackModal && feedbackItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-                                <Brain className="w-5 h-5" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900">Ayúdanos a Mejorar</h3>
-                        </div>
-                        <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-gray-600">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
+    const handleOpenFeedback = (inv: any) => {
+        setFeedbackItem(inv)
+        setFeedbackComment('')
+        setSuggestedRule('')
+        setShowFeedbackModal(true)
+    }
 
-                    <div className="p-6 space-y-4 overflow-y-auto">
-                        <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
-                            <p><strong>Documento:</strong> {feedbackItem.invoiceNumber}</p>
-                            <p><strong>Fuente:</strong> {feedbackItem.source || 'GMAIL'}</p>
-                            <p><strong>Asunto:</strong> {feedbackItem.emailSubject || 'N/A'}</p>
-                        </div>
+    const handleSendFeedback = async () => {
+        if (!feedbackItem || !feedbackComment) return;
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">¿Qué está mal?</label>
-                            <textarea
-                                className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                rows={3}
-                                placeholder="Ej: El proveedor no es correcto, clasificó mal la fecha..."
-                                value={feedbackComment}
-                                onChange={(e) => setFeedbackComment(e.target.value)}
-                            />
-                        </div>
+        try {
+            await sendAIFeedback({
+                unitId,
+                documentType: 'INVOICE',
+                invoiceId: feedbackItem.id,
+                comment: feedbackComment,
+                suggestedRule
+            });
+            alert('Gracias por tu feedback. Hemos registrado la regla para mejorar la IA.');
+            setShowFeedbackModal(false);
+            setFeedbackItem(null);
+        } catch (error) {
+            console.error('Error sending feedback:', error);
+            alert('Error al enviar feedback');
+        }
+    }
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Regla Sugerida (Opcional)</label>
-                            <textarea
-                                className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-indigo-50/50"
-                                rows={2}
-                                placeholder="Ej: Si el asunto dice 'Cuenta de Cobro', ignorar..."
-                                value={suggestedRule}
-                                onChange={(e) => setSuggestedRule(e.target.value)}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Esta regla se añadirá a nuestra base de conocimiento para entrenar a la IA.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                        <button
-                            onClick={() => setShowFeedbackModal(false)}
-                            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleSendFeedback}
-                            disabled={!feedbackComment}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <Send className="w-4 h-4" />
-                            Enviar Feedback
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-
-        <div className="space-y-6 animate-fade-in">
-            {/* Header */}
-
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Facturas (CxP)</h1>
-                    <p className="text-sm text-gray-500 mt-1">Causación y control de deuda</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    {gmailStatus?.connected ? (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm border border-green-200">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            <span className="font-medium">Conectado: {gmailStatus.email}</span>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => connectGmail(unitId)}
-                            className="px-3 py-2 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2"
-                            title="Conectar cuenta de Gmail para escanear facturas"
-                        >
-                            <Mail className="w-4 h-4" />
-                            Conectar Gmail
-                        </button>
-                    )}
-
-                    <button
-                        onClick={() => setShowPreviewModal(true)}
-                        disabled={!gmailStatus?.connected}
-                        className="px-3 py-2 border border-gray-200 text-gray-700 bg-white rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-                        title="Ver últimos correos para verificar acceso"
-                    >
-                        <Eye className="w-4 h-4" />
-                        Buzón
-                    </button>
-
-                    <AIButton
-                        variant="secondary"
-                        loading={scanningGmail}
-                        disabled={!gmailStatus?.connected}
-                        onClick={handleGmailScan}
-                    >
-                        {scanningGmail ? 'Escaneando...' : 'Escanear Inbox'}
-                    </AIButton>
-
-                    <button
-                        onClick={() => {
-                            const dataToExport = filtered.map((inv: any) => ({
-                                invoiceNumber: inv.invoiceNumber,
-                                provider: inv.provider?.name || '',
-                                invoiceDate: inv.invoiceDate,
-                                dueDate: inv.dueDate,
-                                description: inv.description,
-                                baseAmount: Number(inv.subtotal),
-                                ivaAmount: Number(inv.taxIva),
-                                totalAmount: Number(inv.totalAmount),
-                                status: statusLabels[inv.status] || inv.status
-                            }))
-                            exportToExcel(dataToExport, [
-                                { key: 'invoiceNumber', header: '# Factura' },
-                                { key: 'provider', header: 'Proveedor' },
-                                { key: 'invoiceDate', header: 'Fecha', format: 'date' },
-                                { key: 'dueDate', header: 'Vencimiento', format: 'date' },
-                                { key: 'description', header: 'Descripción' },
-                                { key: 'baseAmount', header: 'Base', format: 'money' },
-                                { key: 'ivaAmount', header: 'IVA', format: 'money' },
-                                { key: 'totalAmount', header: 'Total', format: 'money' },
-                                { key: 'status', header: 'Estado' }
-                            ], `facturas_${new Date().toISOString().split('T')[0]}`)
-                        }}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
-                    >
-                        <Download className="w-4 h-4" />
-                        Exportar
-                    </button>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Registrar Factura
-                    </button>
-                </div>
-            </div>
-
-            {/* DRAFT ATTENTION ALERT */}
-            {invoices.some((inv: any) => inv.status === 'DRAFT') && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-pulse">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg text-purple-700">
-                            <Sparkles className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-purple-900">Facturas en Borrador</p>
-                            <p className="text-xs text-purple-700">Tienes facturas importadas por IA que requieren tu revisión y aprobación.</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setSearch('Borrador')}
-                        className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        Revisar ahora
-                    </button>
-                </div>
-            )}
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="card p-4 border-l-4 border-l-amber-500">
-                    <p className="text-sm text-gray-500">Total Pendiente</p>
-                    <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.pending.total)}</p>
-                    <p className="text-xs text-amber-600 mt-1">{stats.pending.count} facturas</p>
-                </div>
-                <div className="card p-4 border-l-4 border-l-indigo-500">
-                    <p className="text-sm text-gray-500">Pago Parcial</p>
-                    <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.partiallyPaid.total)}</p>
-                    <p className="text-xs text-indigo-600 mt-1">{stats.partiallyPaid.count} facturas</p>
-                </div>
-                <div className="card p-4 border-l-4 border-l-emerald-500">
-                    <p className="text-sm text-gray-500">Pagadas (Mes)</p>
-                    <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.paid.total)}</p>
-                    <p className="text-xs text-emerald-600 mt-1">{stats.paid.count} facturas</p>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="card p-4">
-                <div className="flex items-center gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar factura o proveedor..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="card overflow-x-auto">
-                {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">Cargando facturas...</div>
-                ) : invoices.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-gray-500">No hay facturas registradas</p>
-                        <button onClick={() => setShowModal(true)} className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-                            + Registrar primera factura
-                        </button>
-                    </div>
-                ) : (
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3"># Factura</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Proveedor</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Fecha</th>
-                                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Vencimiento</th>
-                                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Total</th>
-                                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Saldo</th>
-                                <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Soporte</th>
-                                <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
-                                <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {filtered.map((inv: Invoice & { provider?: { name: string }; balance?: number; fileUrl?: string }) => (
-                                <tr key={inv.id} className="hover:bg-gray-50/50">
-                                    <td className="px-4 py-3">
-                                        <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
-                                        {inv.source === 'GMAIL' && (
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
-                                                    <Mail className="w-3 h-3" /> Gmail
-                                                </span>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <p className="font-medium text-gray-900">{inv.provider?.name || 'N/A'}</p>
-                                        {inv.source === 'GMAIL' && inv.emailSubject && (
-                                            <p
-                                                className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] cursor-pointer hover:text-blue-600 hover:bg-blue-50 rounded px-1 -ml-1 transition-colors flex items-center gap-1 group"
-                                                title="Clic para copiar asunto"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigator.clipboard.writeText(inv.emailSubject || '');
-                                                    // Optional: could add a toast here, for now simple browser implementation
-                                                    const el = e.currentTarget;
-                                                    const originalText = el.innerHTML;
-                                                    el.innerHTML = '<span class="font-medium text-emerald-600">¡Copiado!</span>';
-                                                    setTimeout(() => {
-                                                        el.innerHTML = originalText;
-                                                    }, 1000);
-                                                }}
-                                            >
-                                                <span className="font-medium text-blue-600 group-hover:underline">Asunto:</span> {inv.emailSubject}
-                                            </p>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">{new Date(inv.invoiceDate).toLocaleDateString('es-CO')}</td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-CO') : '-'}</td>
-                                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatMoney(Number(inv.totalAmount))}</td>
-                                    <td className="px-4 py-3 text-right font-semibold text-amber-600">{formatMoney(inv.balance ?? Number(inv.totalAmount))}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            {inv.fileUrl && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        try {
-                                                            const url = inv.fileUrl!
-                                                            if (url.startsWith('data:')) {
-                                                                const parts = url.split(',')
-                                                                if (parts.length < 2) throw new Error('Invalid data URI')
-                                                                const byteString = atob(parts[1])
-                                                                const mimeType = parts[0].split(':')[1]?.split(';')[0] || 'application/pdf'
-                                                                const ab = new ArrayBuffer(byteString.length)
-                                                                const ia = new Uint8Array(ab)
-                                                                for (let i = 0; i < byteString.length; i++) {
-                                                                    ia[i] = byteString.charCodeAt(i)
-                                                                }
-                                                                const blob = new Blob([ab], { type: mimeType })
-                                                                window.open(URL.createObjectURL(blob), '_blank')
-                                                            } else {
-                                                                window.open(url, '_blank')
-                                                            }
-                                                        } catch (err) {
-                                                            console.error('Error opening file:', err)
-                                                            alert('Archivo corrupto. Usa el botón de carga para subir uno nuevo.')
-                                                        }
-                                                    }}
-                                                    className="inline-flex items-center justify-center p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                                                    title="Ver Factura"
-                                                >
-                                                    <FileText className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    console.log('Upload button clicked for invoice:', inv.id)
-                                                    setUploadInvoiceId(inv.id)
-                                                    const input = document.getElementById('invoice-upload-input') as HTMLInputElement
-                                                    if (input) {
-                                                        input.click()
-                                                    } else {
-                                                        alert('Error: No se encontró el campo de carga.')
-                                                    }
-                                                }}
-                                                className={`p-1 rounded disabled:opacity-50 ${inv.fileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'}`}
-                                                disabled={uploadingFile && uploadInvoiceId === inv.id}
-                                                title={inv.fileUrl ? "Reemplazar Factura" : "Cargar Factura Original"}
-                                            >
-                                                {uploadingFile && uploadInvoiceId === inv.id ? (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <Upload className="w-4 h-4" />
-                                                )}
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <span className={`status-pill ${statusStyles[inv.status]}`}>
-                                                {statusLabels[inv.status]}
-                                            </span>
-                                            {inv.monthlyReportId && (
-                                                <span title="Incluido en Cierre Contable">
-                                                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            {inv.status === 'DRAFT' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleApproveInvoice(inv.id)
-                                                    }}
-                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                    title="Aprobar Borrador"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    setEditingInvoice(inv)
-                                                    setShowModal(true)
-                                                }}
-                                                disabled={!!inv.monthlyReportId}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title={inv.monthlyReportId ? 'No se puede editar (incluido en cierre)' : 'Editar factura'}
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    handleDeleteInvoice(inv)
-                                                }}
-                                                disabled={deletingId === inv.id || !!inv.monthlyReportId}
-                                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                                title={inv.monthlyReportId ? 'No se puede eliminar (incluido en cierre)' : 'Eliminar factura'}
-                                            >
-                                                {deletingId === inv.id ? (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <Trash2 className="w-4 h-4" />
-                                                )}
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div >
-
-            <input
-                type="file"
-                id="invoice-upload-input"
-                className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={handleFileUpload}
+    return (
+        <>
+            {/* AI Processing Overlay for Gmail Scan */}
+            <AIProcessingOverlay
+                visible={showOverlay}
+                message={scanState.message || 'Iniciando escaneo...'}
+                subMessage="Esto puede tomar unos minutos dependiendo de la cantidad de correos."
+                progress={scanState.progress > 0 ? scanState.progress : undefined}
+                estimatedTime={undefined}
+                onMinimize={minimizeScanUI}
             />
 
-            {/* Modal */}
-            {
-                showModal && (
-                    <InvoiceModal
-                        unitId={unitId}
-                        initialData={editingInvoice}
-                        onClose={() => {
-                            setShowModal(false)
-                            setEditingInvoice(null)
-                        }}
-                        onSuccess={() => {
-                            setShowModal(false)
-                            setEditingInvoice(null)
-                            queryClient.invalidateQueries({ queryKey: ['invoices'] })
-                            queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
-                        }}
-                    />
-                )
-            }
-
-            {/* Gmail Preview Modal */}
-            {
-                showPreviewModal && (
-                    <GmailPreviewModal
-                        unitId={unitId}
-                        onClose={() => setShowPreviewModal(false)}
-                    />
-                )
-            }
-
-            {/* Delete Confirmation Modal */}
-            {
-                showDeleteConfirm && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-                            <div className="p-6 text-center">
-                                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                                    <AlertTriangle className="h-6 w-6 text-red-600" />
+            {/* Feedback Modal */}
+            {showFeedbackModal && feedbackItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                                    <Brain className="w-5 h-5" />
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">¿Eliminar Factura?</h3>
-                                <p className="text-sm text-gray-500 mb-6">
-                                    Estás a punto de eliminar la factura <span className="font-mono font-medium text-gray-900">{showDeleteConfirm.invoiceNumber}</span> de <span className="font-medium text-gray-900">{showDeleteConfirm.provider?.name}</span> por valor de <span className="font-medium text-gray-900">{formatMoney(Number(showDeleteConfirm.totalAmount))}</span>.
-                                    <br /><br />
-                                    Esta acción no se puede deshacer.
-                                </p>
-                                <div className="flex justify-center gap-3">
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(null)}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                                        disabled={deletingId === showDeleteConfirm.id}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={confirmDelete}
-                                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                                        disabled={deletingId === showDeleteConfirm.id}
-                                    >
-                                        {deletingId === showDeleteConfirm.id && <Loader2 className="w-4 h-4 animate-spin" />}
-                                        {deletingId === showDeleteConfirm.id ? 'Eliminando...' : 'Sí, eliminar'}
-                                    </button>
-                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">Ayúdanos a Mejorar</h3>
                             </div>
+                            <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
-                    </div>
-                )
-            }
 
-            {/* Minimized Progress Widget */}
-            {isScanning && scanState.minimized && (
-                <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-80 animate-slide-up z-50 cursor-pointer hover:shadow-xl transition-shadow ring-1 ring-gray-900/5 group"
-                    onClick={maximizeScanUI}
-                >
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-3">
-                            <div className="relative p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                <Mail className="w-5 h-5 text-indigo-600" />
-                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500 border-2 border-white"></span>
-                                </span>
+                        <div className="p-6 space-y-4 overflow-y-auto">
+                            <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+                                <p><strong>Documento:</strong> {feedbackItem.invoiceNumber}</p>
+                                <p><strong>Fuente:</strong> {feedbackItem.source || 'GMAIL'}</p>
+                                <p><strong>Asunto:</strong> {feedbackItem.emailSubject || 'N/A'}</p>
                             </div>
+
                             <div>
-                                <h4 className="font-semibold text-sm text-gray-900 leading-tight">
-                                    Escanenado Gmail
-                                </h4>
-                                <p className="text-xs text-gray-500 mt-0.5">Segundo plano</p>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">¿Qué está mal?</label>
+                                <textarea
+                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    rows={3}
+                                    placeholder="Ej: El proveedor no es correcto, clasificó mal la fecha..."
+                                    value={feedbackComment}
+                                    onChange={(e) => setFeedbackComment(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Regla Sugerida (Opcional)</label>
+                                <textarea
+                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-indigo-50/50"
+                                    rows={2}
+                                    placeholder="Ej: Si el asunto dice 'Cuenta de Cobro', ignorar..."
+                                    value={suggestedRule}
+                                    onChange={(e) => setSuggestedRule(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Esta regla se añadirá a nuestra base de conocimiento para entrenar a la IA.
+                                </p>
                             </div>
                         </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm('¿Detener monitoreo visual? El proceso seguirá en el servidor.')) {
-                                    dismissScanUI();
-                                }
-                            }}
-                            className="text-gray-400 hover:text-red-600 hover:bg-gray-100 p-1 rounded transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
 
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-medium text-gray-600">
-                            <span className="truncate max-w-[180px]">{scanState.message}</span>
-                            <span>{Math.round(scanState.progress)}%</span>
+                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowFeedbackModal(false)}
+                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSendFeedback}
+                                disabled={!feedbackComment}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                <Send className="w-4 h-4" />
+                                Enviar Feedback
+                            </button>
                         </div>
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-indigo-600 rounded-full transition-all duration-500 ease-out"
-                                style={{ width: `${scanState.progress}%` }}
-                            />
-                        </div>
-                        <p className="text-[10px] text-gray-400 text-center pt-1">Clic para expandir</p>
                     </div>
                 </div>
             )}
-        </div >
-    </>
-)
+
+
+            <div className="space-y-6 animate-fade-in">
+                {/* Header */}
+
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Facturas (CxP)</h1>
+                        <p className="text-sm text-gray-500 mt-1">Causación y control de deuda</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {gmailStatus?.connected ? (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm border border-green-200">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="font-medium">Conectado: {gmailStatus.email}</span>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => connectGmail(unitId)}
+                                className="px-3 py-2 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2"
+                                title="Conectar cuenta de Gmail para escanear facturas"
+                            >
+                                <Mail className="w-4 h-4" />
+                                Conectar Gmail
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setShowPreviewModal(true)}
+                            disabled={!gmailStatus?.connected}
+                            className="px-3 py-2 border border-gray-200 text-gray-700 bg-white rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
+                            title="Ver últimos correos para verificar acceso"
+                        >
+                            <Eye className="w-4 h-4" />
+                            Buzón
+                        </button>
+
+                        <AIButton
+                            variant="secondary"
+                            loading={scanningGmail}
+                            disabled={!gmailStatus?.connected}
+                            onClick={handleGmailScan}
+                        >
+                            {scanningGmail ? 'Escaneando...' : 'Escanear Inbox'}
+                        </AIButton>
+
+                        <button
+                            onClick={() => {
+                                const dataToExport = filtered.map((inv: any) => ({
+                                    invoiceNumber: inv.invoiceNumber,
+                                    provider: inv.provider?.name || '',
+                                    invoiceDate: inv.invoiceDate,
+                                    dueDate: inv.dueDate,
+                                    description: inv.description,
+                                    baseAmount: Number(inv.subtotal),
+                                    ivaAmount: Number(inv.taxIva),
+                                    totalAmount: Number(inv.totalAmount),
+                                    status: statusLabels[inv.status] || inv.status
+                                }))
+                                exportToExcel(dataToExport, [
+                                    { key: 'invoiceNumber', header: '# Factura' },
+                                    { key: 'provider', header: 'Proveedor' },
+                                    { key: 'invoiceDate', header: 'Fecha', format: 'date' },
+                                    { key: 'dueDate', header: 'Vencimiento', format: 'date' },
+                                    { key: 'description', header: 'Descripción' },
+                                    { key: 'baseAmount', header: 'Base', format: 'money' },
+                                    { key: 'ivaAmount', header: 'IVA', format: 'money' },
+                                    { key: 'totalAmount', header: 'Total', format: 'money' },
+                                    { key: 'status', header: 'Estado' }
+                                ], `facturas_${new Date().toISOString().split('T')[0]}`)
+                            }}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <Download className="w-4 h-4" />
+                            Exportar
+                        </button>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Registrar Factura
+                        </button>
+                    </div>
+                </div>
+
+                {/* DRAFT ATTENTION ALERT */}
+                {invoices.some((inv: any) => inv.status === 'DRAFT') && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-pulse">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 rounded-lg text-purple-700">
+                                <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-purple-900">Facturas en Borrador</p>
+                                <p className="text-xs text-purple-700">Tienes facturas importadas por IA que requieren tu revisión y aprobación.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setSearch('Borrador')}
+                            className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                            Revisar ahora
+                        </button>
+                    </div>
+                )}
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="card p-4 border-l-4 border-l-amber-500">
+                        <p className="text-sm text-gray-500">Total Pendiente</p>
+                        <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.pending.total)}</p>
+                        <p className="text-xs text-amber-600 mt-1">{stats.pending.count} facturas</p>
+                    </div>
+                    <div className="card p-4 border-l-4 border-l-indigo-500">
+                        <p className="text-sm text-gray-500">Pago Parcial</p>
+                        <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.partiallyPaid.total)}</p>
+                        <p className="text-xs text-indigo-600 mt-1">{stats.partiallyPaid.count} facturas</p>
+                    </div>
+                    <div className="card p-4 border-l-4 border-l-emerald-500">
+                        <p className="text-sm text-gray-500">Pagadas (Mes)</p>
+                        <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(stats.paid.total)}</p>
+                        <p className="text-xs text-emerald-600 mt-1">{stats.paid.count} facturas</p>
+                    </div>
+                </div>
+
+                {/* Filters */}
+                <div className="card p-4">
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar factura o proveedor..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div className="card overflow-x-auto">
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500">Cargando facturas...</div>
+                    ) : invoices.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <p className="text-gray-500">No hay facturas registradas</p>
+                            <button onClick={() => setShowModal(true)} className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+                                + Registrar primera factura
+                            </button>
+                        </div>
+                    ) : (
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3"># Factura</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Proveedor</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Fecha</th>
+                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Vencimiento</th>
+                                    <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Total</th>
+                                    <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Saldo</th>
+                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Soporte</th>
+                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
+                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filtered.map((inv: Invoice & { provider?: { name: string }; balance?: number; fileUrl?: string }) => (
+                                    <tr key={inv.id} className="hover:bg-gray-50/50">
+                                        <td className="px-4 py-3">
+                                            <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
+                                            {inv.source === 'GMAIL' && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                                                        <Mail className="w-3 h-3" /> Gmail
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <p className="font-medium text-gray-900">{inv.provider?.name || 'N/A'}</p>
+                                            {inv.source === 'GMAIL' && inv.emailSubject && (
+                                                <p
+                                                    className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] cursor-pointer hover:text-blue-600 hover:bg-blue-50 rounded px-1 -ml-1 transition-colors flex items-center gap-1 group"
+                                                    title="Clic para copiar asunto"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(inv.emailSubject || '');
+                                                        // Optional: could add a toast here, for now simple browser implementation
+                                                        const el = e.currentTarget;
+                                                        const originalText = el.innerHTML;
+                                                        el.innerHTML = '<span class="font-medium text-emerald-600">¡Copiado!</span>';
+                                                        setTimeout(() => {
+                                                            el.innerHTML = originalText;
+                                                        }, 1000);
+                                                    }}
+                                                >
+                                                    <span className="font-medium text-blue-600 group-hover:underline">Asunto:</span> {inv.emailSubject}
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{new Date(inv.invoiceDate).toLocaleDateString('es-CO')}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-CO') : '-'}</td>
+                                        <td className="px-4 py-3 text-right font-medium text-gray-900">{formatMoney(Number(inv.totalAmount))}</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-amber-600">{formatMoney(inv.balance ?? Number(inv.totalAmount))}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                {inv.fileUrl && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            try {
+                                                                const url = inv.fileUrl!
+                                                                if (url.startsWith('data:')) {
+                                                                    const parts = url.split(',')
+                                                                    if (parts.length < 2) throw new Error('Invalid data URI')
+                                                                    const byteString = atob(parts[1])
+                                                                    const mimeType = parts[0].split(':')[1]?.split(';')[0] || 'application/pdf'
+                                                                    const ab = new ArrayBuffer(byteString.length)
+                                                                    const ia = new Uint8Array(ab)
+                                                                    for (let i = 0; i < byteString.length; i++) {
+                                                                        ia[i] = byteString.charCodeAt(i)
+                                                                    }
+                                                                    const blob = new Blob([ab], { type: mimeType })
+                                                                    window.open(URL.createObjectURL(blob), '_blank')
+                                                                } else {
+                                                                    window.open(url, '_blank')
+                                                                }
+                                                            } catch (err) {
+                                                                console.error('Error opening file:', err)
+                                                                alert('Archivo corrupto. Usa el botón de carga para subir uno nuevo.')
+                                                            }
+                                                        }}
+                                                        className="inline-flex items-center justify-center p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                        title="Ver Factura"
+                                                    >
+                                                        <FileText className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        console.log('Upload button clicked for invoice:', inv.id)
+                                                        setUploadInvoiceId(inv.id)
+                                                        const input = document.getElementById('invoice-upload-input') as HTMLInputElement
+                                                        if (input) {
+                                                            input.click()
+                                                        } else {
+                                                            alert('Error: No se encontró el campo de carga.')
+                                                        }
+                                                    }}
+                                                    className={`p-1 rounded disabled:opacity-50 ${inv.fileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'}`}
+                                                    disabled={uploadingFile && uploadInvoiceId === inv.id}
+                                                    title={inv.fileUrl ? "Reemplazar Factura" : "Cargar Factura Original"}
+                                                >
+                                                    {uploadingFile && uploadInvoiceId === inv.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Upload className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <span className={`status-pill ${statusStyles[inv.status]}`}>
+                                                    {statusLabels[inv.status]}
+                                                </span>
+                                                {inv.monthlyReportId && (
+                                                    <span title="Incluido en Cierre Contable">
+                                                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {inv.status === 'DRAFT' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleApproveInvoice(inv.id)
+                                                        }}
+                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                        title="Aprobar Borrador"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setEditingInvoice(inv)
+                                                        setShowModal(true)
+                                                    }}
+                                                    disabled={!!inv.monthlyReportId}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title={inv.monthlyReportId ? 'No se puede editar (incluido en cierre)' : 'Editar factura'}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleDeleteInvoice(inv)
+                                                    }}
+                                                    disabled={deletingId === inv.id || !!inv.monthlyReportId}
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    title={inv.monthlyReportId ? 'No se puede eliminar (incluido en cierre)' : 'Eliminar factura'}
+                                                >
+                                                    {deletingId === inv.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div >
+
+                <input
+                    type="file"
+                    id="invoice-upload-input"
+                    className="hidden"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                />
+
+                {/* Modal */}
+                {
+                    showModal && (
+                        <InvoiceModal
+                            unitId={unitId}
+                            initialData={editingInvoice}
+                            onClose={() => {
+                                setShowModal(false)
+                                setEditingInvoice(null)
+                            }}
+                            onSuccess={() => {
+                                setShowModal(false)
+                                setEditingInvoice(null)
+                                queryClient.invalidateQueries({ queryKey: ['invoices'] })
+                                queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+                            }}
+                        />
+                    )
+                }
+
+                {/* Gmail Preview Modal */}
+                {
+                    showPreviewModal && (
+                        <GmailPreviewModal
+                            unitId={unitId}
+                            onClose={() => setShowPreviewModal(false)}
+                        />
+                    )
+                }
+
+                {/* Delete Confirmation Modal */}
+                {
+                    showDeleteConfirm && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+                                <div className="p-6 text-center">
+                                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                                    </div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">¿Eliminar Factura?</h3>
+                                    <p className="text-sm text-gray-500 mb-6">
+                                        Estás a punto de eliminar la factura <span className="font-mono font-medium text-gray-900">{showDeleteConfirm.invoiceNumber}</span> de <span className="font-medium text-gray-900">{showDeleteConfirm.provider?.name}</span> por valor de <span className="font-medium text-gray-900">{formatMoney(Number(showDeleteConfirm.totalAmount))}</span>.
+                                        <br /><br />
+                                        Esta acción no se puede deshacer.
+                                    </p>
+                                    <div className="flex justify-center gap-3">
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(null)}
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                            disabled={deletingId === showDeleteConfirm.id}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={confirmDelete}
+                                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                                            disabled={deletingId === showDeleteConfirm.id}
+                                        >
+                                            {deletingId === showDeleteConfirm.id && <Loader2 className="w-4 h-4 animate-spin" />}
+                                            {deletingId === showDeleteConfirm.id ? 'Eliminando...' : 'Sí, eliminar'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+
+                {/* Minimized Progress Widget */}
+                {isScanning && scanState.minimized && (
+                    <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-80 animate-slide-up z-50 cursor-pointer hover:shadow-xl transition-shadow ring-1 ring-gray-900/5 group"
+                        onClick={maximizeScanUI}
+                    >
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="relative p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                                    <Mail className="w-5 h-5 text-indigo-600" />
+                                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500 border-2 border-white"></span>
+                                    </span>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-sm text-gray-900 leading-tight">
+                                        Escanenado Gmail
+                                    </h4>
+                                    <p className="text-xs text-gray-500 mt-0.5">Segundo plano</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm('¿Detener monitoreo visual? El proceso seguirá en el servidor.')) {
+                                        dismissScanUI();
+                                    }
+                                }}
+                                className="text-gray-400 hover:text-red-600 hover:bg-gray-100 p-1 rounded transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs font-medium text-gray-600">
+                                <span className="truncate max-w-[180px]">{scanState.message}</span>
+                                <span>{Math.round(scanState.progress)}%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-indigo-600 rounded-full transition-all duration-500 ease-out"
+                                    style={{ width: `${scanState.progress}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400 text-center pt-1">Clic para expandir</p>
+                        </div>
+                    </div>
+                )}
+            </div >
+        </>
+    )
 }
 
