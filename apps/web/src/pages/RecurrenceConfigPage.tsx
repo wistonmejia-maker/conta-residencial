@@ -173,109 +173,113 @@ export default function RecurrenceConfigPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Proveedores Recurrentes</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Configura qué proveedores deben facturar cada mes para <span className="font-medium text-indigo-600">{selectedUnit?.name}</span>
-                    </p>
-                </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" />
-                    Agregar Proveedor
-                </button>
-            </div>
-
-            {/* Info Banner */}
-            <div className="card p-4 bg-amber-50 border-amber-200 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                    <p className="font-medium">¿Cómo funcionan las alertas?</p>
-                    <p className="mt-1">
-                        Si un proveedor marcado como recurrente no tiene una factura registrada en el mes actual,
-                        aparecerá una alerta en el Dashboard para recordarte registrarla.
-                    </p>
-                </div>
-            </div>
-
-            {/* Recurring Providers List */}
-            {configsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                </div>
-            ) : recurringConfigs.length === 0 ? (
-                <div className="card p-12 text-center">
-                    <RefreshCw className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay proveedores recurrentes</h3>
-                    <p className="text-gray-500 mb-4">
-                        Agrega proveedores que deben facturar mensualmente para recibir alertas.
-                    </p>
+        <>
+            <div className="space-y-6 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Proveedores Recurrentes</h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Configura qué proveedores deben facturar cada mes para <span className="font-medium text-indigo-600">{selectedUnit?.name}</span>
+                        </p>
+                    </div>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                     >
-                        Agregar Primer Proveedor
+                        <Plus className="w-4 h-4" />
+                        Agregar Proveedor
                     </button>
                 </div>
-            ) : (
-                <div className="card overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr>
-                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">Proveedor</th>
-                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">NIT</th>
-                                <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">Categoría</th>
-                                <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 w-20">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {recurringConfigs.map((c: any) => (
-                                <tr key={c.id} className="hover:bg-gray-50/50">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            <RefreshCw className="w-4 h-4 text-indigo-500" />
-                                            <span className="font-medium text-gray-900">{c.provider.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                                        {c.provider.nit}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <select
-                                            value={c.category || ''}
-                                            onChange={(e) => handleCategoryChange(c, e.target.value)}
-                                            className={`px-2 py-1 text-xs font-medium rounded-lg border-0 cursor-pointer ${categoryOptions.find(o => o.value === c.category)?.color || 'bg-gray-100 text-gray-600'
-                                                }`}
-                                        >
-                                            <option value="">Sin categoría</option>
-                                            {categoryOptions.map((cat: { value: string; label: string }) => (
-                                                <option key={cat.value} value={cat.value}>
-                                                    {cat.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <button
-                                            onClick={() => handleRemove(c)}
-                                            disabled={deleteMutation.isPending}
-                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                            title="Quitar de recurrentes"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+
+                {/* Info Banner */}
+                <div className="card p-4 bg-amber-50 border-amber-200 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-800">
+                        <p className="font-medium">¿Cómo funcionan las alertas?</p>
+                        <p className="mt-1">
+                            Si un proveedor marcado como recurrente no tiene una factura registrada en el mes actual,
+                            aparecerá una alerta en el Dashboard para recordarte registrarla.
+                        </p>
+                    </div>
                 </div>
-            )}
+
+                {/* Recurring Providers List */}
+                {configsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                    </div>
+                ) : recurringConfigs.length === 0 ? (
+                    <div className="card p-12 text-center">
+                        <RefreshCw className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay proveedores recurrentes</h3>
+                        <p className="text-gray-500 mb-4">
+                            Agrega proveedores que deben facturar mensualmente para recibir alertas.
+                        </p>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700"
+                        >
+                            Agregar Primer Proveedor
+                        </button>
+                    </div>
+                ) : (
+                    <div className="card overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">Proveedor</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">NIT</th>
+                                    <th className="text-left px-4 py-3 text-sm font-medium text-gray-600">Categoría</th>
+                                    <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 w-20">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {recurringConfigs.map((c: any) => (
+                                    <tr key={c.id} className="hover:bg-gray-50/50">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <RefreshCw className="w-4 h-4 text-indigo-500" />
+                                                <span className="font-medium text-gray-900">{c.provider.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                                            {c.provider.nit}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <select
+                                                value={c.category || ''}
+                                                onChange={(e) => handleCategoryChange(c, e.target.value)}
+                                                className={`px-2 py-1 text-xs font-medium rounded-lg border-0 cursor-pointer ${categoryOptions.find(o => o.value === c.category)?.color || 'bg-gray-100 text-gray-600'
+                                                    }`}
+                                            >
+                                                <option value="">Sin categoría</option>
+                                                {categoryOptions.map((cat: { value: string; label: string }) => (
+                                                    <option key={cat.value} value={cat.value}>
+                                                        {cat.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button
+                                                onClick={() => handleRemove(c)}
+                                                disabled={deleteMutation.isPending}
+                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                                title="Quitar de recurrentes"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Close Main Animated Div */}
+            </div>
 
             {/* Add Provider Modal */}
             {showAddModal && (
@@ -289,7 +293,7 @@ export default function RecurrenceConfigPage() {
                     }}
                 />
             )}
-        </div>
+        </>
     )
 }
 

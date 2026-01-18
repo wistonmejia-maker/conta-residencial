@@ -1104,134 +1104,134 @@ export default function InvoicesPage() {
                             </tbody>
                         </table>
                     )}
-                </div >
+                </div>
+            </div>
 
-                <input
-                    type="file"
-                    id="invoice-upload-input"
-                    className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={handleFileUpload}
-                />
+            <input
+                type="file"
+                id="invoice-upload-input"
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={handleFileUpload}
+            />
 
-                {/* Modal */}
-                {
-                    showModal && (
-                        <InvoiceModal
-                            unitId={unitId}
-                            initialData={editingInvoice}
-                            onClose={() => {
-                                setShowModal(false)
-                                setEditingInvoice(null)
-                            }}
-                            onSuccess={() => {
-                                setShowModal(false)
-                                setEditingInvoice(null)
-                                queryClient.invalidateQueries({ queryKey: ['invoices'] })
-                                queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
-                            }}
-                        />
-                    )
-                }
+            {/* Modal */}
+            {
+                showModal && (
+                    <InvoiceModal
+                        unitId={unitId}
+                        initialData={editingInvoice}
+                        onClose={() => {
+                            setShowModal(false)
+                            setEditingInvoice(null)
+                        }}
+                        onSuccess={() => {
+                            setShowModal(false)
+                            setEditingInvoice(null)
+                            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+                            queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+                        }}
+                    />
+                )
+            }
 
-                {/* Gmail Preview Modal */}
-                {
-                    showPreviewModal && (
-                        <GmailPreviewModal
-                            unitId={unitId}
-                            onClose={() => setShowPreviewModal(false)}
-                        />
-                    )
-                }
+            {/* Gmail Preview Modal */}
+            {
+                showPreviewModal && (
+                    <GmailPreviewModal
+                        unitId={unitId}
+                        onClose={() => setShowPreviewModal(false)}
+                    />
+                )
+            }
 
-                {/* Delete Confirmation Modal */}
-                {
-                    showDeleteConfirm && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-                                <div className="p-6 text-center">
-                                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                                    </div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">¿Eliminar Factura?</h3>
-                                    <p className="text-sm text-gray-500 mb-6">
-                                        Estás a punto de eliminar la factura <span className="font-mono font-medium text-gray-900">{showDeleteConfirm.invoiceNumber}</span> de <span className="font-medium text-gray-900">{showDeleteConfirm.provider?.name}</span> por valor de <span className="font-medium text-gray-900">{formatMoney(Number(showDeleteConfirm.totalAmount))}</span>.
-                                        <br /><br />
-                                        Esta acción no se puede deshacer.
-                                    </p>
-                                    <div className="flex justify-center gap-3">
-                                        <button
-                                            onClick={() => setShowDeleteConfirm(null)}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                                            disabled={deletingId === showDeleteConfirm.id}
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            onClick={confirmDelete}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                                            disabled={deletingId === showDeleteConfirm.id}
-                                        >
-                                            {deletingId === showDeleteConfirm.id && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            {deletingId === showDeleteConfirm.id ? 'Eliminando...' : 'Sí, eliminar'}
-                                        </button>
-                                    </div>
+            {/* Delete Confirmation Modal */}
+            {
+                showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+                            <div className="p-6 text-center">
+                                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">¿Eliminar Factura?</h3>
+                                <p className="text-sm text-gray-500 mb-6">
+                                    Estás a punto de eliminar la factura <span className="font-mono font-medium text-gray-900">{showDeleteConfirm.invoiceNumber}</span> de <span className="font-medium text-gray-900">{showDeleteConfirm.provider?.name}</span> por valor de <span className="font-medium text-gray-900">{formatMoney(Number(showDeleteConfirm.totalAmount))}</span>.
+                                    <br /><br />
+                                    Esta acción no se puede deshacer.
+                                </p>
+                                <div className="flex justify-center gap-3">
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(null)}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                        disabled={deletingId === showDeleteConfirm.id}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={confirmDelete}
+                                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                                        disabled={deletingId === showDeleteConfirm.id}
+                                    >
+                                        {deletingId === showDeleteConfirm.id && <Loader2 className="w-4 h-4 animate-spin" />}
+                                        {deletingId === showDeleteConfirm.id ? 'Eliminando...' : 'Sí, eliminar'}
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    )
-                }
-
-                {/* Minimized Progress Widget */}
-                {isScanning && scanState.minimized && (
-                    <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-80 animate-slide-up z-50 cursor-pointer hover:shadow-xl transition-shadow ring-1 ring-gray-900/5 group"
-                        onClick={maximizeScanUI}
-                    >
-                        <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="relative p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                    <Mail className="w-5 h-5 text-indigo-600" />
-                                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500 border-2 border-white"></span>
-                                    </span>
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold text-sm text-gray-900 leading-tight">
-                                        Escanenado Gmail
-                                    </h4>
-                                    <p className="text-xs text-gray-500 mt-0.5">Segundo plano</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (confirm('¿Detener monitoreo visual? El proceso seguirá en el servidor.')) {
-                                        dismissScanUI();
-                                    }
-                                }}
-                                className="text-gray-400 hover:text-red-600 hover:bg-gray-100 p-1 rounded transition-colors"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-medium text-gray-600">
-                                <span className="truncate max-w-[180px]">{scanState.message}</span>
-                                <span>{Math.round(scanState.progress)}%</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-indigo-600 rounded-full transition-all duration-500 ease-out"
-                                    style={{ width: `${scanState.progress}%` }}
-                                />
-                            </div>
-                            <p className="text-[10px] text-gray-400 text-center pt-1">Clic para expandir</p>
                         </div>
                     </div>
-                )}
-            </div>
+                )
+            }
+
+            {/* Minimized Progress Widget */}
+            {isScanning && scanState.minimized && (
+                <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-2xl border border-gray-100 p-4 w-80 animate-slide-up z-50 cursor-pointer hover:shadow-xl transition-shadow ring-1 ring-gray-900/5 group"
+                    onClick={maximizeScanUI}
+                >
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className="relative p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                                <Mail className="w-5 h-5 text-indigo-600" />
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500 border-2 border-white"></span>
+                                </span>
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-sm text-gray-900 leading-tight">
+                                    Escanenado Gmail
+                                </h4>
+                                <p className="text-xs text-gray-500 mt-0.5">Segundo plano</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('¿Detener monitoreo visual? El proceso seguirá en el servidor.')) {
+                                    dismissScanUI();
+                                }
+                            }}
+                            className="text-gray-400 hover:text-red-600 hover:bg-gray-100 p-1 rounded transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-xs font-medium text-gray-600">
+                            <span className="truncate max-w-[180px]">{scanState.message}</span>
+                            <span>{Math.round(scanState.progress)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-600 rounded-full transition-all duration-500 ease-out"
+                                style={{ width: `${scanState.progress}%` }}
+                            />
+                        </div>
+                        <p className="text-[10px] text-gray-400 text-center pt-1">Clic para expandir</p>
+                    </div>
+                </div>
+            )}
             {showFeedbackModal && feedbackItem && (
                 <FeedbackModal
                     isOpen={showFeedbackModal}

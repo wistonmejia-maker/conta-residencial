@@ -110,124 +110,128 @@ export default function UnitsPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Unidades</h1>
-                    <p className="text-sm text-gray-500 mt-1">Propiedades horizontales administradas</p>
-                </div>
-                <button
-                    onClick={openCreateModal}
-                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" />
-                    Nueva Unidad
-                </button>
-            </div>
-
-            {/* Units Grid */}
-            {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                </div>
-            ) : units.length === 0 ? (
-                <div className="card p-12 text-center">
-                    <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay unidades registradas</h3>
-                    <p className="text-gray-500 mb-4">Crea tu primera unidad para comenzar.</p>
+        <>
+            <div className="space-y-6 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Unidades</h1>
+                        <p className="text-sm text-gray-500 mt-1">Propiedades horizontales administradas</p>
+                    </div>
                     <button
                         onClick={openCreateModal}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+                        className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2"
                     >
-                        Crear Primera Unidad
+                        <Plus className="w-4 h-4" />
+                        Nueva Unidad
                     </button>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {units.map((unit: Unit) => (
-                        <div
-                            key={unit.id}
-                            onClick={() => handleUnitClick(unit)}
-                            className="card p-5 hover:shadow-md transition-shadow cursor-pointer group hover:ring-2 hover:ring-indigo-500/20"
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
-                                        {unit.logoUrl ? (
-                                            <img
-                                                src={unit.logoUrl}
-                                                alt={unit.name}
-                                                className="w-full h-full object-contain p-1"
-                                                onError={(e) => {
-                                                    // Hide broken image and show fallback icon
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                    const parent = (e.target as HTMLImageElement).parentElement;
-                                                    if (parent && !parent.querySelector('.fallback-icon')) {
-                                                        const icon = document.createElement('div');
-                                                        icon.className = 'fallback-icon';
-                                                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M6 22V4c0-.5.2-1 .6-1.4C7 2.2 7.5 2 8 2h8c.5 0 1 .2 1.4.6.4.4.6.9.6 1.4v18"/><path d="M6 18h12"/><path d="M10 22v-4a2 2 0 0 1 2-2 2 2 0 0 1 2 2v4"/><path d="M2 22h20"/><path d="M9 6h2"/><path d="M9 10h2"/><path d="M13 6h2"/><path d="M13 10h2"/></svg>';
-                                                        parent.appendChild(icon);
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <Building2 className="w-6 h-6 text-indigo-500" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors" title={unit.name}>{unit.name}</h3>
-                                        <p className="text-sm text-gray-500">NIT: {unit.taxId}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={(e) => openEditModal(e, unit)}
-                                        className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-button transition-colors"
-                                        title="Editar"
-                                    >
-                                        <Pencil className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => handleDelete(e, unit)}
-                                        disabled={deleteMutation.isPending}
-                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                        title="Eliminar"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            {unit.address && (
-                                <p className="mt-3 text-sm text-gray-500 pl-15">{unit.address}</p>
-                            )}
-                            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center text-xs text-gray-400">
-                                <span>Consecutivo: CE-{unit.consecutiveSeed || 1}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
 
-            {/* Create/Edit Modal */}
-            {showModal && (
-                <UnitModal
-                    unit={editingUnit}
-                    onClose={() => {
-                        setShowModal(false)
-                        setEditingUnit(null)
-                    }}
-                    onSave={(data) => {
-                        if (editingUnit) {
-                            updateMutation.mutate({ id: editingUnit.id, data })
-                        } else {
-                            createMutation.mutate(data as Omit<Unit, 'id'>)
-                        }
-                    }}
-                    isLoading={createMutation.isPending || updateMutation.isPending}
-                />
-            )}
-        </div>
+                {/* Units Grid */}
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                    </div>
+                ) : units.length === 0 ? (
+                    <div className="card p-12 text-center">
+                        <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay unidades registradas</h3>
+                        <p className="text-gray-500 mb-4">Crea tu primera unidad para comenzar.</p>
+                        <button
+                            onClick={openCreateModal}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+                        >
+                            Crear Primera Unidad
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {units.map((unit: Unit) => (
+                            <div
+                                key={unit.id}
+                                onClick={() => handleUnitClick(unit)}
+                                className="card p-5 hover:shadow-md transition-shadow cursor-pointer group hover:ring-2 hover:ring-indigo-500/20"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
+                                            {unit.logoUrl ? (
+                                                <img
+                                                    src={unit.logoUrl}
+                                                    alt={unit.name}
+                                                    className="w-full h-full object-contain p-1"
+                                                    onError={(e) => {
+                                                        // Hide broken image and show fallback icon
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                        const parent = (e.target as HTMLImageElement).parentElement;
+                                                        if (parent && !parent.querySelector('.fallback-icon')) {
+                                                            const icon = document.createElement('div');
+                                                            icon.className = 'fallback-icon';
+                                                            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-500"><path d="M6 22V4c0-.5.2-1 .6-1.4C7 2.2 7.5 2 8 2h8c.5 0 1 .2 1.4.6.4.4.6.9.6 1.4v18"/><path d="M6 18h12"/><path d="M10 22v-4a2 2 0 0 1 2-2 2 2 0 0 1 2 2v4"/><path d="M2 22h20"/><path d="M9 6h2"/><path d="M9 10h2"/><path d="M13 6h2"/><path d="M13 10h2"/></svg>';
+                                                            parent.appendChild(icon);
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Building2 className="w-6 h-6 text-indigo-500" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors" title={unit.name}>{unit.name}</h3>
+                                            <p className="text-sm text-gray-500">NIT: {unit.taxId}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={(e) => openEditModal(e, unit)}
+                                            className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-button transition-colors"
+                                            title="Editar"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDelete(e, unit)}
+                                            disabled={deleteMutation.isPending}
+                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                                {unit.address && (
+                                    <p className="mt-3 text-sm text-gray-500 pl-15">{unit.address}</p>
+                                )}
+                                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-center text-xs text-gray-400">
+                                    <span>Consecutivo: CE-{unit.consecutiveSeed || 1}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Create/Edit Modal - Moved outside animate-fade-in to fix stacking context */}
+            {
+                showModal && (
+                    <UnitModal
+                        unit={editingUnit}
+                        onClose={() => {
+                            setShowModal(false)
+                            setEditingUnit(null)
+                        }}
+                        onSave={(data) => {
+                            if (editingUnit) {
+                                updateMutation.mutate({ id: editingUnit.id, data })
+                            } else {
+                                createMutation.mutate(data as Omit<Unit, 'id'>)
+                            }
+                        }}
+                        isLoading={createMutation.isPending || updateMutation.isPending}
+                    />
+                )
+            }
+        </>
     )
 }
 
@@ -714,8 +718,8 @@ function UnitModal({
                                                             type="button"
                                                             onClick={() => handleChange('gmailAutoScanEnabled', !form.gmailAutoScanEnabled)}
                                                             className={`flex items-center gap-2 px-3 py-1.5 rounded-button text-xs font-medium transition-all ${form.gmailAutoScanEnabled
-                                                                    ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
-                                                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
+                                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                                                 }`}
                                                         >
                                                             {form.gmailAutoScanEnabled ? (

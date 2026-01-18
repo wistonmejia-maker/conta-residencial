@@ -632,595 +632,598 @@ export default function MonthlyClosurePage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* TABS */}
-            <div className="flex gap-4 border-b border-gray-200">
-                <button
-                    onClick={() => setActiveTab('generate')}
-                    className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'generate'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
-                >
-                    Generar Reporte
-                </button>
-                <button
-                    onClick={() => setActiveTab('audit')}
-                    className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'audit'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
-                >
-                    <Brain className="w-4 h-4" />
-                    Auditor Virtual (IA)
-                </button>
-                <button
-                    onClick={() => setActiveTab('history')}
-                    className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                        }`}
-                >
-                    Historial de Cierres
-                </button>
-            </div>
-
-            {activeTab === 'audit' ? (
-                <div className="space-y-6">
-                    <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-6 border border-indigo-100 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <Brain className="w-32 h-32" />
-                        </div>
-                        <h2 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                            <Brain className="w-6 h-6 text-indigo-600" />
-                            Análisis de Cierre Inteligente
-                        </h2>
-                        <p className="text-sm text-indigo-700 max-w-2xl">
-                            La IA ha analizado los movimientos de este mes para detectar anomalías, validar cumplimiento y sugerir puntos clave para el informe de gestión.
-                        </p>
-                    </div>
-
-                    {isLoadingAudit ? (
-                        <div className="flex flex-col items-center justify-center py-12">
-                            <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
-                            <p className="text-gray-500 font-medium">Auditando transacciones...</p>
-                            <p className="text-gray-400 text-sm">Calculando variaciones y validando soportes</p>
-                        </div>
-                    ) : auditData ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* AI Summary Card */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-gray-600" />
-                                    Resumen Ejecutivo (Sugerido)
-                                </h3>
-                                <div className="bg-gray-50 rounded-lg p-4 text-gray-700 text-sm leading-relaxed border border-gray-100">
-                                    {auditData.aiAnalysis?.summary || 'No hay datos suficientes para generar el resumen.'}
-                                </div>
-                                <div className="mt-4 flex gap-2">
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(auditData.aiAnalysis?.summary || '')
-                                            toast.success('Texto copiado al portapapeles')
-                                        }}
-                                        className="text-xs text-indigo-600 font-medium hover:underline"
-                                    >
-                                        Copiar para informe
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Compliance & Anomalies */}
-                            <div className="space-y-6">
-                                {/* Anomalies */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                        <TrendingUp className="w-5 h-5 text-orange-500" />
-                                        Anomalías de Gasto ({auditData.aiAnalysis?.anomalies?.length || 0})
-                                    </h3>
-                                    {auditData.aiAnalysis?.anomalies?.length > 0 ? (
-                                        <ul className="space-y-3">
-                                            {auditData.aiAnalysis.anomalies.map((anomaly: string, i: number) => (
-                                                <li key={i} className="flex gap-3 text-sm text-gray-600">
-                                                    <AlertOctagon className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-                                                    {anomaly}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
-                                            <CheckCircle className="w-4 h-4" />
-                                            No se detectaron variaciones inusuales.
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Compliance Issues */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                        <AlertOctagon className="w-5 h-5 text-red-500" />
-                                        Alertas de Cumplimiento
-                                    </h3>
-                                    {auditData.complianceIssues?.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {auditData.complianceIssues.map((issue: any, i: number) => (
-                                                <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
-                                                    <p className="text-sm font-semibold text-red-800 mb-1">
-                                                        {issue.type === 'MISSING_INVOICE_SUPPORT' ? 'Facturas sin Soporte (PDF)' : 'Problema de Cumplimiento'}
-                                                    </p>
-                                                    <p className="text-xs text-red-600 mb-2">
-                                                        Se encontraron {issue.count} registros incompletos.
-                                                    </p>
-                                                    <div className="max-h-24 overflow-y-auto pl-4 border-l-2 border-red-200">
-                                                        <ul className="text-xs text-red-700 space-y-1">
-                                                            {issue.details.map((d: string, idx: number) => (
-                                                                <li key={idx}>{d}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
-                                            <CheckCircle className="w-4 h-4" />
-                                            Todos los soportes documentales están en orden.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-12 text-gray-500">
-                            No hay datos para auditar en este periodo.
-                        </div>
-                    )}
+        <>
+            <div className="space-y-6 animate-fade-in">
+                {/* TABS */}
+                <div className="flex gap-4 border-b border-gray-200">
+                    <button
+                        onClick={() => setActiveTab('generate')}
+                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'generate'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Generar Reporte
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('audit')}
+                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'audit'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Brain className="w-4 h-4" />
+                        Auditor Virtual (IA)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`pb-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'history'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Historial de Cierres
+                    </button>
                 </div>
-            ) : activeTab === 'history' ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100">
-                        <h2 className="text-lg font-semibold text-gray-800">Historial de Carpetas Mensuales</h2>
-                    </div>
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-500">
-                            <tr>
-                                <th className="px-6 py-3">Fecha Cierre</th>
-                                <th className="px-6 py-3">Periodo</th>
-                                <th className="px-6 py-3 text-center">Facturas</th>
-                                <th className="px-6 py-3 text-center">Pagos</th>
-                                <th className="px-6 py-3 text-right">Total Egresos</th>
-                                <th className="px-6 py-3 text-center">Estado</th>
-                                <th className="px-6 py-3 text-center">PDF</th>
-                                <th className="px-6 py-3 text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {(historyReports || []).map((report) => (
-                                <tr key={report.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4">{new Date(report.createdAt).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 font-medium text-gray-900 capitalize">{report.month} {report.year}</td>
-                                    <td className="px-6 py-4 text-center">{report._count?.invoices || 0}</td>
-                                    <td className="px-6 py-4 text-center">{report._count?.payments || 0}</td>
-                                    <td className="px-6 py-4 text-right font-medium text-gray-900">{formatMoney(calcReportTotal(report))}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">{report.status}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        {report.pdfUrl ? (
-                                            <button
-                                                onClick={() => window.open(report.pdfUrl!, '_blank')}
-                                                className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                                                title="Descargar PDF"
-                                            >
-                                                <FileText className="w-4 h-4" />
-                                            </button>
-                                        ) : (
-                                            <span className="text-gray-400 text-xs">---</span>
-                                        )}
+
+                {activeTab === 'audit' ? (
+                    <div className="space-y-6">
+                        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-6 border border-indigo-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <Brain className="w-32 h-32" />
+                            </div>
+                            <h2 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                                <Brain className="w-6 h-6 text-indigo-600" />
+                                Análisis de Cierre Inteligente
+                            </h2>
+                            <p className="text-sm text-indigo-700 max-w-2xl">
+                                La IA ha analizado los movimientos de este mes para detectar anomalías, validar cumplimiento y sugerir puntos clave para el informe de gestión.
+                            </p>
+                        </div>
+
+                        {isLoadingAudit ? (
+                            <div className="flex flex-col items-center justify-center py-12">
+                                <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                                <p className="text-gray-500 font-medium">Auditando transacciones...</p>
+                                <p className="text-gray-400 text-sm">Calculando variaciones y validando soportes</p>
+                            </div>
+                        ) : auditData ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* AI Summary Card */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                    <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                        <FileText className="w-5 h-5 text-gray-600" />
+                                        Resumen Ejecutivo (Sugerido)
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-lg p-4 text-gray-700 text-sm leading-relaxed border border-gray-100">
+                                        {auditData.aiAnalysis?.summary || 'No hay datos suficientes para generar el resumen.'}
+                                    </div>
+                                    <div className="mt-4 flex gap-2">
                                         <button
-                                            onClick={() => exportReportToExcel(report)}
-                                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                            title="Exportar Excel"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(auditData.aiAnalysis?.summary || '')
+                                                toast.success('Texto copiado al portapapeles')
+                                            }}
+                                            className="text-xs text-indigo-600 font-medium hover:underline"
                                         >
-                                            <FileSpreadsheet className="w-4 h-4" />
+                                            Copiar para informe
                                         </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={() => setSelectedReport(report)}
-                                                className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                                                title="Ver Detalle"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleReopenReport(report.id)}
-                                                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                                title="Reabrir Cierre"
-                                                disabled={generating}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {(!historyReports || historyReports.length === 0) && (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">No hay cierres registrados aún.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <div className="space-y-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Cierre Mensual</h1>
-                            <p className="text-sm text-gray-500 mt-1">Resumen de egresos y generación de carpeta mensual</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={handleDownloadAccountantPackage}
-                                disabled={filteredPayments.length === 0 || generating}
-                                className="px-4 py-2 bg-brand-100 text-brand-700 hover:bg-brand-200 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
-                                title="Descargar Excel + PDF de Soportes (para Contador)"
-                            >
-                                <Briefcase className="w-4 h-4" />
-                                Paquete Contador
-                            </button>
-                            <button
-                                onClick={handleGenerateFolder}
-                                disabled={filteredPayments.length === 0 || generating}
-                                className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <FolderDown className="w-4 h-4" />
-                                {generating ? 'Generando...' : 'Carpeta Mensual'}
-                            </button>
-                            <button
-                                onClick={handleCloseMonth}
-                                disabled={generating}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <FileText className="w-4 h-4" />
-                                Cerrar Mes
-                            </button>
-                            <button
-                                onClick={exportToExcel}
-                                disabled={filteredPayments.length === 0}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 disabled:opacity-50 hidden"
-                            >
-                                <Download className="w-4 h-4" />
-                                Exportar Excel
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="card p-4">
-                        <div className="flex flex-wrap items-end gap-4">
-                            {/* Date Range */}
-                            <div className="flex items-center gap-2">
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            value={dateFrom}
-                                            onChange={(e) => setDateFrom(e.target.value)}
-                                            className="pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                        />
                                     </div>
                                 </div>
-                                <span className="text-gray-400 pb-2">→</span>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            value={dateTo}
-                                            onChange={(e) => setDateTo(e.target.value)}
-                                            className="pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                        />
+
+                                {/* Compliance & Anomalies */}
+                                <div className="space-y-6">
+                                    {/* Anomalies */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                            <TrendingUp className="w-5 h-5 text-orange-500" />
+                                            Anomalías de Gasto ({auditData.aiAnalysis?.anomalies?.length || 0})
+                                        </h3>
+                                        {auditData.aiAnalysis?.anomalies?.length > 0 ? (
+                                            <ul className="space-y-3">
+                                                {auditData.aiAnalysis.anomalies.map((anomaly: string, i: number) => (
+                                                    <li key={i} className="flex gap-3 text-sm text-gray-600">
+                                                        <AlertOctagon className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                                                        {anomaly}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                                                <CheckCircle className="w-4 h-4" />
+                                                No se detectaron variaciones inusuales.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Compliance Issues */}
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                            <AlertOctagon className="w-5 h-5 text-red-500" />
+                                            Alertas de Cumplimiento
+                                        </h3>
+                                        {auditData.complianceIssues?.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {auditData.complianceIssues.map((issue: any, i: number) => (
+                                                    <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                                                        <p className="text-sm font-semibold text-red-800 mb-1">
+                                                            {issue.type === 'MISSING_INVOICE_SUPPORT' ? 'Facturas sin Soporte (PDF)' : 'Problema de Cumplimiento'}
+                                                        </p>
+                                                        <p className="text-xs text-red-600 mb-2">
+                                                            Se encontraron {issue.count} registros incompletos.
+                                                        </p>
+                                                        <div className="max-h-24 overflow-y-auto pl-4 border-l-2 border-red-200">
+                                                            <ul className="text-xs text-red-700 space-y-1">
+                                                                {issue.details.map((d: string, idx: number) => (
+                                                                    <li key={idx}>{d}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                                                <CheckCircle className="w-4 h-4" />
+                                                Todos los soportes documentales están en orden.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Quick filters */}
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setQuickFilter('thisMonth')}
-                                    className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
-                                >
-                                    Este mes
-                                </button>
-                                <button
-                                    onClick={() => setQuickFilter('lastMonth')}
-                                    className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
-                                >
-                                    Mes anterior
-                                </button>
-                                <button
-                                    onClick={() => setQuickFilter('last3Months')}
-                                    className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
-                                >
-                                    Últimos 3 meses
-                                </button>
-                            </div>
-
-                            {/* Provider filter */}
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Proveedor</label>
-                                <div className="relative">
-                                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <select
-                                        value={selectedProvider}
-                                        onChange={(e) => setSelectedProvider(e.target.value)}
-                                        className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
-                                    >
-                                        <option value="">Todos los proveedores</option>
-                                        {providers.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="card p-4 border-l-4 border-l-gray-400">
-                            <p className="text-sm text-gray-500">Total Bruto</p>
-                            <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(totals.gross)}</p>
-                            <p className="text-xs text-gray-500 mt-1">{filteredPayments.length} egresos</p>
-                        </div>
-                        <div className="card p-4 border-l-4 border-l-red-400">
-                            <p className="text-sm text-gray-500">Retención Fuente</p>
-                            <p className="text-xl font-bold text-red-600 mt-1">-{formatMoney(totals.retefuente)}</p>
-                        </div>
-                        <div className="card p-4 border-l-4 border-l-orange-400">
-                            <p className="text-sm text-gray-500">Retención ICA</p>
-                            <p className="text-xl font-bold text-orange-600 mt-1">-{formatMoney(totals.reteica)}</p>
-                        </div>
-                        <div className="card p-4 border-l-4 border-l-emerald-500">
-                            <p className="text-sm text-gray-500">Total Neto Pagado</p>
-                            <p className="text-xl font-bold text-emerald-600 mt-1">{formatMoney(totals.net)}</p>
-                        </div>
-                    </div>
-
-                    {/* Data Table */}
-                    <div className="card overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                                <FileSpreadsheet className="w-4 h-4" />
-                                Detalle de Novedades
-                            </h3>
-                            <span className="text-sm text-gray-500">{filteredPayments.length} registros</span>
-                        </div>
-
-                        {isLoading ? (
-                            <div className="p-8 text-center text-gray-500">Cargando...</div>
-                        ) : filteredPayments.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500">
-                                No hay egresos en el período seleccionado
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 text-xs uppercase text-gray-500 tracking-wider">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left font-semibold">CE</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Fecha</th>
-                                            <th className="px-4 py-3 text-left font-semibold">Beneficiario</th>
-                                            <th className="px-4 py-3 text-left font-semibold">NIT</th>
-                                            <th className="px-4 py-3 text-right font-semibold">Valor Bruto</th>
-                                            <th className="px-4 py-3 text-right font-semibold">ReteFte</th>
-                                            <th className="px-4 py-3 text-right font-semibold">ReteICA</th>
-                                            <th className="px-4 py-3 text-right font-semibold">Valor Neto</th>
-                                            <th className="px-4 py-3 text-center font-semibold">Conciliación</th>
-                                            <th className="px-4 py-3 text-center font-semibold">PILA</th>
-                                            <th className="px-4 py-3 text-center font-semibold">Soporte</th>
-                                            <th className="px-4 py-3 text-center font-semibold">Factura</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredPayments.map(payment => (
-                                            <tr key={payment.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3">
-                                                    {payment.consecutiveNumber ? (
-                                                        <button
-                                                            onClick={() => handlePreviewVoucher(payment)}
-                                                            className="font-mono text-sm bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-100 hover:underline cursor-pointer transition-colors"
-                                                            title="Ver Comprobante de Egreso"
-                                                        >
-                                                            CE-{payment.consecutiveNumber}
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400">EXTERNO</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-600">{formatDate(payment.paymentDate)}</td>
-                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{payment.provider?.name || 'N/A'}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500 font-mono">{(payment.provider as any)?.nit || '-'}</td>
-                                                <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{formatMoney(Number(payment.amountPaid))}</td>
-                                                <td className="px-4 py-3 text-sm text-right text-red-600">
-                                                    {Number(payment.retefuenteApplied) > 0 ? `-${formatMoney(Number(payment.retefuenteApplied))}` : '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-right text-orange-600">
-                                                    {Number(payment.reteicaApplied) > 0 ? `-${formatMoney(Number(payment.reteicaApplied))}` : '-'}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">{formatMoney(Number(payment.netValue))}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {payment.status === 'CONCILIATED' ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                                            ✓ Conciliado
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                                            Pendiente
-                                                        </span>
-                                                    )}
-                                                    {payment.monthlyReportId && (
-                                                        <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600" title="Incluido en Cierre Contable">
-                                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {(payment as any).pilaFileUrl && (
-                                                            <button
-                                                                onClick={() => openFileUrl((payment as any).pilaFileUrl!)}
-                                                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                                                title="Ver PILA"
-                                                            >
-                                                                <Briefcase className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => {
-                                                                const input = document.createElement('input')
-                                                                input.type = 'file'
-                                                                input.accept = '.pdf'
-                                                                input.onchange = (e) => {
-                                                                    const file = (e.target as HTMLInputElement).files?.[0]
-                                                                    if (file) handlePilaUpload(payment.id, file)
-                                                                }
-                                                                input.click()
-                                                            }}
-                                                            disabled={uploadingPilaId === payment.id}
-                                                            className={`p-1 rounded ${(payment as any).pilaFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-indigo-600 hover:bg-indigo-50'}`}
-                                                            title="Cargar PILA"
-                                                        >
-                                                            {uploadingPilaId === payment.id ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                            ) : (
-                                                                <Upload className="w-4 h-4" />
-                                                            )}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {payment.supportFileUrl ? (
-                                                        <button
-                                                            onClick={() => openFileUrl(payment.supportFileUrl!)}
-                                                            className="inline-flex items-center justify-center p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                                            title="Ver Soporte de Pago"
-                                                        >
-                                                            <FileText className="w-4 h-4" />
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-gray-300">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {/* Check invoiceItems for files */}
-                                                    {(payment as any).invoiceItems && (payment as any).invoiceItems.length > 0 ? (
-                                                        <div className="flex items-center justify-center gap-1">
-                                                            {(payment as any).invoiceItems.map((item: any, idx: number) => (
-                                                                item.invoice?.fileUrl ? (
-                                                                    <button
-                                                                        key={idx}
-                                                                        onClick={() => openFileUrl(item.invoice.fileUrl)}
-                                                                        className="inline-flex items-center justify-center p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                                                                        title={`Ver Factura ${item.invoice.invoiceNumber}`}
-                                                                    >
-                                                                        <FileSpreadsheet className="w-4 h-4" />
-                                                                    </button>
-                                                                ) : null
-                                                            ))}
-                                                            {(payment as any).invoiceItems.every((item: any) => !item.invoice?.fileUrl) && (
-                                                                <span className="text-gray-300">-</span>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-gray-300">-</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    {/* Totals row */}
-                                    <tfoot className="bg-gray-100 font-semibold">
-                                        <tr>
-                                            <td className="px-4 py-3" colSpan={4}>TOTALES</td>
-                                            <td className="px-4 py-3 text-right text-gray-900">{formatMoney(totals.gross)}</td>
-                                            <td className="px-4 py-3 text-right text-red-600">-{formatMoney(totals.retefuente)}</td>
-                                            <td className="px-4 py-3 text-right text-orange-600">-{formatMoney(totals.reteica)}</td>
-                                            <td className="px-4 py-3 text-right text-emerald-600">{formatMoney(totals.net)}</td>
-                                            <td className="px-4 py-3" colSpan={3}></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                            <div className="text-center py-12 text-gray-500">
+                                No hay datos para auditar en este periodo.
                             </div>
                         )}
                     </div>
-
-                    {/* PENDING INVOICES TABLE */}
-                    {pendingInvoices.length > 0 && (
-                        <div className="mt-8">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-indigo-600" />
-                                Facturas Pendientes de Pago (Se incluirán en la carpeta)
-                            </h3>
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-xs text-gray-500 uppercase bg-gray-50/50">
-                                        <tr>
-                                            <th className="px-4 py-3 font-medium">Fecha</th>
-                                            <th className="px-4 py-3 font-medium">Proveedor</th>
-                                            <th className="px-4 py-3 font-medium">Factura #</th>
-                                            <th className="px-4 py-3 font-medium text-right">Valor Total</th>
-                                            <th className="px-4 py-3 font-medium text-right">Saldo Pendiente</th>
-                                            <th className="px-4 py-3 font-medium text-center">Soporte</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {pendingInvoices.map((inv) => (
-                                            <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-4 py-3">{formatDate(inv.invoiceDate)}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-900">{inv.provider?.name || '---'}</td>
-                                                <td className="px-4 py-3 text-gray-600">{inv.invoiceNumber}</td>
-                                                <td className="px-4 py-3 text-right font-medium">{formatMoney(inv.totalAmount)}</td>
-                                                <td className="px-4 py-3 text-right font-bold text-red-600">
-                                                    {formatMoney(inv.balance || inv.totalAmount)}
-                                                    {inv.monthlyReportId && (
-                                                        <span title="Incluido en Cierre Contable">
-                                                            <CheckCircle2 className="inline w-4 h-4 text-blue-600 ml-1" />
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {inv.fileUrl ? (
-                                                        <button
-                                                            onClick={() => openFileUrl(inv.fileUrl!)}
-                                                            className="text-indigo-600 hover:text-indigo-800 p-1 hover:bg-indigo-50 rounded"
-                                                            title="Ver Factura"
-                                                        >
-                                                            <FileSpreadsheet className="w-4 h-4" />
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-gray-400">-</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                ) : activeTab === 'history' ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b border-gray-100">
+                            <h2 className="text-lg font-semibold text-gray-800">Historial de Carpetas Mensuales</h2>
+                        </div>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-xs uppercase font-semibold text-gray-500">
+                                <tr>
+                                    <th className="px-6 py-3">Fecha Cierre</th>
+                                    <th className="px-6 py-3">Periodo</th>
+                                    <th className="px-6 py-3 text-center">Facturas</th>
+                                    <th className="px-6 py-3 text-center">Pagos</th>
+                                    <th className="px-6 py-3 text-right">Total Egresos</th>
+                                    <th className="px-6 py-3 text-center">Estado</th>
+                                    <th className="px-6 py-3 text-center">PDF</th>
+                                    <th className="px-6 py-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {(historyReports || []).map((report) => (
+                                    <tr key={report.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4">{new Date(report.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900 capitalize">{report.month} {report.year}</td>
+                                        <td className="px-6 py-4 text-center">{report._count?.invoices || 0}</td>
+                                        <td className="px-6 py-4 text-center">{report._count?.payments || 0}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-gray-900">{formatMoney(calcReportTotal(report))}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">{report.status}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {report.pdfUrl ? (
+                                                <button
+                                                    onClick={() => window.open(report.pdfUrl!, '_blank')}
+                                                    className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                    title="Descargar PDF"
+                                                >
+                                                    <FileText className="w-4 h-4" />
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">---</span>
+                                            )}
+                                            <button
+                                                onClick={() => exportReportToExcel(report)}
+                                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                                title="Exportar Excel"
+                                            >
+                                                <FileSpreadsheet className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => setSelectedReport(report)}
+                                                    className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                    title="Ver Detalle"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReopenReport(report.id)}
+                                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                                    title="Reabrir Cierre"
+                                                    disabled={generating}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(!historyReports || historyReports.length === 0) && (
+                                    <tr>
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">No hay cierres registrados aún.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">Cierre Mensual</h1>
+                                <p className="text-sm text-gray-500 mt-1">Resumen de egresos y generación de carpeta mensual</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleDownloadAccountantPackage}
+                                    disabled={filteredPayments.length === 0 || generating}
+                                    className="px-4 py-2 bg-brand-100 text-brand-700 hover:bg-brand-200 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                    title="Descargar Excel + PDF de Soportes (para Contador)"
+                                >
+                                    <Briefcase className="w-4 h-4" />
+                                    Paquete Contador
+                                </button>
+                                <button
+                                    onClick={handleGenerateFolder}
+                                    disabled={filteredPayments.length === 0 || generating}
+                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <FolderDown className="w-4 h-4" />
+                                    {generating ? 'Generando...' : 'Carpeta Mensual'}
+                                </button>
+                                <button
+                                    onClick={handleCloseMonth}
+                                    disabled={generating}
+                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Cerrar Mes
+                                </button>
+                                <button
+                                    onClick={exportToExcel}
+                                    disabled={filteredPayments.length === 0}
+                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 disabled:opacity-50 hidden"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Exportar Excel
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                </div>
-            )}
+                        {/* Filters */}
+                        <div className="card p-4">
+                            <div className="flex flex-wrap items-end gap-4">
+                                {/* Date Range */}
+                                <div className="flex items-center gap-2">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="date"
+                                                value={dateFrom}
+                                                onChange={(e) => setDateFrom(e.target.value)}
+                                                className="pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <span className="text-gray-400 pb-2">→</span>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="date"
+                                                value={dateTo}
+                                                onChange={(e) => setDateTo(e.target.value)}
+                                                className="pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Quick filters */}
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setQuickFilter('thisMonth')}
+                                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                                    >
+                                        Este mes
+                                    </button>
+                                    <button
+                                        onClick={() => setQuickFilter('lastMonth')}
+                                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                                    >
+                                        Mes anterior
+                                    </button>
+                                    <button
+                                        onClick={() => setQuickFilter('last3Months')}
+                                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                                    >
+                                        Últimos 3 meses
+                                    </button>
+                                </div>
+
+                                {/* Provider filter */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Proveedor</label>
+                                    <div className="relative">
+                                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <select
+                                            value={selectedProvider}
+                                            onChange={(e) => setSelectedProvider(e.target.value)}
+                                            className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                                        >
+                                            <option value="">Todos los proveedores</option>
+                                            {providers.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="card p-4 border-l-4 border-l-gray-400">
+                                <p className="text-sm text-gray-500">Total Bruto</p>
+                                <p className="text-xl font-bold text-gray-900 mt-1">{formatMoney(totals.gross)}</p>
+                                <p className="text-xs text-gray-500 mt-1">{filteredPayments.length} egresos</p>
+                            </div>
+                            <div className="card p-4 border-l-4 border-l-red-400">
+                                <p className="text-sm text-gray-500">Retención Fuente</p>
+                                <p className="text-xl font-bold text-red-600 mt-1">-{formatMoney(totals.retefuente)}</p>
+                            </div>
+                            <div className="card p-4 border-l-4 border-l-orange-400">
+                                <p className="text-sm text-gray-500">Retención ICA</p>
+                                <p className="text-xl font-bold text-orange-600 mt-1">-{formatMoney(totals.reteica)}</p>
+                            </div>
+                            <div className="card p-4 border-l-4 border-l-emerald-500">
+                                <p className="text-sm text-gray-500">Total Neto Pagado</p>
+                                <p className="text-xl font-bold text-emerald-600 mt-1">{formatMoney(totals.net)}</p>
+                            </div>
+                        </div>
+
+                        {/* Data Table */}
+                        <div className="card overflow-hidden">
+                            <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                                <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                    Detalle de Novedades
+                                </h3>
+                                <span className="text-sm text-gray-500">{filteredPayments.length} registros</span>
+                            </div>
+
+                            {isLoading ? (
+                                <div className="p-8 text-center text-gray-500">Cargando...</div>
+                            ) : filteredPayments.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    No hay egresos en el período seleccionado
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 text-xs uppercase text-gray-500 tracking-wider">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-semibold">CE</th>
+                                                <th className="px-4 py-3 text-left font-semibold">Fecha</th>
+                                                <th className="px-4 py-3 text-left font-semibold">Beneficiario</th>
+                                                <th className="px-4 py-3 text-left font-semibold">NIT</th>
+                                                <th className="px-4 py-3 text-right font-semibold">Valor Bruto</th>
+                                                <th className="px-4 py-3 text-right font-semibold">ReteFte</th>
+                                                <th className="px-4 py-3 text-right font-semibold">ReteICA</th>
+                                                <th className="px-4 py-3 text-right font-semibold">Valor Neto</th>
+                                                <th className="px-4 py-3 text-center font-semibold">Conciliación</th>
+                                                <th className="px-4 py-3 text-center font-semibold">PILA</th>
+                                                <th className="px-4 py-3 text-center font-semibold">Soporte</th>
+                                                <th className="px-4 py-3 text-center font-semibold">Factura</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {filteredPayments.map(payment => (
+                                                <tr key={payment.id} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3">
+                                                        {payment.consecutiveNumber ? (
+                                                            <button
+                                                                onClick={() => handlePreviewVoucher(payment)}
+                                                                className="font-mono text-sm bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-100 hover:underline cursor-pointer transition-colors"
+                                                                title="Ver Comprobante de Egreso"
+                                                            >
+                                                                CE-{payment.consecutiveNumber}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">EXTERNO</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-600">{formatDate(payment.paymentDate)}</td>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{payment.provider?.name || 'N/A'}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-500 font-mono">{(payment.provider as any)?.nit || '-'}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{formatMoney(Number(payment.amountPaid))}</td>
+                                                    <td className="px-4 py-3 text-sm text-right text-red-600">
+                                                        {Number(payment.retefuenteApplied) > 0 ? `-${formatMoney(Number(payment.retefuenteApplied))}` : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-right text-orange-600">
+                                                        {Number(payment.reteicaApplied) > 0 ? `-${formatMoney(Number(payment.reteicaApplied))}` : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">{formatMoney(Number(payment.netValue))}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {payment.status === 'CONCILIATED' ? (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                                ✓ Conciliado
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                                Pendiente
+                                                            </span>
+                                                        )}
+                                                        {payment.monthlyReportId && (
+                                                            <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600" title="Incluido en Cierre Contable">
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {(payment as any).pilaFileUrl && (
+                                                                <button
+                                                                    onClick={() => openFileUrl((payment as any).pilaFileUrl!)}
+                                                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                                                    title="Ver PILA"
+                                                                >
+                                                                    <Briefcase className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    const input = document.createElement('input')
+                                                                    input.type = 'file'
+                                                                    input.accept = '.pdf'
+                                                                    input.onchange = (e) => {
+                                                                        const file = (e.target as HTMLInputElement).files?.[0]
+                                                                        if (file) handlePilaUpload(payment.id, file)
+                                                                    }
+                                                                    input.click()
+                                                                }}
+                                                                disabled={uploadingPilaId === payment.id}
+                                                                className={`p-1 rounded ${(payment as any).pilaFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                                                                title="Cargar PILA"
+                                                            >
+                                                                {uploadingPilaId === payment.id ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <Upload className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {payment.supportFileUrl ? (
+                                                            <button
+                                                                onClick={() => openFileUrl(payment.supportFileUrl!)}
+                                                                className="inline-flex items-center justify-center p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                                                title="Ver Soporte de Pago"
+                                                            >
+                                                                <FileText className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-gray-300">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {/* Check invoiceItems for files */}
+                                                        {(payment as any).invoiceItems && (payment as any).invoiceItems.length > 0 ? (
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {(payment as any).invoiceItems.map((item: any, idx: number) => (
+                                                                    item.invoice?.fileUrl ? (
+                                                                        <button
+                                                                            key={idx}
+                                                                            onClick={() => openFileUrl(item.invoice.fileUrl)}
+                                                                            className="inline-flex items-center justify-center p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                                            title={`Ver Factura ${item.invoice.invoiceNumber}`}
+                                                                        >
+                                                                            <FileSpreadsheet className="w-4 h-4" />
+                                                                        </button>
+                                                                    ) : null
+                                                                ))}
+                                                                {(payment as any).invoiceItems.every((item: any) => !item.invoice?.fileUrl) && (
+                                                                    <span className="text-gray-300">-</span>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-300">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        {/* Totals row */}
+                                        <tfoot className="bg-gray-100 font-semibold">
+                                            <tr>
+                                                <td className="px-4 py-3" colSpan={4}>TOTALES</td>
+                                                <td className="px-4 py-3 text-right text-gray-900">{formatMoney(totals.gross)}</td>
+                                                <td className="px-4 py-3 text-right text-red-600">-{formatMoney(totals.retefuente)}</td>
+                                                <td className="px-4 py-3 text-right text-orange-600">-{formatMoney(totals.reteica)}</td>
+                                                <td className="px-4 py-3 text-right text-emerald-600">{formatMoney(totals.net)}</td>
+                                                <td className="px-4 py-3" colSpan={3}></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PENDING INVOICES TABLE */}
+                        {pendingInvoices.length > 0 && (
+                            <div className="mt-8">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                    <FileText className="w-5 h-5 text-indigo-600" />
+                                    Facturas Pendientes de Pago (Se incluirán en la carpeta)
+                                </h3>
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-xs text-gray-500 uppercase bg-gray-50/50">
+                                            <tr>
+                                                <th className="px-4 py-3 font-medium">Fecha</th>
+                                                <th className="px-4 py-3 font-medium">Proveedor</th>
+                                                <th className="px-4 py-3 font-medium">Factura #</th>
+                                                <th className="px-4 py-3 font-medium text-right">Valor Total</th>
+                                                <th className="px-4 py-3 font-medium text-right">Saldo Pendiente</th>
+                                                <th className="px-4 py-3 font-medium text-center">Soporte</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {pendingInvoices.map((inv) => (
+                                                <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-4 py-3">{formatDate(inv.invoiceDate)}</td>
+                                                    <td className="px-4 py-3 font-medium text-gray-900">{inv.provider?.name || '---'}</td>
+                                                    <td className="px-4 py-3 text-gray-600">{inv.invoiceNumber}</td>
+                                                    <td className="px-4 py-3 text-right font-medium">{formatMoney(inv.totalAmount)}</td>
+                                                    <td className="px-4 py-3 text-right font-bold text-red-600">
+                                                        {formatMoney(inv.balance || inv.totalAmount)}
+                                                        {inv.monthlyReportId && (
+                                                            <span title="Incluido en Cierre Contable">
+                                                                <CheckCircle2 className="inline w-4 h-4 text-blue-600 ml-1" />
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {inv.fileUrl ? (
+                                                            <button
+                                                                onClick={() => openFileUrl(inv.fileUrl!)}
+                                                                className="text-indigo-600 hover:text-indigo-800 p-1 hover:bg-indigo-50 rounded"
+                                                                title="Ver Factura"
+                                                            >
+                                                                <FileSpreadsheet className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+                )}
 
 
+
+            </div>
 
             {/* Validation Modal */}
             {
@@ -1396,7 +1399,7 @@ export default function MonthlyClosurePage() {
           }
         }
       `}</style>
-        </div >
+        </>
     )
 }
 

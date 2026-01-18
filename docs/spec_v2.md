@@ -75,6 +75,29 @@ Sistema de diseño unificado en Tailwind CSS aplicado globalmente.
   - `MonthlyClosurePage`
   - `DashboardPage`
 
+## 5.1. Manejo de Modales (Stacking Context)
+Regla arquitectónica crítica para evitar problemas de visualización ("pantalla gris" o overlays incorrectos).
+
+- **Problema**: `animate-fade-in` (o cualquier `transform`) crea un nuevo *stacking context*, rompiendo el `z-index` de hijos con `position: fixed`.
+- **Solución**: Los Modales **NUNCA** deben ser hijos directos de contenedores animados.
+- **Implementación**:
+  1. Componente Page (`return`): Usar React Fragment `<>` como raíz.
+  2. Contenido principal dentro de `<div className="animate-fade-in">`. 
+  3. Modales ubicados **FUERA** del `div` animado, cerrando el Fragment.
+
+```tsx
+return (
+  <>
+    <div className="animate-fade-in">
+       {/* Contenido de página, tablas, etc */}
+    </div>
+
+    {/* Modales fuera del contexto de animación */}
+    {showModal && <MyModal />}
+  </>
+)
+```
+
 # 6. Objetivos Cumplidos (Refactor Q1 2026)
 - [x] **Unificación de DB**: Renombrado a modelos PascalCase.
 - [x] **Abstracción de IA**: Sistema de prompts dinámicos implementado.
