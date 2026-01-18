@@ -1,4 +1,4 @@
-import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check } from 'lucide-react'
+import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check, MessageSquare } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +7,7 @@ import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
-import { AIButton } from '../components/ui'
+import { AIButton, FeedbackModal } from '../components/ui'
 
 const formatMoney = (value: number) =>
     new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value)
@@ -46,7 +46,10 @@ export default function PaymentsPage() {
     const [editPayment, setEditPayment] = useState<any | null>(null)
     const [scanningGmail, setScanningGmail] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<Payment | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+    const [feedbackItem, setFeedbackItem] = useState<{ id: string, type: 'INVOICE' | 'PAYMENT' } | null>(null)
     const queryClient = useQueryClient()
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -441,6 +444,17 @@ export default function PaymentsPage() {
                                                 {deletingId === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                             <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setFeedbackItem({ id: payment.id, type: 'PAYMENT' })
+                                                    setShowFeedbackModal(true)
+                                                }}
+                                                className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-indigo-600 rounded-lg transition-colors"
+                                                title="Comentar / Reportar error IA"
+                                            >
+                                                <MessageSquare className="w-4 h-4" />
+                                            </button>
+                                            <button
                                                 onClick={() => {
                                                     // Map keys to preview struct
                                                     const UNIT_INFO = {
@@ -586,6 +600,16 @@ export default function PaymentsPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {showFeedbackModal && feedbackItem && (
+                <FeedbackModal
+                    isOpen={showFeedbackModal}
+                    onClose={() => setShowFeedbackModal(false)}
+                    unitId={unitId}
+                    documentType="PAYMENT"
+                    referenceId={feedbackItem.id}
+                />
             )}
         </div>
     )

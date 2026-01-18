@@ -221,11 +221,7 @@ export async function ensureLabel(unitId: string): Promise<string> {
             requestBody: {
                 name: PROCESSED_LABEL_NAME,
                 labelListVisibility: 'labelShow',
-                messageListVisibility: 'show',
-                color: {
-                    backgroundColor: '#2ac766', // Green
-                    textColor: '#ffffff'
-                }
+                messageListVisibility: 'show'
             }
         });
         return created.data.id!;

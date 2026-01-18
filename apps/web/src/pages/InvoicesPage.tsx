@@ -1,4 +1,4 @@
-import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, ChevronDown, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, Brain, Send } from 'lucide-react'
+import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, ChevronDown, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, Eye, Brain, Send, MessageSquare } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +8,7 @@ import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
 import { useAI } from '../lib/AIContext'
-import { AIButton, AIProcessingOverlay, AIConfidenceIndicator } from '../components/ui'
+import { AIButton, AIProcessingOverlay, AIConfidenceIndicator, FeedbackModal } from '../components/ui'
 
 import type { Invoice, Provider } from '../lib/api/index'
 
@@ -94,6 +94,15 @@ function GmailPreviewModal({ unitId, onClose }: { unitId: string; onClose: () =>
                     Nota: El escaneo procesa correos con facturas (PDF/ZIP) recibidos desde la fecha configurada en los ajustes del conjunto.
                 </div>
             </div>
+            {showFeedbackModal && feedbackItem && (
+                <FeedbackModal
+                    isOpen={showFeedbackModal}
+                    onClose={() => setShowFeedbackModal(false)}
+                    unitId={unitId}
+                    documentType="INVOICE"
+                    referenceId={feedbackItem.id}
+                />
+            )}
         </div>
     )
 }
@@ -1190,6 +1199,17 @@ export default function InvoicesPage() {
                                                     title={inv.monthlyReportId ? 'No se puede editar (incluido en cierre)' : 'Editar factura'}
                                                 >
                                                     <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setFeedbackItem({ id: inv.id, type: 'INVOICE' })
+                                                        setShowFeedbackModal(true)
+                                                    }}
+                                                    className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-indigo-600 rounded-lg transition-colors"
+                                                    title="Comentar / Reportar error IA"
+                                                >
+                                                    <MessageSquare className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={(e) => {

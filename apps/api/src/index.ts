@@ -25,7 +25,7 @@ import authRouter from './routes/auth'
 import scanRouter from './routes/scan'
 
 const app = express()
-const PORT = process.env.PORT || 3002
+const PORT = config.PORT
 
 // Middleware
 const allowedOrigins = [
@@ -74,7 +74,7 @@ app.use('/api/ai', aiRouter)
 app.use('/api/budgets', budgetsRouter)
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`🚀 ContaResidencial API running on http://localhost:${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 ContaResidencial API running on http://0.0.0.0:${PORT}`)
 })
 
