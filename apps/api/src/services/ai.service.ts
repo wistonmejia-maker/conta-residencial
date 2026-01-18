@@ -62,6 +62,10 @@ export async function classifyAndExtractDocument(
         }
     }
 
+            "concept": "Pago a [Nombre Proveedor] - [Concepto]"
+        }
+    }
+
     Si es PAYMENT_RECEIPT (Solo Egresos):
     {
         "type": "PAYMENT_RECEIPT",
@@ -72,6 +76,22 @@ export async function classifyAndExtractDocument(
             "date": "YYYY-MM-DD",
             "concept": "Pago a [Nombre Proveedor] - [Concepto]"
         }
+    }
+
+    INSTRUCCIONES PARA RETENCIONES (Sugerencia Experta):
+    Basado en el concepto y el monto base (subtotal), SUGIERE las retenciones aplicables según norma Colombia 2025:
+    - UVT 2025: $49.799
+    - Tarifas comunes: 
+      - Compras (Base 27 UVT): 2.5% declarante
+      - Servicios (Base 4 UVT): 4% (Persona Juridica), 6% (Natural)
+      - Honorarios: 10% o 11%
+    - Si la factura IMPRIME explícitamente la retención, úsala (TYPE="EXTRACTED").
+    - Si no, CALCÚLALA/SUGIERELA (TYPE="SUGGESTED") si aplica por base.
+
+    AGREGA ESTO AL OBJETO "data" (tanto para invoice como payment):
+    "retentions": {
+        "retefuente": { "amount": 0, "rate": 0, "type": "SUGGESTED" }, // type puede ser SUGGESTED o EXTRACTED
+        "reteica": { "amount": 0, "rate": 0, "type": "SUGGESTED" }
     }
 
     Si es OTHER:
@@ -293,7 +313,11 @@ export async function answerFinancialQuery(
     Responde de forma clara, directa y profesional. Si la respuesta requiere cálculos (sumas, promedios), hazlos con precisión basándote en los datos json provistos.
     Si la pregunta no se puede responder con los datos disponibles, indícalo amablemente.
     
-    Tu respuesta debe ser solo texto plano (puedes usar listas o negritas markdown si ayuda a la legibilidad).`;
+    FORMATO OBLIGATORIO:
+    - Usa Markdown para dar formato.
+    - SIEMPRE que listes datos (ej: lista de facturas, gastos por categoría, top proveedores), **USA UNA TABLA MARKDOWN**.
+    - Usa negritas para resaltar montos totales y fechas clave.
+    - Sé conciso.`;
 
     const result = await model.generateContent(prompt);
     return result.response.text();
@@ -428,4 +452,61 @@ export async function analyzeBudgetDeeply(
     }
 
     return { alerts: [], analysis: "No se pudo generar el análisis.", forecast: "" };
+}
+
+export async function logAIQuery(unitId: string, query: string, source: 'CHAT' | 'FEEDBACK' = 'CHAT') {
+    try {
+        // @ts-ignore - Prisma client dynamic property
+        await prisma.aiQueryLog.create({
+            data: { unitId, query, source }
+        });
+    } catch (e) {
+        console.error('Failed to log AI query:', e);
+    }
+}
+
+export async function getSuggestedQuestions(unitId: string): Promise<string[]> {
+    try {
+        // Fetch last 50 queries
+        // @ts-ignore - Prisma client dynamic property
+        const logs = await prisma.aiQueryLog.findMany({
+            where: { unitId },
+            orderBy: { timestamp: 'desc' },
+            take: 50,
+            select: { query: true }
+        });
+
+        // Simple frequency analysis
+        const frequency: Record<string, number> = {};
+        logs.forEach((log: { query: string }) => {
+            const q = log.query.trim();
+            // Filter short queries or noise
+            if (q.length > 4) {
+                frequency[q] = (frequency[q] || 0) + 1;
+            }
+        });
+
+        // Sort by frequency
+        const sorted = Object.entries(frequency)
+            .sort((a, b) => b[1] - a[1])
+            .map(([q]) => q)
+            .slice(0, 3); // Top 3
+
+        if (sorted.length > 0) return sorted;
+
+        // Default feedback if no history
+        return [
+            "¿Cuánto gasté este mes?",
+            "¿Facturas pendientes?",
+            "Compara gastos vs mes anterior"
+        ];
+    } catch (e) {
+        console.error('Failed to get suggestions:', e);
+        // Fallback defaults
+        return [
+            "¿Cuánto gasté este mes?",
+            "¿Facturas pendientes?",
+            "Compara gastos vs mes anterior"
+        ];
+    }
 }

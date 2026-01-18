@@ -1,8 +1,23 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
-import { answerFinancialQuery, analyzeReportData } from '../services/ai.service'
+import { answerFinancialQuery, analyzeReportData, logAIQuery, getSuggestedQuestions } from '../services/ai.service'
 
 const router = Router()
+
+// GET /suggestions
+// Get dynamic suggestions for the user
+router.get('/suggestions', async (req, res) => {
+    try {
+        const { unitId } = req.query
+        if (!unitId) return res.status(400).json({ error: 'unitId required' })
+
+        const suggestions = await getSuggestedQuestions(String(unitId))
+        res.json({ suggestions })
+    } catch (error) {
+        console.error('Error fetching suggestions:', error)
+        res.status(500).json({ error: 'Error fetching suggestions' })
+    }
+})
 
 // POST /chat
 // Natural language interface for financial data
@@ -66,7 +81,11 @@ router.post('/chat', async (req, res) => {
         // 2. Call AI Service
         const answer = await answerFinancialQuery(message, contextData)
 
-        res.json({ answer })
+        // 3. Learning & Suggestions
+        await logAIQuery(unitId, message, 'CHAT')
+        const suggestions = await getSuggestedQuestions(unitId)
+
+        res.json({ answer, suggestions })
 
     } catch (error) {
         console.error('Error in AI chat:', error)

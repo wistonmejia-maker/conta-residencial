@@ -161,23 +161,33 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         const provider = providers.find((p: any) => p.id === form.providerId)
         if (provider) {
             const retefuentePerc = Number(provider.defaultRetefuentePerc) || 0
-            const reteicaPerc = Number(provider.defaultReteicaPerc) || 0 // Assuming this is stored as a percentage (e.g., 0.966 for 9.66 per 1000)
+            const reteicaPerc = Number(provider.defaultReteicaPerc) || 0
 
-            const calcRetefuente = Math.round(form.subtotal * (retefuentePerc / 100))
-            // If reteicaPerc is stored as a percentage (e.g., 0.966 for 9.66 per 1000), then divide by 100
-            // If it's stored as a nominal value (e.g., 9.66 for 9.66 per 1000), then divide by 1000
-            // Let's assume it's a percentage like retefuente, so divide by 100.
-            // If it's per 1000, the DB should store it as 0.00966 or the UI should convert 9.66 to 0.00966.
-            // For now, assuming it's a percentage like retefuente.
-            const calcReteica = Math.round(form.subtotal * (reteicaPerc / 100))
+            // Logic:
+            // 1. If Provider has Default % > 0 -> Calculate and OVERWRITE.
+            // 2. If Provider has Default % == 0 -> Do NOT overwrite (preserve manual input or AI suggestion).
 
-            setForm(f => ({
-                ...f,
-                retefuenteAmount: calcRetefuente,
-                reteicaAmount: calcReteica
-            }))
+            let newRetefuente = form.retefuenteAmount
+            let newReteica = form.reteicaAmount
+
+            if (retefuentePerc > 0) {
+                newRetefuente = Math.round(form.subtotal * (retefuentePerc / 100))
+            }
+
+            if (reteicaPerc > 0) {
+                newReteica = Math.round(form.subtotal * (reteicaPerc / 100))
+            }
+
+            // Only update if changed to avoid loops (though dependency array handles it)
+            if (newRetefuente !== form.retefuenteAmount || newReteica !== form.reteicaAmount) {
+                setForm(f => ({
+                    ...f,
+                    retefuenteAmount: newRetefuente,
+                    reteicaAmount: newReteica
+                }))
+            }
         }
-    }, [form.providerId, form.subtotal, providers]) // Added providers to dependency array
+    }, [form.providerId, form.subtotal, providers])
 
     const handleAIExtract = async (file: File) => {
         setAnalyzing(true)
@@ -206,6 +216,19 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                     } else {
                         setExtractedProvider({ name: data.providerName || 'Proveedor Nuevo', nit: data.nit })
                         setError(`AI extrajo el NIT ${data.nit} (${data.providerName}), pero no coincide con ningún proveedor registrado.`)
+                    }
+                }
+
+                // Handle AI Suggested Retentions
+                if (data.retentions) {
+                    // Only apply if form doesn't have manually set non-zero values OR we want to overwrite
+                    // Logic: If provider has defaults, useEffect will overwrite this locally later.
+                    // But if provider has NO defaults, we want these suggestions to stick.
+                    if (data.retentions.retefuente && data.retentions.retefuente.amount > 0) {
+                        setForm(f => ({ ...f, retefuenteAmount: data.retentions.retefuente.amount }))
+                    }
+                    if (data.retentions.reteica && data.retentions.reteica.amount > 0) {
+                        setForm(f => ({ ...f, reteicaAmount: data.retentions.reteica.amount }))
                     }
                 }
             } else if (analysis.type === 'PAYMENT_RECEIPT') {

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, X, Bot, User, Loader2, Minimize2, Maximize2 } from 'lucide-react'
 import { API_BASE } from '../lib/api/common'
 import { useUnit } from '../lib/UnitContext'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
     id: string
@@ -24,6 +26,7 @@ export function AIChatWidget() {
     ])
     const [inputText, setInputText] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [suggestions, setSuggestions] = useState<string[]>([])
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const unitId = selectedUnit?.id
@@ -37,6 +40,18 @@ export function AIChatWidget() {
             scrollToBottom()
         }
     }, [messages, isOpen, isMinimized])
+
+    // Load suggestions on open
+    useEffect(() => {
+        if (isOpen && unitId) {
+            fetch(`${API_BASE}/ai/suggestions?unitId=${unitId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.suggestions) setSuggestions(data.suggestions)
+                })
+                .catch(err => console.error(err))
+        }
+    }, [isOpen, unitId])
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault()
@@ -72,6 +87,9 @@ export function AIChatWidget() {
             }
 
             setMessages(prev => [...prev, aiMsg])
+            if (data.suggestions && Array.isArray(data.suggestions)) {
+                setSuggestions(data.suggestions)
+            }
         } catch (error) {
             console.error(error)
             setMessages(prev => [...prev, {
@@ -149,16 +167,22 @@ export function AIChatWidget() {
                                         : 'bg-white text-gray-700 border border-gray-200 rounded-tl-none shadow-sm'
                                         }`}
                                 >
-                                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                                    <div className="chat-markdown">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {msg.content}
+                                        </ReactMarkdown>
+                                    </div>
                                     <span className={`text-[10px] block mt-1 ${msg.role === 'user' ? 'text-indigo-200' : 'text-gray-400'}`}>
                                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
-                                {msg.role === 'user' && (
-                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                        <User className="w-4 h-4 text-gray-500" />
-                                    </div>
-                                )}
+                                {
+                                    msg.role === 'user' && (
+                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                            <User className="w-4 h-4 text-gray-500" />
+                                        </div>
+                                    )
+                                }
                             </div>
                         ))}
                         {isLoading && (
@@ -175,28 +199,22 @@ export function AIChatWidget() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Smart Suggestions */}
-                    {messages.length <= 2 && !isLoading && (
+                    {/* Smart Suggestions (Persistent) */}
+                    {!isLoading && suggestions.length > 0 && (
                         <div className="px-3 py-2 bg-white border-t border-gray-100 shrink-0">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-medium">Sugerencias</p>
-                            <div className="flex flex-wrap gap-1.5">
-                                {[
-                                    { emoji: '📊', text: '¿Cuánto gasté este mes?' },
-                                    { emoji: '⚠️', text: '¿Facturas pendientes?' },
-                                    { emoji: '📈', text: 'Compara gastos vs mes anterior' },
-                                    { emoji: '💰', text: '¿Cuál es mi mayor gasto?' },
-                                    { emoji: '🏦', text: 'Estado de cuentas por pagar' },
-                                ].map((suggestion) => (
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 font-medium">Sugerencias {messages.length > 1 && '(Dinámicas)'}</p>
+                            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                                {suggestions.map((text) => (
                                     <button
-                                        key={suggestion.text}
+                                        key={text}
                                         type="button"
                                         onClick={() => {
-                                            setInputText(suggestion.text)
+                                            setInputText(text)
                                         }}
                                         className="text-xs px-2.5 py-1.5 bg-gradient-to-r from-violet-50 to-indigo-50 text-indigo-700 rounded-full border border-indigo-100 hover:from-violet-100 hover:to-indigo-100 hover:border-indigo-200 transition-all flex items-center gap-1 whitespace-nowrap"
                                     >
-                                        <span>{suggestion.emoji}</span>
-                                        <span>{suggestion.text}</span>
+                                        <span>💡</span>
+                                        <span>{text}</span>
                                     </button>
                                 ))}
                             </div>
@@ -225,7 +243,8 @@ export function AIChatWidget() {
                     </form>
 
                 </>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }

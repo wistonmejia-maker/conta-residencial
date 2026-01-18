@@ -46,9 +46,24 @@ model Unit {
   gmailToken         GmailToken?
   budgets            Budget[]
   aiFeedback         AIFeedback[]
+  aiQueryLogs        AIQueryLog[] // Relation to new log table
   aiCustomPrompt     String?              @map("ai_custom_prompt")
 
   @@map("units")
+}
+
+// ... existing models ...
+
+model AIQueryLog {
+  id        String   @id @default(uuid())
+  unitId    String   @map("unit_id")
+  query     String
+  timestamp DateTime @default(now())
+  source    String   @default("CHAT") // 'CHAT', 'FEEDBACK'
+
+  unit Unit @relation(fields: [unitId], references: [id])
+
+  @@map("ai_query_logs")
 }
 
 model Budget {

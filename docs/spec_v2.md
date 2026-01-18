@@ -180,3 +180,48 @@ Sistema de escaneo programado con rango de búsqueda configurable.
   - Diseñado para ejecutarse como un "Cron Job" en Railway.
   - Requiere variables `API_URL` y `CRON_SECRET`.
 - **Prioridad de filtro**: Días relativos > Fecha fija > Default 1 día
+
+# 11. Motor de Inferencia Fiscal (IA Híbrida)
+Sistema inteligente para la sugerencia de retenciones fiscales en facturas.
+
+- **Objetivo**: Reducir la carga operativa sugiriendo valores contables (Retefuente, ReteICA) basados en el análisis del documento y normas nacionales.
+- **Componentes**:
+  - `ai.service.ts`: Prompt enriquecido con normas Colombia 2025 (UVT $49.799, Bases Servicios/Compras).
+  - `InvoicesPage.tsx`: Lógica de prioridad en UI.
+
+## 11.1. Lógica de Prioridad (Cascade)
+El sistema decide qué valor mostrar en los campos de retención siguiendo este orden estricto:
+
+1.  **Configuración del Proveedor (Alta Prioridad)**:
+    - Si el proveedor tiene `defaultRetefuentePerc > 0`, se calcula y **sobrescribe** cualquier otro valor.
+    - *Razón*: La configuración explícita del contador sobre el tercero es la fuente de verdad.
+
+2.  **Sugerencia de IA (Media Prioridad)**:
+    - Si el proveedor NO tiene configuración (0%), se acepta el valor sugerido por la IA (`suggestedRetentions`).
+    - La IA puede haber extraído el valor impreso o haberlo calculado por inferencia de concepto.
+
+3.  **Manual (Intervención)**:
+    - El usuario siempre puede editar el campo final.
+
+# 12. Asistente Financiero (CFO Virtual)
+Interfaz de chat flotante para consultas en lenguaje natural sobre el estado financiero.
+
+- **Componente UI**: `AIChatWidget.tsx` (Botón flotante en esquina inferior derecha).
+- **Estilos**: Requiere clases `.ai-gradient` y `.ai-pulse` en `index.css`.
+- **Renderizado Rico (UX)**:
+  - Implementa `react-markdown` + `remark-gfm` para soportar **Tablas**, Listas y Negritas.
+  - El Prompt del Backend (`answerFinancialQuery`) instruye explícitamente el uso de tablas para listar datos.
+- **Funcionalidad**:
+  - Responde preguntas sobre saldo, gastos por categoría y estado de facturas.
+  - Sugerencias rápidas ("¿Cuánto gasté este mes?").
+  - Identidad: "CFO Virtual" impulsado por Gemini 2.0.
+
+# 13. Módulo de Aprendizaje Continuo (CFO)
+> **Implementado (v1.0)**: Sistema activo que aprende de las interacciones y mejora la relevancia.
+
+- **Persistencia**: Tabla `AIQueryLog` registra cada consulta (filtrado por `unitId`) para análisis de frecuencia.
+- **Sugerencias Dinámicas**:
+  - Endpoint `/suggestions`: Recupera preguntas sugeridas al inicio.
+  - Endpoint `/chat`: Retorna nuevas sugerencias basadas en el historial tras cada mensaje.
+  - **Lógica**: Análisis de frecuencia de las últimas 50 consultas de la Unidad.
+- **UX**: Sugerencias persistentes (Chips) que no desaparecen, facilitando la navegación continua.
