@@ -15,6 +15,7 @@ import paymentsRouter from './routes/payments'
 import bankRouter from './routes/bank'
 import alertsRouter from './routes/alerts'
 import filesRouter from './routes/files'
+import feedbackRouter from './routes/feedback'
 import providerConfigsRouter from './routes/providerConfigs'
 import searchRouter from './routes/search'
 import reportsRouter from './routes/reports'
@@ -65,6 +66,7 @@ app.use('/api/payments', paymentsRouter)
 app.use('/api/bank', bankRouter)
 app.use('/api/alerts', alertsRouter)
 app.use('/api/files', filesRouter)
+app.use('/api/feedback', feedbackRouter) // Added feedback router
 app.use('/api/provider-configs', providerConfigsRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/reports', reportsRouter)

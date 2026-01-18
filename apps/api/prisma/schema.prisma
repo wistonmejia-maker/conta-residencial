@@ -40,6 +40,7 @@ model Unit {
   user_unit_access   user_unit_access[]
   gmailToken         GmailToken?
   budgets            Budget[]
+  aiFeedback         AIFeedback[]
 
   @@map("units")
 }
@@ -162,6 +163,7 @@ model Invoice {
   provider        Provider         @relation(fields: [providerId], references: [id])
   unit            Unit             @relation(fields: [unitId], references: [id])
   paymentItems    PaymentInvoice[]
+  aiFeedback      AIFeedback[]
 
   @@unique([providerId, invoiceNumber], name: "unique_provider_invoice")
   @@map("invoices")
@@ -193,6 +195,7 @@ model Payment {
   emailDate         DateTime?        @map("email_date")
   conciliation      Conciliation?
   invoiceItems      PaymentInvoice[]
+  aiFeedback        AIFeedback[]
   report            MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
   unit              Unit             @relation(fields: [unitId], references: [id])
 
@@ -337,4 +340,23 @@ model ScanningJob {
   completedAt    DateTime? @map("completed_at")
 
   @@map("scanning_jobs")
+}
+
+model AIFeedback {
+  id             String    @id @default(uuid())
+  unitId         String    @map("unit_id")
+  documentType   String    @map("document_type") // INVOICE, PAYMENT
+  invoiceId      String?   @map("invoice_id")
+  paymentId      String?   @map("payment_id")
+  comment        String
+  suggestedRule  String?   @map("suggested_rule")
+  status         String    @default("PENDING")   // PENDING, APPLIED, RESOLVED
+  createdAt      DateTime  @default(now()) @map("created_at")
+  resolvedAt     DateTime? @map("resolved_at")
+  
+  unit           Unit      @relation(fields: [unitId], references: [id])
+  invoice        Invoice?  @relation(fields: [invoiceId], references: [id])
+  payment        Payment?  @relation(fields: [paymentId], references: [id])
+
+  @@map("ai_feedback")
 }

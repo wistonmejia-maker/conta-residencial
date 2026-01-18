@@ -81,3 +81,20 @@ export async function getNextCCNumber(unitId: string): Promise<{ number: string;
     return handleResponse(res, 'Error al obtener próximo número')
 }
 
+
+export async function sendAIFeedback(data: {
+    unitId: string;
+    documentType: 'INVOICE' | 'PAYMENT';
+    referenceId?: string;
+    invoiceId?: string;
+    paymentId?: string;
+    comment: string;
+    suggestedRule?: string;
+}): Promise<any> {
+    const res = await fetch(`${API_BASE}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    return handleResponse(res, 'Error al enviar feedback');
+}

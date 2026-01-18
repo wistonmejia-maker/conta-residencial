@@ -707,6 +707,39 @@ export default function InvoicesPage() {
         return <div className="p-8 text-center text-gray-500">Selecciona una copropiedad para continuar.</div>
     }
 
+    // Feedback State
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+    const [feedbackItem, setFeedbackItem] = useState<any>(null)
+    const [feedbackComment, setFeedbackComment] = useState('')
+    const [suggestedRule, setSuggestedRule] = useState('')
+
+    const handleOpenFeedback = (inv: any) => {
+        setFeedbackItem(inv)
+        setFeedbackComment('')
+        setSuggestedRule('')
+        setShowFeedbackModal(true)
+    }
+
+    const handleSendFeedback = async () => {
+        if (!feedbackItem || !feedbackComment) return;
+
+        try {
+            await sendAIFeedback({
+                unitId,
+                documentType: 'INVOICE',
+                invoiceId: feedbackItem.id,
+                comment: feedbackComment,
+                suggestedRule
+            });
+            alert('Gracias por tu feedback. Hemos registrado la regla para mejorar la IA.');
+            setShowFeedbackModal(false);
+            setFeedbackItem(null);
+        } catch (error) {
+            console.error('Error sending feedback:', error);
+            alert('Error al enviar feedback');
+        }
+    }
+
     return (
         <>
             {/* AI Processing Overlay for Gmail Scan */}
@@ -718,6 +751,76 @@ export default function InvoicesPage() {
                 estimatedTime={undefined}
                 onMinimize={minimizeScanUI}
             />
+
+            {/* Feedback Modal */}
+            {showFeedbackModal && feedbackItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                                    <Brain className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">Ayúdanos a Mejorar</h3>
+                            </div>
+                            <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4 overflow-y-auto">
+                            <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+                                <p><strong>Documento:</strong> {feedbackItem.invoiceNumber}</p>
+                                <p><strong>Fuente:</strong> {feedbackItem.source || 'GMAIL'}</p>
+                                <p><strong>Asunto:</strong> {feedbackItem.emailSubject || 'N/A'}</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">¿Qué está mal?</label>
+                                <textarea
+                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    rows={3}
+                                    placeholder="Ej: El proveedor no es correcto, clasificó mal la fecha..."
+                                    value={feedbackComment}
+                                    onChange={(e) => setFeedbackComment(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Regla Sugerida (Opcional)</label>
+                                <textarea
+                                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-indigo-50/50"
+                                    rows={2}
+                                    placeholder="Ej: Si el asunto dice 'Cuenta de Cobro', ignorar..."
+                                    value={suggestedRule}
+                                    onChange={(e) => setSuggestedRule(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Esta regla se añadirá a nuestra base de conocimiento para entrenar a la IA.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowFeedbackModal(false)}
+                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSendFeedback}
+                                disabled={!feedbackComment}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                <Send className="w-4 h-4" />
+                                Enviar Feedback
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             <div className="space-y-6 animate-fade-in">
                 {/* Header */}
@@ -880,16 +983,23 @@ export default function InvoicesPage() {
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Vencimiento</th>
                                     <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Total</th>
                                     <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Saldo</th>
-                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Soporte Factura</th>
+                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Soporte</th>
                                     <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
                                     <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filtered.map((inv: Invoice & { provider?: { name: string }; balance?: number; fileUrl?: string }) => (
-                                    <tr key={inv.id} className="hover:bg-gray-50/50 cursor-pointer">
+                                    <tr key={inv.id} className="hover:bg-gray-50/50">
                                         <td className="px-4 py-3">
                                             <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
+                                            {inv.source === 'GMAIL' && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                                                        <Mail className="w-3 h-3" /> Gmail
+                                                    </span>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-gray-900">{inv.provider?.name || 'N/A'}</p>
@@ -937,7 +1047,6 @@ export default function InvoicesPage() {
                                                         e.stopPropagation()
                                                         console.log('Upload button clicked for invoice:', inv.id)
                                                         setUploadInvoiceId(inv.id)
-                                                        // This assumes there is an input with id 'invoice-upload-input' in the document
                                                         const input = document.getElementById('invoice-upload-input') as HTMLInputElement
                                                         if (input) {
                                                             input.click()
@@ -1017,7 +1126,7 @@ export default function InvoicesPage() {
                             </tbody>
                         </table>
                     )}
-                </div>
+                </div >
 
                 <input
                     type="file"
@@ -1095,7 +1204,7 @@ export default function InvoicesPage() {
                     )
                 }
 
-            </div>
+            </div >
         </>
     )
 }
