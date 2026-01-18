@@ -50,16 +50,20 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
             const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const isPdf = filename.toLowerCase().endsWith('.pdf');
 
-            // For PDFs, we use 'raw' to avoid "Restricted media types" (401) issues
-            // on accounts where PDF delivery is blocked by default and the setting is hidden.
+            // For PDFs, we use 'raw' to avoid "Restricted media types" (401) issues.
+            // Additionally, we MUST change the extension/suffix because the account blocks ".pdf" 
+            // specifically, regardless of resource_type.
             const resType: 'image' | 'auto' | 'raw' = isPdf ? 'raw' : 'auto';
+            const publicId = isPdf
+                ? safeName + '_secure' // Appending suffix avoids ".pdf" strict block
+                : safeName.replace(/\.[^/.]+$/, "");
 
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: `conta-residencial/${folder}`,
                     resource_type: resType,
                     // Cloudinary best practice: no extension for 'image', yes for 'raw'
-                    public_id: resType === ('raw' as any) ? safeName : safeName.replace(/\.[^/.]+$/, "")
+                    public_id: publicId
                 },
                 (error: any, result: any) => {
                     if (error) {
