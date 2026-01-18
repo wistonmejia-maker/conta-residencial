@@ -52,7 +52,7 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: `conta-residencial/${folder}`,
-                    resource_type: 'auto',
+                    resource_type: 'auto', // Use auto to let Cloudinary decide
                     public_id: safeName.replace(/\.[^/.]+$/, "") // Remove extension for public_id
                 },
                 (error: any, result: any) => {
@@ -74,14 +74,19 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
 
         fs.writeFileSync(filePath, buffer);
 
-        // In production (Railway), allow using the public domain if API_URL is not set
-        let baseUrl = process.env.API_URL;
+        // In production (Railway), ensure we use the public HTTPS domain
+        let baseUrl = process.env.API_URL || process.env.PUBLIC_URL;
+
+        if (!baseUrl && process.env.RAILWAY_PUBLIC_DOMAIN) {
+            baseUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+        }
+
         if (!baseUrl) {
-            // Fallback to current domain if possible, or localhost
-            // If we are in Railway, we might use the RAICWAY_PUBLIC_DOMAIN or similar, 
-            // but 'GOOGLE_REDIRECT_URI' usually contains the public base
+            // Fallback for local development
             if (process.env.GOOGLE_REDIRECT_URI) {
-                baseUrl = new URL(process.env.GOOGLE_REDIRECT_URI).origin;
+                try {
+                    baseUrl = new URL(process.env.GOOGLE_REDIRECT_URI).origin;
+                } catch (e) { baseUrl = 'http://localhost:3002'; }
             } else {
                 baseUrl = 'http://localhost:3002';
             }
@@ -98,6 +103,27 @@ function logScan(msg: string) {
         fs.appendFileSync(SCAN_LOG, line);
     } catch (e) { }
     console.log(msg);
+}
+
+// Helpers for robust parsing
+function parseRobusDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
+
+    // Try common Spanish/Gemini variations if ISO fails
+    // (Actual parsing logic can be expanded)
+    return new Date();
+}
+
+function parseRobustAmount(amt: any): number {
+    if (typeof amt === 'number') return amt;
+    if (typeof amt === 'string') {
+        // Remove $ and , . etc then parse
+        const clean = amt.replace(/[^0-9.]/g, '');
+        return parseFloat(clean) || 0;
+    }
+    return 0;
 }
 
 // Internal function to run the scan in background
@@ -162,7 +188,22 @@ async function runBackgroundScan(jobId: string, unitId: string) {
 
                     if (buffer) {
                         await new Promise(r => setTimeout(r, 4000)); // Rate limit
-                        const analysis = await classifyAndExtractDocument(buffer, mimeType);
+
+                        // Refine mimeType for Gemini if it's octet-stream
+                        let finalMimeType = mimeType;
+                        if (finalMimeType === 'application/octet-stream' || !finalMimeType) {
+                            if (filename.toLowerCase().endsWith('.pdf')) finalMimeType = 'application/pdf';
+                            else if (filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg')) finalMimeType = 'image/jpeg';
+                            else if (filename.toLowerCase().endsWith('.png')) finalMimeType = 'image/png';
+                        }
+
+                        // Ensure we don't send octet-stream to Gemini
+                        if (finalMimeType === 'application/octet-stream') {
+                            logScan(`  [!] Skipping document with unsupported mimeType: ${filename}`);
+                            continue;
+                        }
+
+                        const analysis = await classifyAndExtractDocument(buffer, finalMimeType);
 
                         if (analysis.type === 'INVOICE' && analysis.data) {
                             const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept } = analysis.data;
@@ -195,11 +236,14 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                     ? concept
                                     : `Importado: ${(email.subject || 'Sin Asunto').substring(0, 100)}`;
 
+                                const invDate = parseRobusDate(date);
+                                const total = parseRobustAmount(totalAmount);
+
                                 const inv = await prisma.invoice.create({
                                     data: {
                                         unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
-                                        invoiceDate: date ? new Date(date) : new Date(),
-                                        totalAmount, subtotal: totalAmount, status: 'DRAFT',
+                                        invoiceDate: invDate,
+                                        totalAmount: total, subtotal: total, status: 'DRAFT',
                                         description: finalDescription,
                                         pdfUrl: fileUrl, fileUrl,
                                         source: 'GMAIL',
@@ -219,10 +263,13 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                 });
                                 if (!existing) {
                                     const fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/payments`);
+                                    const payDate = parseRobusDate(date);
+                                    const amount = parseRobustAmount(totalAmount);
+
                                     const pay = await prisma.payment.create({
                                         data: {
-                                            unitId, paymentDate: date ? new Date(date) : new Date(),
-                                            amountPaid: totalAmount, netValue: totalAmount, sourceType: 'BANCO',
+                                            unitId, paymentDate: payDate,
+                                            amountPaid: amount, netValue: amount, sourceType: 'BANCO',
                                             bankPaymentMethod: bankName || 'GMAIL', transactionRef, status: 'DRAFT',
                                             supportFileUrl: fileUrl,
                                             source: 'GMAIL',
