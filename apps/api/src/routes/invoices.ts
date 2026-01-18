@@ -192,13 +192,14 @@ router.post('/', async (req, res) => {
 
         // Handle Prisma unique constraint violation
         if (error.code === 'P2002') {
+            console.log('Duplicate invoice detected via Prisma P2002');
             return res.status(409).json({
                 error: 'DUPLICATE_INVOICE',
                 message: 'Ya existe una factura con este número para el proveedor seleccionado.'
             })
         }
 
-        res.status(500).json({ error: 'Error creating invoice' })
+        res.status(500).json({ error: 'Error creating invoice', details: error.message })
     }
 })
 
