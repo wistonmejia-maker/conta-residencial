@@ -22,8 +22,15 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
     })
 
     if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error uploading file')
+        let errorMsg = 'Error uploading file';
+        try {
+            const error = await response.json();
+            errorMsg = error.error || error.message || errorMsg;
+        } catch (e) {
+            const text = await response.text();
+            errorMsg = text || `Error del servidor (${response.status})`;
+        }
+        throw new Error(errorMsg)
     }
 
     const result = await response.json()
