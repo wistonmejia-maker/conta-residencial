@@ -22,12 +22,12 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
     })
 
     if (!response.ok) {
+        const text = await response.text();
         let errorMsg = 'Error uploading file';
         try {
-            const error = await response.json();
+            const error = JSON.parse(text);
             errorMsg = error.error || error.message || errorMsg;
         } catch (e) {
-            const text = await response.text();
             errorMsg = text || `Error del servidor (${response.status})`;
         }
         throw new Error(errorMsg)
