@@ -76,7 +76,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             // Upload to Cloudinary
             const result = await new Promise<any>((resolve, reject) => {
                 const safeName = req.file!.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const isPdf = safeName.toLowerCase().endsWith('.pdf');
+                const isPdf = req.file!.mimetype === 'application/pdf' || safeName.toLowerCase().endsWith('.pdf');
 
                 // For PDFs, we use 'raw' to avoid "Restricted media types" (401) issues.
                 // Additionally, we MUST change the extension/suffix because the account blocks ".pdf" 
