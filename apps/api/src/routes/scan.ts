@@ -46,18 +46,27 @@ async function uploadBuffer(buffer: Buffer, filename: string, folder: string = '
 
     if (useCloudinary) {
         return new Promise((resolve, reject) => {
-            // Sanitize filename for Cloudinary public_id (remove special chars/spaces)
+            // Sanitize filename for Cloudinary public_id
             const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            const isPdf = filename.toLowerCase().endsWith('.pdf');
+
+            // For PDFs, 'image' resource_type is usually best for transformations,
+            // but for simple storage 'raw' can be used. However, account settings
+            // must allow PDF delivery.
+            const resType: 'image' | 'auto' | 'raw' = isPdf ? 'image' : 'auto';
 
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: `conta-residencial/${folder}`,
-                    resource_type: 'auto', // Use auto to let Cloudinary decide
-                    public_id: safeName.replace(/\.[^/.]+$/, "") // Remove extension for public_id
+                    resource_type: resType,
+                    // Cloudinary best practice: no extension for 'image', yes for 'raw'
+                    public_id: resType === ('raw' as any) ? safeName : safeName.replace(/\.[^/.]+$/, "")
                 },
                 (error: any, result: any) => {
-                    if (error) reject(error);
-                    else resolve(result!.secure_url);
+                    if (error) {
+                        console.error('Cloudinary Upload Error:', error);
+                        reject(error);
+                    } else resolve(result!.secure_url);
                 }
             );
             uploadStream.end(buffer);
@@ -207,6 +216,12 @@ async function runBackgroundScan(jobId: string, unitId: string) {
 
                         if (analysis.type === 'INVOICE' && analysis.data) {
                             const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept } = analysis.data;
+
+                            // Robust check for required fields from Gemini
+                            if (!nit && !providerName) {
+                                logScan(`  [!] Skipping invoice: Missing NIT and Provider Name`);
+                                continue;
+                            }
 
                             // Validar NIT (leniente)
                             const cleanUnitNit = unit.taxId.replace(/[^0-9]/g, '').substring(0, 9);
