@@ -947,7 +947,9 @@ export default function InvoicesPage() {
 
                                                                 // Handle Cloudinary RAW files or _secure bypass files
                                                                 // We fetch them and enforce application/pdf type so browser renders them
-                                                                if (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf')) {
+                                                                const isImage = /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(url) || url.includes('/image/upload/');
+
+                                                                if (!isImage && (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf'))) {
 
                                                                     // Open window first to avoid popup blocker
                                                                     const newWindow = window.open('', '_blank');
@@ -981,7 +983,7 @@ export default function InvoicesPage() {
                                                                         window.open(url, '_blank');
                                                                     }
                                                                 } else {
-                                                                    // Standard behavior for normal files
+                                                                    // Standard behavior for normal files and images
                                                                     window.open(url, '_blank')
                                                                 }
                                                             } catch (err) {

@@ -457,7 +457,7 @@ router.post('/cron/scan-all', async (req, res) => {
             }
         }
 
-        res.json({
+        res.status(202).json({
             success: true,
             message: `Auto-scan started for ${results.length} units`,
             scanned: results.length,

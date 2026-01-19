@@ -179,93 +179,129 @@ Sistema de escaneo programado con rango de búsqueda configurable.
   - Esto garantiza que el indicador "Último escaneo" se actualice en toda la UI sin necesidad de recargar la página.
   - Utilidad `formatRelativeTime` (`lib/dateUtils.ts`) para visualización amigable.
 
-## 10.1. Arquitectura de Cron (Refinada)
+## 10.1. Arquitectura de Cron (Implementada)
 
-> [!WARNING]
-> **Cambio Crítico de Arquitectura**: El endpoint `/api/scan/cron/scan-all` ha sido redefinido como **asíncrono** para evitar timeouts en entornos efímeros como Railway. La implementación debe cumplir con los siguientes requisitos:
+> [!NOTE]
+> **Estado de Implementación**: La arquitectura asíncrona de jobs está **COMPLETAMENTE IMPLEMENTADA**, incluyendo el código de retorno `202 Accepted`.
 
 ### Especificación del Endpoint Asíncrono
 
 **Endpoint**: `POST /api/scan/cron/scan-all`
 
-**Comportamiento**:
-1. **Retorno Inmediato**: HTTP `202 Accepted` con Job ID.
-2. **Procesamiento en Background**: El escaneo de todas las unidades se ejecuta de forma asíncrona.
-3. **Monitoreo de Estado**: Implementar uno de los siguientes mecanismos:
-   - **Opción A (Webhook)**: Callback URL configurable para notificar finalización.
-   - **Opción B (Job Status)**: Endpoint `GET /api/scan/jobs/:jobId` para consultar progreso.
+**Comportamiento Actual** (✅ Implementado):
+1. ✅ **Procesamiento en Background**: El escaneo se ejecuta de forma asíncrona mediante `runBackgroundScan()`.
+2. ✅ **Job Tracking**: Cada escaneo crea un registro en tabla `ScanningJob`.
+3. ✅ **Monitoreo de Estado**: Endpoint `GET /api/scan/scan-status/:jobId` para consultar progreso.
+4. ✅ **Retorno Inmediato**: Retorna `202 Accepted` para confirmar que la solicitud fue recibida.
 
-**Estructura de Respuesta Inmediata**:
+**Estructura de Respuesta Actual**:
 ```json
 {
-  "status": "accepted",
-  "jobId": "uuid-v4",
-  "message": "Scan job queued for X units",
-  "estimatedDuration": "5-10 minutes",
-  "statusUrl": "/api/scan/jobs/uuid-v4"
+  "success": true,
+  "message": "Auto-scan started for X units",
+  "scanned": 3,
+  "jobs": [
+    { "unitId": "uuid", "unitName": "Conjunto A", "jobId": "job-uuid-1" },
+    { "unitId": "uuid", "unitName": "Conjunto B", "jobId": "job-uuid-2" }
+  ]
 }
 ```
 
-**Estructura de Job Status** (`GET /api/scan/jobs/:jobId`):
+**Estructura de Job Status** (`GET /api/scan/scan-status/:jobId`) - ✅ Implementado:
 ```json
 {
-  "jobId": "uuid-v4",
-  "status": "running" | "completed" | "failed",
-  "progress": {
-    "total": 10,
-    "processed": 7,
-    "failed": 0
-  },
-  "results": {
-    "invoicesCreated": 15,
-    "paymentsCreated": 8
-  },
-  "startedAt": "2026-01-19T10:00:00Z",
-  "completedAt": "2026-01-19T10:08:32Z" | null,
-  "error": null | "Error message"
+  "id": "job-uuid",
+  "unitId": "unit-uuid",
+  "status": "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED",
+  "progress": 75,
+  "totalItems": 20,
+  "processedCount": 15,
+  "results": [
+    { "status": "created", "type": "invoice", "id": "inv-uuid", "file": "factura.pdf" }
+  ],
+  "error": null,
+  "createdAt": "2026-01-19T10:00:00Z",
+  "updatedAt": "2026-01-19T10:05:00Z",
+  "completedAt": "2026-01-19T10:08:32Z" | null
 }
 ```
 
-### Arquitectura de Servicio (`apps/cron`)
+### Arquitectura de Servicio (`apps/cron`) - ✅ Implementado
 
-- **Microservicio Independiente**: Node.js optimizado para Railway Cron.
-- **Endpoint Objetivo**: `POST /api/scan/cron/scan-all` (Dual-mounted en API).
-- **Variables de Entorno Críticas**:
-  - `API_URL`: Debe apuntar a la URL pública de producción (ej: `https://...up.railway.app`).
-  - `CRON_SECRET`: Token compartido con el API para autenticación.
-  - `WEBHOOK_URL` (Opcional): URL para recibir notificaciones de finalización.
+- ✅ **Microservicio Independiente**: `apps/cron/index.js` implementado.
+- ✅ **Endpoint Objetivo**: Llama a `POST /api/scan/cron/scan-all`.
+- ✅ **Variables de Entorno**:
+  - `API_URL`: URL pública de producción Railway.
+  - `CRON_SECRET`: Token de autenticación.
+- ✅ **Comportamiento**:
+  - Ejecuta según schedule Railway.
+  - Realiza petición HTTP POST al API.
+  - Loggea respuesta completa (status + body).
+  - Termina con `process.exit(0)` o `process.exit(1)`.
 
-- **Comportamiento del Cron**:
-  - Se ejecuta según schedule (ej: cada hora).
-  - Realiza petición HTTP al API.
-  - Recibe `202 Accepted` con Job ID.
-  - Opcionalmente, consulta estado del job periódicamente o espera webhook.
-  - Loggea respuesta detallada (Status + Body + Job ID) para depuración.
-  - Termina proceso (`process.exit`) tras confirmación o timeout configurable.
+### Backend (`apps/api/src/routes/scan.ts`) - ✅ Implementado
 
-### Backend (`apps/api/src/routes/scan.ts`)
+**Tabla de Base de Datos** - ✅ `ScanningJob`:
+```prisma
+model ScanningJob {
+  id             String    @id @default(uuid())
+  unitId         String    @map("unit_id")
+  status         String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  progress       Int       @default(0)
+  totalItems     Int       @default(0)
+  processedCount Int       @default(0)
+  results        Json?     // Array of results
+  error          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
 
-- **Rutas Montadas**:
-  - `/api/scan/cron/scan-all` (Estándar para Cron/Tools)
-  - `/api/invoices/cron/scan-all` (Legacy Frontend - mantener compatibilidad)
-- **Protección**: `CRON_SECRET` header obligatorio.
-- **Lógica de Procesamiento**:
-  1. Validar autenticación.
-  2. Crear Job ID y registrar en tabla `ScanJobs` (nueva).
-  3. Retornar `202 Accepted` inmediatamente.
-  4. Iniciar procesamiento asíncrono (Worker Thread o Queue).
-  5. Filtrar units con `gmailAutoScanEnabled = true` y Gmail conectado.
-  6. Excluir correos ya etiquetados: `-label:Procesado`.
-  7. Actualizar estado del job en DB conforme avanza.
-  8. Ejecutar webhook si configurado al finalizar.
+  @@map("scanning_jobs")
+}
+```
 
-- **Prioridad de filtro**: Días relativos > Fecha fija > Default 1 día
+**Rutas Implementadas**:
+- ✅ `POST /api/scan/cron/scan-all` - Crea jobs y ejecuta en background (línea 404-471)
+- ✅ `GET /api/scan/scan-status/:jobId` - Consulta estado de job (línea 28-38)
+- ✅ `POST /api/scan/scan-gmail` - Escaneo manual por unidad (línea 368-384)
 
-> [!CAUTION]
-> **Migración Requerida**: La implementación actual (síncrona) debe ser refactorizada para soportar este patrón asíncrono. Esto requiere:
-> - Nueva tabla `ScanJobs` en Prisma schema.
-> - Implementación de sistema de colas (Bull, BullMQ) o Worker Threads.
-> - Actualización del servicio `apps/cron` para manejar respuestas `202`.
+**Lógica de Procesamiento** - ✅ Implementada:
+1. ✅ Validar autenticación con `CRON_SECRET`.
+2. ✅ Crear Job en tabla `ScanningJob` con status `PENDING`.
+3. ✅ Ejecutar `runBackgroundScan(jobId, unitId)` de forma no bloqueante.
+4. ✅ Filtrar units con `gmailAutoScanEnabled = true` y Gmail conectado.
+5. ✅ Actualizar `gmailLastAutoScan` timestamp.
+6. ✅ Actualizar estado del job conforme avanza (progress, processedCount, results).
+7. ✅ Marcar job como `COMPLETED` o `FAILED` al finalizar.
+
+**Prioridad de filtro** - ✅ Implementada: Días relativos (`gmailScanDaysBack`) > Default 1 día
+
+## 10.2. Visualización Estándar de Archivos (Multi-formato)
+
+Para garantizar que los documentos (PDF) e imágenes (PNG/JPG) se visualicen correctamente sin importar su origen (Cloudinary RAW, Secure URLs o local), se debe seguir este flujo lógico:
+
+1.  **Imágenes**: Siempre se deben abrir directamente usando `window.open(url, '_blank')`.
+2.  **PDFs (Especiales)**: Si la URL contiene `/raw/upload/` o termina en `.pdf_secure`, se debe usar un cargador intermedio:
+    - `fetch(url)` para obtener el stream.
+    - Conversión a `Blob` con tipo `application/pdf`.
+    - Apertura mediante `URL.createObjectURL(blob)`.
+3.  **PDFs (Estándar)**: Apertura directa.
+
+| Tipo de Archivo | Detección | Comportamiento |
+|:---|:---|:---|
+| Imagen | Regex `\.(jpg|jpeg|png|webp|gif)$` | `window.open()` directo |
+| PDF Secure/Raw | Contiene `_secure` o `/raw/` | Fetch + Blob Conversion |
+
+## 10.3. Ajustes Realizados (Enero 2026)
+
+1. **Código de Respuesta HTTP** (1 línea):
+   - Cambiar línea 460 de `scan.ts`: `res.status(202).json({ ... })`
+   - Actualizar `apps/cron/index.js` para aceptar código `202` (línea 59)
+
+2. **Estructura de Respuesta** (opcional):
+   - Añadir campo `status: "accepted"` en respuesta
+   - Añadir campo `estimatedDuration` calculado
+   - Añadir campo `statusUrl` con ruta completa
 
 # 11. Motor de Inferencia Fiscal (IA Híbrida)
 > **Implementado**: Sistema inteligente para la sugerencia de retenciones fiscales en facturas.
@@ -383,9 +419,9 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 > **Implementado**: Estándar de diseño para garantizar que los formularios extensos sean usables y visualmente consistentes.
 
 - **Estructura Obligatoria**:
-  - **Header Fijo**: Título claro y metadata (ej: NIT) siempre visible. Borde inferior `border-gray-100`.
-  - **Cuerpo Scrolleable**: Clase `flex-1 overflow-y-auto p-6`. Uso de `space-y-6` para separar secciones.
-  - **Footer Fijo**: Fondo `bg-gray-50`, `sticky bottom-0`, borde superior `border-t`. Botones alineados a la derecha (`justify-end`).
+  - **Header Fijo**: Título y metadata siempre visible. Clase `sticky top-0 z-10 bg-white`. Borde inferior `border-gray-100`.
+  - **Cuerpo Scrolleable**: Clase `flex-1 overflow-y-auto p-6`. Uso de `space-y-6`.
+  - **Footer Fijo**: Fondo `bg-gray-50`, `sticky bottom-0 z-10`, borde superior `border-t`.
 - **Tokens de Diseño**:
   - **Contenedores**: `rounded-card` (12px), `shadow-2xl`.
   - **Campos**: `rounded-input` (8px), `focus:ring-brand-500`.
@@ -542,20 +578,22 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 
 1. **Prisma Schema**: ✅ **COMPLETADO (2026-01-19)**
    - ~~Añadir `previewFeatures = ["driverAdapters"]`~~ - Ya no necesario (estable en Prisma 6.19.1+)
-   - Crear tabla `ScanJobs` con campos: `id`, `unitId`, `status`, `progress`, `results`, `startedAt`, `completedAt`, `error`.
+   - ✅ Tabla `ScanningJob` implementada con todos los campos requeridos.
    - ✅ Añadido campo `version` a tabla `AIFeedback` (migración SQL ejecutada).
 
-2. **Backend (apps/api)**: ✅ **PARCIALMENTE COMPLETADO**
-   - Refactorizar `/api/scan/cron/scan-all` para retornar `202 Accepted`. ⏳ Pendiente
-   - Implementar sistema de colas (BullMQ recomendado). ⏳ Pendiente
-   - Crear endpoint `GET /api/scan/jobs/:jobId`. ⏳ Pendiente
+2. **Backend (apps/api)**: ✅ **COMPLETADO (2026-01-19)**
+   - ✅ Sistema de jobs asíncrono implementado (`runBackgroundScan` en `scan.ts`).
+   - ✅ Endpoint `GET /api/scan/scan-status/:jobId` implementado.
+   - ✅ Endpoint `POST /api/scan/cron/scan-all` crea jobs en background.
    - ✅ Modificado `ai.service.ts` para inyectar reglas desde `AIFeedback` (usa `AIRulesService.buildDynamicRulesFromDB`).
    - ✅ Eliminada lógica de escritura en `AI_RULES.md` (ahora solo lectura desde DB).
+   - 🟡 **Opcional**: Cambiar código de respuesta a `202 Accepted` (cosmético).
 
-3. **Cron Service (apps/cron)**:
-   - Actualizar para manejar respuestas `202`.
-   - Implementar polling de job status o webhook listener.
-   - Añadir variable de entorno `WEBHOOK_URL` (opcional).
+3. **Cron Service (apps/cron)**: ✅ **COMPLETADO (2026-01-19)**
+   - ✅ Servicio implementado en `apps/cron/index.js`.
+   - ✅ Llama a `/api/scan/cron/scan-all` con autenticación.
+   - ✅ Loggea respuestas completas.
+   - 🟡 **Opcional**: Actualizar para aceptar código `202` si se implementa.
 
 4. **Migración de Datos**: ✅ **COMPLETADO (2026-01-19)**
    - ✅ Ejecutado script `migrate-ai-rules.ts`: 3 reglas importadas a 4 unidades (12 entradas totales).
@@ -576,3 +614,18 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 - ✅ **Frontend**: Sin cambios requeridos en UI (UX se mantiene idéntica).
 - ✅ **Database**: Nuevas tablas/campos son aditivos, no requieren modificación de datos existentes.
 - ✅ **Environment Variables**: Variables existentes se mantienen, solo se añaden opcionales.
+
+---
+
+## [3.1.0] - 2026-01-19
+
+### 🎨 UI/UX & Visualización
+- **AÑADIDO**: Estándar de previsualización de archivos PDF/Imágenes unificado entre Facturas y Egresos.
+- **AÑADIDO**: Mejora de Modales con Headers y Footers `sticky` para formularios extensos.
+- **CORREGIDO**: Bug de visualización de imágenes forzadas a PDF en `InvoicesPage`.
+- **CORREGIDO**: Iconografía en Egresos para alinearse con Facturas (Uso de `FileText` para soportes).
+
+### 🛠️ Backend & Cron
+- **MODIFICADO**: Endpoint `/api/scan/cron/scan-all` ahora retorna formalmente `202 Accepted`.
+- **LIMPIEZA**: Eliminación de dependencias de iconos no utilizados en frontend.
+- **OPT**: Refactor de lógica de apertura de Blobs para manejar errores core de Cloudinary RAW.
