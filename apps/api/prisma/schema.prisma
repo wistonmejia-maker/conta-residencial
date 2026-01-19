@@ -53,6 +53,7 @@ model Unit {
   aiFeedback         AIFeedback[]
   aiQueryLogs        AIQueryLog[] // Relation to new log table
   aiCustomPrompt     String?              @map("ai_custom_prompt")
+  geminiMetrics      GeminiMetric[]
 
   @@map("units")
 }
@@ -394,4 +395,20 @@ model AIFeedback {
 
   @@map("ai_feedback")
 }
+model GeminiMetric {
+  id               String   @id @default(uuid())
+  unitId           String?  @map("unit_id")
+  modelName        String   @map("model_name")
+  promptTokens     Int      @map("prompt_tokens")
+  completionTokens Int      @map("completion_tokens")
+  totalTokens      Int      @map("total_tokens")
+  latencyMs        Int      @map("latency_ms")
+  status           String   // SUCCESS, ERROR
+  errorMessage     String?  @map("error_message")
+  requestType      String   @map("request_type") // CLASSIFICATION, INSIGHTS, CHAT, etc.
+  createdAt        DateTime @default(now()) @map("created_at")
 
+  unit             Unit?    @relation(fields: [unitId], references: [id])
+
+  @@map("gemini_metrics")
+}

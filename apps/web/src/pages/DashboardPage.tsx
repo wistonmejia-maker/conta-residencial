@@ -131,7 +131,7 @@ export default function DashboardPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                     <p className="text-sm text-gray-500 mt-1">Resumen financiero de {currentMonth}</p>
                 </div>
-                <Link to="/reports" className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2">
+                <Link to="/closure" className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2">
                     Generar Cierre Mensual
                     <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                                 <p className="text-xs text-gray-500">Cruzar movimientos</p>
                             </div>
                         </Link>
-                        <Link to="/reports" className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                        <Link to="/closure" className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
                             <ArrowRight className="w-5 h-5" />
                             <div>
                                 <p className="font-medium">Cierre Mensual</p>

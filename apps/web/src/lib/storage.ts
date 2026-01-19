@@ -48,6 +48,67 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
 }
 
 /**
+ * Uploads a file with progress tracking using XMLHttpRequest.
+ * 
+ * @param file The file to upload
+ * @param folder The folder path
+ * @param onProgress Callback function for upload progress (0-100)
+ * @returns The URL and metadata
+ */
+export async function uploadFileToStorageWithProgress(
+    file: File,
+    folder: string,
+    onProgress?: (percent: number) => void
+): Promise<{ url: string, fileName: string, type: string }> {
+    return new Promise((resolve, reject) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('folder', folder)
+
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${API_BASE}/files/upload`)
+
+        // Track upload progress
+        if (xhr.upload && onProgress) {
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100)
+                    onProgress(percent)
+                }
+            }
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const result = JSON.parse(xhr.response)
+                    resolve({
+                        url: result.url,
+                        fileName: result.filename,
+                        type: result.mimetype
+                    })
+                } catch (e) {
+                    reject(new Error('Invalid JSON response from server'))
+                }
+            } else {
+                try {
+                    const error = JSON.parse(xhr.response)
+                    reject(new Error(error.error || error.message || `Upload failed with status ${xhr.status}`))
+                } catch (e) {
+                    reject(new Error(`Upload failed with status ${xhr.status}`))
+                }
+            }
+        }
+
+        xhr.onerror = () => {
+            reject(new Error('Network error during file upload'))
+        }
+
+        xhr.send(formData)
+    })
+}
+
+/**
  * Deletes a file from the local server storage.
  * 
  * @param folder The folder where the file is stored
@@ -63,4 +124,3 @@ export async function deleteFileFromStorage(folder: string, filename: string): P
         throw new Error(error.error || 'Error deleting file')
     }
 }
-

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2 } from 'lucide-react'
+import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle } from 'lucide-react'
 // ... (existing imports)
 
 // ... (existing functions)
@@ -21,22 +21,38 @@ import { formatMoney } from '../lib/format'
 const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-CO')
 
-// Helper to open data URIs or regular URLs
-const openFileUrl = (url: string) => {
-    if (url.startsWith('data:')) {
-        const byteString = atob(url.split(',')[1])
-        const mimeType = url.split(',')[0].split(':')[1].split(';')[0]
-        const ab = new ArrayBuffer(byteString.length)
-        const ia = new Uint8Array(ab)
-        for (let i = 0; i < byteString.length; i++) {
-            ia[i] = byteString.charCodeAt(i)
-        }
-        const blob = new Blob([ab], { type: mimeType })
-        window.open(URL.createObjectURL(blob), '_blank')
-    } else {
-        window.open(url, '_blank')
+// Helper to open files in new tab with advanced handling for Cloudinary
+const openFileUrl = async (url: string) => {
+    if (!url) return;
+
+    // Direct open for images or non-pdf/non-Cloudinary files
+    const isImage = /\.(png|jpg|jpeg|webp|gif|bmp)$/i.test(url);
+    const isPdf = /\.pdf(_secure)?/i.test(url) || url.includes('/raw/upload/');
+
+    if (isImage) {
+        window.open(url, '_blank');
+        return;
     }
-}
+
+    if (isPdf) {
+        // For PDFs, especially Cloudinary /raw/upload/ or .pdf_secure, 
+        // we use fetch + blob to avoid CORS issues and force view
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, '_blank');
+            // Clean up blob URL after some time
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        } catch (error) {
+            console.error('Error opening PDF:', error);
+            window.open(url, '_blank'); // Fallback
+        }
+        return;
+    }
+
+    window.open(url, '_blank');
+};
 
 // Get current month start/end
 const getMonthRange = (monthsAgo = 0) => {
@@ -866,7 +882,7 @@ export default function MonthlyClosurePage() {
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleDownloadAccountantPackage}
-                                    disabled={filteredPayments.length === 0 || generating}
+                                    disabled={(filteredPayments.length === 0 && pendingInvoices.length === 0) || generating}
                                     className="px-4 py-2 bg-brand-100 text-brand-700 hover:bg-brand-200 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
                                     title="Descargar Excel + PDF de Soportes (para Contador)"
                                 >
@@ -875,7 +891,7 @@ export default function MonthlyClosurePage() {
                                 </button>
                                 <button
                                     onClick={handleGenerateFolder}
-                                    disabled={filteredPayments.length === 0 || generating}
+                                    disabled={(filteredPayments.length === 0 && pendingInvoices.length === 0) || generating}
                                     className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
                                 >
                                     <FolderDown className="w-4 h-4" />
@@ -883,8 +899,8 @@ export default function MonthlyClosurePage() {
                                 </button>
                                 <button
                                     onClick={handleCloseMonth}
-                                    disabled={generating}
-                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                    disabled={generating || (filteredPayments.length === 0 && pendingInvoices.length === 0)}
+                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-lg shadow-brand-200 flex items-center gap-2 transition-all disabled:opacity-50"
                                 >
                                     <FileText className="w-4 h-4" />
                                     Cerrar Mes
@@ -1225,37 +1241,38 @@ export default function MonthlyClosurePage() {
 
             </div>
 
-            {/* Validation Modal */}
             {
                 showValidationModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                        <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-                            <div className="flex items-center gap-3 text-red-600">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="sticky top-0 bg-white p-6 border-b border-gray-100 flex items-center gap-3 text-red-600 z-10">
                                 <div className="bg-red-50 p-2 rounded-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
+                                    <AlertTriangle className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-semibold">Garantía Documental Incompleta</h3>
+                                <h3 className="text-xl font-bold">Garantía Documental Incompleta</h3>
                             </div>
 
-                            <p className="text-gray-600">
-                                No se puede generar la carpeta mensual. El sistema ha detectado que faltan documentos obligatorios para los siguientes egresos:
-                            </p>
+                            <div className="p-6 overflow-y-auto space-y-4">
+                                <p className="text-gray-600">
+                                    No se puede generar la carpeta mensual. El sistema ha detectado que faltan documentos obligatorios para los siguientes egresos:
+                                </p>
 
-                            <div className="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto border border-gray-100">
-                                <ul className="space-y-2">
-                                    {validationErrors.map((error, index) => (
-                                        <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                                            <span className="text-red-500 mt-0.5">•</span>
-                                            {error}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                    <ul className="space-y-3">
+                                        {validationErrors.map((error, index) => (
+                                            <li key={index} className="flex items-start gap-3 text-sm text-gray-700">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
+                                                {error}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
 
-                            <div className="flex justify-end pt-2">
+                            <div className="sticky bottom-0 bg-gray-50 p-6 border-t border-gray-100 flex justify-end z-10">
                                 <button
                                     onClick={() => setShowValidationModal(false)}
-                                    className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+                                    className="px-6 py-2 bg-brand-primary text-white rounded-button text-sm font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200"
                                 >
                                     Entendido, voy a cargarlos
                                 </button>
@@ -1267,11 +1284,11 @@ export default function MonthlyClosurePage() {
 
             {/* Report Details Modal */}
             {selectedReport && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="sticky top-0 bg-white p-6 border-b border-gray-100 flex items-center justify-between z-10">
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900 capitalize">
+                                <h2 className="text-xl font-bold text-gray-900 capitalize">
                                     Cierre: {selectedReport.month} {selectedReport.year}
                                 </h2>
                                 <p className="text-sm text-gray-500">
@@ -1280,40 +1297,43 @@ export default function MonthlyClosurePage() {
                             </div>
                             <button
                                 onClick={() => setSelectedReport(null)}
-                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+                        <div className="p-6 overflow-y-auto flex-1 space-y-8">
                             {/* Payments Section */}
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                                <h3 className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-brand-500" />
                                     Pagos Incluidos ({selectedReport.payments?.length || 0})
                                 </h3>
                                 {selectedReport.payments && selectedReport.payments.length > 0 ? (
-                                    <div className="bg-gray-50 rounded-lg overflow-hidden">
+                                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-100 text-xs text-gray-500 uppercase">
+                                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
                                                 <tr>
-                                                    <th className="px-4 py-2 text-left">CE</th>
-                                                    <th className="px-4 py-2 text-left">Fecha</th>
-                                                    <th className="px-4 py-2 text-left">Proveedor</th>
-                                                    <th className="px-4 py-2 text-right">Monto</th>
+                                                    <th className="px-4 py-3 text-left font-semibold">CE</th>
+                                                    <th className="px-4 py-3 text-left font-semibold">Fecha</th>
+                                                    <th className="px-4 py-3 text-left font-semibold">Proveedor</th>
+                                                    <th className="px-4 py-3 text-right font-semibold">Monto</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-gray-50">
                                                 {selectedReport.payments.map((p) => (
-                                                    <tr key={p.id}>
-                                                        <td className="px-4 py-2">
-                                                            {p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'}
+                                                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-4 py-3">
+                                                            <span className="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
+                                                                {p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'}
+                                                            </span>
                                                         </td>
-                                                        <td className="px-4 py-2">{formatDate(p.paymentDate)}</td>
-                                                        <td className="px-4 py-2">
+                                                        <td className="px-4 py-3 text-gray-600">{formatDate(p.paymentDate)}</td>
+                                                        <td className="px-4 py-3 font-medium text-gray-900">
                                                             {p.invoiceItems?.[0]?.invoice?.provider?.name || 'N/A'}
                                                         </td>
-                                                        <td className="px-4 py-2 text-right font-medium">
+                                                        <td className="px-4 py-3 text-right font-bold text-gray-900">
                                                             {formatMoney(Number(p.amountPaid))}
                                                         </td>
                                                     </tr>
@@ -1328,25 +1348,26 @@ export default function MonthlyClosurePage() {
 
                             {/* Invoices Section */}
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                                <h3 className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-brand-500" />
                                     Facturas Incluidas ({selectedReport.invoices?.length || 0})
                                 </h3>
                                 {selectedReport.invoices && selectedReport.invoices.length > 0 ? (
-                                    <div className="bg-gray-50 rounded-lg overflow-hidden">
+                                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-100 text-xs text-gray-500 uppercase">
+                                            <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
                                                 <tr>
-                                                    <th className="px-4 py-2 text-left">Factura #</th>
-                                                    <th className="px-4 py-2 text-left">Proveedor</th>
-                                                    <th className="px-4 py-2 text-right">Monto</th>
+                                                    <th className="px-4 py-3 text-left font-semibold">Factura #</th>
+                                                    <th className="px-4 py-3 text-left font-semibold">Proveedor</th>
+                                                    <th className="px-4 py-3 text-right font-semibold">Monto</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-gray-50">
                                                 {selectedReport.invoices.map((inv) => (
-                                                    <tr key={inv.id}>
-                                                        <td className="px-4 py-2">{inv.invoiceNumber}</td>
-                                                        <td className="px-4 py-2">{inv.provider?.name || 'N/A'}</td>
-                                                        <td className="px-4 py-2 text-right font-medium">
+                                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-4 py-3 font-medium text-indigo-600">{inv.invoiceNumber}</td>
+                                                        <td className="px-4 py-3 text-gray-900">{inv.provider?.name || 'N/A'}</td>
+                                                        <td className="px-4 py-3 text-right font-bold text-gray-900">
                                                             {formatMoney(Number(inv.totalAmount))}
                                                         </td>
                                                     </tr>
@@ -1360,17 +1381,17 @@ export default function MonthlyClosurePage() {
                             </div>
                         </div>
 
-                        <div className="p-4 border-t border-gray-100 flex justify-end gap-3">
+                        <div className="sticky bottom-0 bg-gray-50 p-6 border-t border-gray-100 flex justify-end gap-3 z-10">
                             <button
                                 onClick={() => handleReopenReport(selectedReport.id)}
                                 disabled={generating}
-                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
+                                className="px-4 py-2 text-red-600 font-bold text-sm hover:bg-red-50 rounded-button transition-all disabled:opacity-50"
                             >
                                 Reabrir Cierre
                             </button>
                             <button
                                 onClick={() => setSelectedReport(null)}
-                                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+                                className="px-6 py-2 bg-brand-primary text-white rounded-button text-sm font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200"
                             >
                                 Cerrar
                             </button>

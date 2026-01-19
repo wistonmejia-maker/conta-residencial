@@ -332,7 +332,21 @@ El sistema decide qué valor mostrar en los campos de retención siguiendo este 
 Para garantizar la precisión en facturas colombianas (donde `02/01/2026` es 2 de Enero y no 1 de Febrero), se ha establecido el siguiente estándar:
 
 - **Prompting**: El system prompt instruye explícitamente a la IA sobre el formato `DD/MM/YYYY` predominante en Colombia.
-- **Backend (Robustness)**: Implementación de `parseRobusDate` que prioriza el patrón `DD/MM/YYYY` si el parseo ISO falla o es abmiguo.
+- **Backend (Robustness)**: Implementación de `parseRobusDate` que prioriza el patrón `DD/MM/YYYY` si el parseo ISO falla o es ambiguo.
+
+---
+
+### 11.3. Estándar de Cierre Mensual (Reporting)
+- **Botones de Reporte**: Deben estar habilitados si existe al menos **un egreso** pagado O **una factura** pendiente en el periodo.
+- **Modales de Reporte**: Deben seguir el layout de Modales `spec_v3` (encabezados y pies fijos, backdrop-blur-sm, shadow-2xl).
+
+#### Condiciones Obligatorias para el Cierre:
+1.  **Existencia de Movimientos**: Al menos un pago o factura pendiente sin reportar en el rango de fechas.
+2.  **Vínculo Documental**: Si un pago indica "Tiene factura", el cierre se bloquea hasta que la factura esté vinculada.
+3.  **Garantía de Soportes**: Los egresos incluidos deben tener Soporte de Pago (Recibo bancario) y las facturas su PDF/Imagen original para la Carpeta Contable.
+4.  **Confirmación de Usuario**: Resumen explícito del conteo de documentos antes de la ejecución definitiva.
+
+- **Apertura de Archivos**: Uso de la única función estándar `openFileUrl` (con fetch + blob para PDFs) para garantizar visualización sin errores de CORS.
 
 ### Lógica de Referencia (parseRobusDate)
 ```typescript
@@ -605,7 +619,8 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
    - ✅ Endpoint `POST /api/scan/cron/scan-all` crea jobs en background.
    - ✅ Modificado `ai.service.ts` para inyectar reglas desde `AIFeedback` (usa `AIRulesService.buildDynamicRulesFromDB`).
    - ✅ Eliminada lógica de escritura en `AI_RULES.md` (ahora solo lectura desde DB).
-   - 🟡 **Opcional**: Cambiar código de respuesta a `202 Accepted` (cosmético).
+   - ✅ **AÑADIDO**: Logging estructurado con Winston (Fase 2.1).
+   - 🟡 **PD**: Pendiente renombrar `ScanningJob` a `ScanJob` para consistencia total.
 
 3. **Cron Service (apps/cron)**: ✅ **COMPLETADO (2026-01-19)**
    - ✅ Servicio implementado en `apps/cron/index.js`.
@@ -617,10 +632,10 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
    - ✅ Ejecutado script `migrate-ai-rules.ts`: 3 reglas importadas a 4 unidades (12 entradas totales).
    - ✅ Validado que reglas se inyectan correctamente en prompts desde DB.
 
-5. **Observabilidad (Opcional pero Recomendado)**:
-   - Integrar logging estructurado (Winston/Pino).
-   - Configurar servicio de log aggregation (Logtail, Better Stack).
-   - Implementar métricas de Gemini API.
+5. **Observabilidad**: ✅ **COMPLETADO (2026-01-19)**
+   - ✅ Integrar logging estructurado (Winston - Fase 2.1).
+   - ✅ Implementar métricas de Gemini API (Fase 2.2 - Latencia, Tokens, Status).
+   - 🟡 **Opcional**: Configurar servicio de log aggregation (Logtail, Better Stack).
 
 ### Breaking Changes
 
@@ -657,3 +672,74 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 - **MODIFICADO**: Prompt de Gemini enriquecido con contexto regional para evitar confusión MM/DD.
 - **AÑADIDO**: Función `parseRobusDate` en el backend para normalización de fechas ambiguas.
 - **CORREGIDO**: Error de interpretación de facturas de inicio de año (Enero vs Febrero).
+
+---
+
+## [3.3.0] - 2026-01-19
+
+### 📊 Reporting & Cierre
+- **AÑADIDO**: Estándares para Cierre Mensual: Lógica de habilitación de botones y modales sticky.
+- **UNIFICADO**: Función `openFileUrl` avanzada en `MonthlyClosurePage`.
+- **UI/UX**: Alineación de `ValidationModal` y `ReportDetailsModal` con Spec V3.
+
+---
+
+## [3.3.1] - 2026-01-19
+
+### 📑 Documentación y Reglas
+- **AÑADIDO**: Detalle de condiciones técnicas y lógicas para el Cierre Mensual.
+- **REFORZADO**: Validación de vínculo obligatorio de facturas para permitir el cierre.
+---
+
+## [3.4.0] - 2026-01-19
+
+### 🔍 Observabilidad avanzada (IA Tracing)
+- **AÑADIDO**: Modelo `GeminiMetric` para persistir latencia, tokens y status de cada llamada.
+- **AÑADIDO**: `TelemetryService` para logging asíncrono de métricas.
+- **MODIFICADO**: `ai.service.ts` con helper `logMetric` y manejo de errores (try-catch) en todas las funciones.
+- **VERIFICADO**: Registro exitoso de errores 400 (Bad Request) y latencia en DB.
+
+# 17. Optimización Móvil y Validaciones (UX Avanzada)
+> **Implementado**: Mejoras significativas en la experiencia de carga de archivos y seguridad operativa.
+
+## 17.1. Carga Inteligente de Archivos (Smart Uploads)
+Para resolver la lentitud en cargas desde móviles (fotos de 5MB+ en 4G), se implementó una estrategia de compresión en el cliente.
+
+- **Tecnología**: `browser-image-compression`.
+- **Componente**: `SmartFileUploader.tsx`.
+- **Lógica**:
+  - Intercepta la selección del archivo.
+  - Si es imagen, la comprime (Max 1MB o 1920x1080).
+  - Muestra progreso circular real.
+  - Sube el archivo optimizado a la API.
+- **Resultado**: Reducción de ~90% en tiempos de espera (ej: 5MB -> 300KB).
+
+## 17.2. Validación de Destinatario (Seguridad)
+Para prevenir errores contables donde se suben facturas de otros conjuntos.
+
+- **Componente**: `InvoicesPage.tsx`.
+- **Flujo**:
+  1. IA extrae `clientNit` del documento.
+  2. Frontend compara con `unit.taxId` (NIT del Conjunto).
+  3. Si hay mismatch, muestra una **Alerta Amarilla**: *"⚠️ Posible error de destinatario"*.
+- **UX**: Es una advertencia no bloqueante. El usuario tiene la decisión final.
+
+## 17.3. Responsividad Móvil (Grids)
+- **Estándar**: Formularios usan `grid-cols-1 md:grid-cols-2`.
+- **Comportamiento**:
+  - **Desktop**: Campos lado a lado.
+  - **Móvil**: Campos apilados verticalmente para facilitar la escritura táctil.
+
+---
+
+## [3.5.0] - 2026-01-19
+
+### 📱 Mobile First & Performance
+- **AÑADIDO**: Componente `SmartFileUploader` con compresión de imágenes client-side.
+- **OPTIMIZADO**: Modales de Facturas y Egresos con layouts responsivos (`grid-cols-1` en móvil).
+- **AÑADIDO**: Feedback visual de progreso de carga (Spinners y % de subida).
+
+### 🛡️ Seguridad Operativa
+- **AÑADIDO**: Validación automática de NIT Receptor vs NIT Conjunto en Facturas.
+- **UX**: Implementación de advertencias no intrusivas ("Yellow Alerts") para discrepancias de datos.
+

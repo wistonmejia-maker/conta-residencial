@@ -8,7 +8,7 @@ import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
 import { formatMoney } from '../lib/format'
-import { FeedbackModal } from '../components/ui'
+import { FeedbackModal, SmartFileUploader } from '../components/ui'
 
 
 const statusStyles: Record<string, string> = {
@@ -796,6 +796,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         reteica: Number(payment?.reteicaApplied || 0)
     })
 
+    const [fileUrl, setFileUrl] = useState<string | null>(payment?.supportFileUrl || null)
     const [file, setFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
     const [manualAmount, setManualAmount] = useState(Number(payment?.amountPaid || 0))
@@ -921,11 +922,12 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         e.preventDefault()
         setUploading(true)
         try {
-            let supportFileUrl = payment?.supportFileUrl || ''
-            if (file) {
-                const res = await uploadFileToStorage(file, `units / ${unitId}/payments`)
-                supportFileUrl = res.url
-            }
+            // File is already uploaded by SmartFileUploader
+            // if (file) { ... }
+
+            // Ensure we use the freshly uploaded URL or the existing one
+            // Note: If we are in edit mode, payment?.supportFileUrl is the fallback
+            // But if user removed it, fileUrl handles that state.
 
             const payload = {
                 ...form,
@@ -933,7 +935,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                 retefuenteApplied: retentions.retefuente,
                 reteicaApplied: retentions.reteica,
                 netValue: netAmount,
-                supportFileUrl,
+                supportFileUrl: fileUrl || undefined,
                 unitId,
                 invoices: items.map(item => ({
                     invoiceId: item.invoice.id,
@@ -972,7 +974,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                     <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
                         {/* Section: Context */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
                                 <input
@@ -997,42 +999,37 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                         </div>
 
                         {/* Section: Support Upload & IA */}
-                        <div className="p-4 bg-gray-50 rounded-card border border-gray-100">
-                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Soporte de Pago (Opcional)</h3>
-                            <div className="flex items-center gap-4">
-                                <div className="flex-1">
-                                    <input
-                                        type="file"
-                                        accept=".pdf,image/*"
-                                        id="modal-payment-file"
-                                        className="hidden"
-                                        onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                    />
-                                    <label
-                                        htmlFor="modal-payment-file"
-                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-button text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
-                                    >
-                                        <UploadIcon className="w-4 h-4 text-gray-400" />
-                                        {file ? file.name : (payment?.supportFileUrl ? 'Cambiar archivo' : 'Subir Comprobante')}
-                                    </label>
-                                </div>
-                                {file && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAIExtract(file)}
-                                        disabled={analyzing}
-                                        className="flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-button text-sm font-bold hover:bg-brand-100 transition-colors disabled:opacity-50"
-                                    >
-                                        {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                                        {analyzing ? 'Analizando...' : 'Auto-completar'}
-                                    </button>
-                                )}
-                            </div>
-                            {aiError && <p className="text-xs text-red-600 mt-2 font-medium">{aiError}</p>}
+                        <div className="space-y-3">
+                            <SmartFileUploader
+                                folder={`units/${unitId}/payments`}
+                                onUploadComplete={(url, uploadedFile) => {
+                                    setFileUrl(url)
+                                    setFile(uploadedFile)
+                                }}
+                                currentFileUrl={fileUrl}
+                                onRemove={() => {
+                                    setFileUrl(null)
+                                    setFile(null)
+                                }}
+                                label="Soporte de Pago (Opcional)"
+                            />
+
+                            {file && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleAIExtract(file)}
+                                    disabled={analyzing}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-button text-sm font-bold hover:bg-brand-100 transition-colors disabled:opacity-50 border border-brand-200"
+                                >
+                                    {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                    {analyzing ? 'Analizando documento...' : 'Auto-completar datos con IA ✨'}
+                                </button>
+                            )}
+                            {aiError && <p className="text-xs text-red-600 font-medium text-center">{aiError}</p>}
                         </div>
 
                         {/* Section: Payment Details */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
                                 <input
