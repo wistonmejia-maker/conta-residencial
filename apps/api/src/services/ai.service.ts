@@ -457,7 +457,7 @@ export async function analyzeBudgetDeeply(
 export async function logAIQuery(unitId: string, query: string, source: 'CHAT' | 'FEEDBACK' = 'CHAT') {
     try {
         // @ts-ignore - Prisma client dynamic property
-        await prisma.aiQueryLog.create({
+        await (prisma as any).aIQueryLog.create({
             data: { unitId, query, source }
         });
     } catch (e: any) {
@@ -469,7 +469,7 @@ export async function getSuggestedQuestions(unitId: string): Promise<string[]> {
     try {
         // Fetch last 50 queries
         // @ts-ignore - Prisma client dynamic property
-        const logs = await prisma.aiQueryLog.findMany({
+        const logs = await (prisma as any).aIQueryLog.findMany({
             where: { unitId },
             orderBy: { timestamp: 'desc' },
             take: 50,
