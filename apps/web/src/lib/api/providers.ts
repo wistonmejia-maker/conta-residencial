@@ -67,13 +67,13 @@ export async function getProviderDetail(id: string, unitId?: string) {
     return res.json()
 }
 
-export async function createProvider(data: Partial<Provider>) {
+export async function createProvider(data: Partial<Provider>): Promise<Provider> {
     const res = await fetch(`${API_BASE}/providers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    return handleResponse(res, 'Error al crear proveedor')
+    return handleResponse<Provider>(res, 'Error al crear proveedor')
 }
 
 export async function updateProvider(id: string, data: Partial<Provider>) {

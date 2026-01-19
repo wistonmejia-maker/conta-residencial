@@ -10,6 +10,7 @@ import { useUnit } from '../lib/UnitContext'
 import { useAI } from '../lib/AIContext'
 import { AIButton, AIProcessingOverlay, AIConfidenceIndicator, FeedbackModal } from '../components/ui'
 import { formatMoney } from '../lib/format'
+import { formatRelativeTime } from '../lib/dateUtils'
 
 import type { Invoice, Provider } from '../lib/api/index'
 
@@ -125,7 +126,6 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
 
     const providers = providersData?.providers || []
 
-    // Fetch next CC number when checkbox is checked
     const handleCuentaDeCobroChange = async (checked: boolean) => {
         setIsCuentaDeCobro(checked)
         setError(null)
@@ -146,15 +146,9 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         }
     }
 
-    // Auto-calculate taxes when subtotal or provider changes
     useEffect(() => {
         if (!form.providerId || form.subtotal <= 0) {
-            // Reset retentions if provider or subtotal is not set
-            setForm(f => ({
-                ...f,
-                retefuenteAmount: 0,
-                reteicaAmount: 0
-            }))
+            setForm(f => ({ ...f, retefuenteAmount: 0, reteicaAmount: 0 }))
             return
         }
 
@@ -163,22 +157,12 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
             const retefuentePerc = Number(provider.defaultRetefuentePerc) || 0
             const reteicaPerc = Number(provider.defaultReteicaPerc) || 0
 
-            // Logic:
-            // 1. If Provider has Default % > 0 -> Calculate and OVERWRITE.
-            // 2. If Provider has Default % == 0 -> Do NOT overwrite (preserve manual input or AI suggestion).
-
             let newRetefuente = form.retefuenteAmount
             let newReteica = form.reteicaAmount
 
-            if (retefuentePerc > 0) {
-                newRetefuente = Math.round(form.subtotal * (retefuentePerc / 100))
-            }
+            if (retefuentePerc > 0) newRetefuente = Math.round(form.subtotal * (retefuentePerc / 100))
+            if (reteicaPerc > 0) newReteica = Math.round(form.subtotal * (reteicaPerc / 100))
 
-            if (reteicaPerc > 0) {
-                newReteica = Math.round(form.subtotal * (reteicaPerc / 100))
-            }
-
-            // Only update if changed to avoid loops (though dependency array handles it)
             if (newRetefuente !== form.retefuenteAmount || newReteica !== form.reteicaAmount) {
                 setForm(f => ({
                     ...f,
@@ -202,12 +186,11 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                     ...f,
                     invoiceNumber: data.invoiceNumber || f.invoiceNumber,
                     invoiceDate: data.date || f.invoiceDate,
-                    subtotal: data.totalAmount || f.subtotal, // Default subtotal to totalAmount if not differentiated
+                    subtotal: data.totalAmount || f.subtotal,
                     totalAmount: data.totalAmount || f.totalAmount,
                     description: data.concept || f.description
                 }))
 
-                // Try to match provider by NIT
                 if (data.nit) {
                     const cleanNit = data.nit.replace(/[^0-9]/g, '')
                     const matchedProvider = providers.find((p: any) => p.nit.replace(/[^0-9]/g, '') === cleanNit)
@@ -219,11 +202,7 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                     }
                 }
 
-                // Handle AI Suggested Retentions
                 if (data.retentions) {
-                    // Only apply if form doesn't have manually set non-zero values OR we want to overwrite
-                    // Logic: If provider has defaults, useEffect will overwrite this locally later.
-                    // But if provider has NO defaults, we want these suggestions to stick.
                     if (data.retentions.retefuente && data.retentions.retefuente.amount > 0) {
                         setForm(f => ({ ...f, retefuenteAmount: data.retentions.retefuente.amount }))
                     }
@@ -258,9 +237,7 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
             })
 
             if (newProvider && newProvider.id) {
-                // Invalidate providers query to refresh the list
                 await queryClient.invalidateQueries({ queryKey: ['providers'] })
-
                 setForm(f => ({ ...f, providerId: newProvider.id }))
                 setExtractedProvider(null)
                 setError(null)
@@ -279,7 +256,6 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         setError(null)
 
         let fileUrl = ''
-
         try {
             if (file) {
                 const res = await uploadFileToStorage(file, `units/${unitId}/invoices`)
@@ -290,45 +266,32 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                 ...form,
                 fileUrl: fileUrl || initialData?.fileUrl,
                 isAutogenerated: isCuentaDeCobro,
-                // totalAmount is now directly from form state
             }
 
             if (isEditMode) {
                 await updateInvoice(initialData.id, invoiceData)
             } else {
                 const response = await fetch(`${API_BASE}/invoices`, {
-
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...invoiceData,
-                        unitId,
-                    })
+                    body: JSON.stringify({ ...invoiceData, unitId })
                 })
 
                 if (!response.ok) {
-                    let text = '';
                     let data;
                     try {
-                        text = await response.text()
-                        try {
-                            data = JSON.parse(text)
-                        } catch (e) {
-                            // If response is not JSON, use the text as the error message
-                        }
-                    } catch (readError) {
-                        text = `Error del servidor (${response.statusText || response.status})`;
-                    }
+                        const text = await response.text()
+                        data = JSON.parse(text)
+                    } catch (e) { }
 
                     if (data && data.error === 'DUPLICATE_INVOICE') {
                         setError(data.message)
                         setUploading(false)
                         return
                     }
-                    throw new Error((data && (data.error || data.message)) || text || `Error del servidor (${response.status})`)
+                    throw new Error((data && (data.error || data.message)) || `Error del servidor (${response.status})`)
                 }
             }
-
             onSuccess()
         } catch (err: any) {
             console.error('Error saving invoice:', err)
@@ -337,262 +300,259 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         }
     }
 
-
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <AIProcessingOverlay
                 visible={analyzing}
                 message="Analizando documento..."
                 subMessage="Extrayendo información clave con IA"
             />
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-900">
+            <div className="bg-white rounded-card shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white">
+                    <h2 className="text-lg font-bold text-gray-900">
                         {isEditMode ? 'Editar Factura' : 'Registrar Factura'}
                     </h2>
-                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 space-y-4">
-                    {/* Error display */}
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex flex-col gap-2">
-                            <span>{error}</span>
-                            {extractedProvider && (
-                                <button
-                                    type="button"
-                                    onClick={handleQuickCreateProvider}
-                                    disabled={creatingProvider}
-                                    className="w-fit px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-                                >
-                                    {creatingProvider ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                                    Registrar "{extractedProvider.name}" como nuevo proveedor
-                                </button>
-                            )}
-                        </div>
-                    )}
+                {/* Body (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                    <form id="invoice-form" onSubmit={handleSubmit} className="space-y-4">
+                        {/* Error display */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-card text-sm flex flex-col gap-2 animate-shake">
+                                <span>{error}</span>
+                                {extractedProvider && (
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickCreateProvider}
+                                        disabled={creatingProvider}
+                                        className="w-fit px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                    >
+                                        {creatingProvider ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                        Registrar "{extractedProvider.name}" como nuevo proveedor
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
-                    {/* AI Confidence Indicator */}
-                    {aiConfidence !== null && !error && (
-                        <div className="flex justify-end -mt-2 mb-2">
-                            <AIConfidenceIndicator score={Math.round(aiConfidence * 100)} size="sm" />
-                        </div>
-                    )}
+                        {/* AI Confidence Indicator */}
+                        {aiConfidence !== null && !error && (
+                            <div className="flex justify-end -mt-2">
+                                <AIConfidenceIndicator score={Math.round(aiConfidence * 100)} size="sm" />
+                            </div>
+                        )}
 
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor *</label>
-                        <select
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                            value={form.providerId}
-                            onChange={(e) => setForm(f => ({ ...f, providerId: e.target.value }))}
-                            required
-                        >
-                            <option value="">Seleccione un proveedor...</option>
-                            {providers.map((p: Provider) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name} ({p.nit}{p.dv ? `-${p.dv}` : ''})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Cuenta de Cobro Checkbox */}
-                    <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <input
-                            type="checkbox"
-                            id="isCuentaDeCobro"
-                            checked={isCuentaDeCobro}
-                            onChange={(e) => handleCuentaDeCobroChange(e.target.checked)}
-                            className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
-                        />
-                        <label htmlFor="isCuentaDeCobro" className="text-sm text-amber-800">
-                            <span className="font-medium">Sin número de factura</span>
-                            <span className="text-amber-600 ml-1">(Cuenta de Cobro)</span>
-                        </label>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                {isCuentaDeCobro ? '# Cuenta de Cobro' : '# Factura'} *
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor *</label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
+                                value={form.providerId}
+                                onChange={(e) => setForm(f => ({ ...f, providerId: e.target.value }))}
+                                required
+                            >
+                                <option value="">Seleccione un proveedor...</option>
+                                {providers.map((p: Provider) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} ({p.nit}{p.dv ? `-${p.dv}` : ''})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Cuenta de Cobro Checkbox */}
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-card transition-colors">
+                            <input
+                                type="checkbox"
+                                id="isCuentaDeCobro"
+                                checked={isCuentaDeCobro}
+                                onChange={(e) => handleCuentaDeCobroChange(e.target.checked)}
+                                className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                            />
+                            <label htmlFor="isCuentaDeCobro" className="text-sm text-amber-800 cursor-pointer select-none">
+                                <span className="font-medium">Sin número de factura</span>
+                                <span className="text-amber-600 ml-1 text-xs">(Cuenta de Cobro)</span>
                             </label>
-                            <div className="relative">
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {isCuentaDeCobro ? '# Cuenta de Cobro' : '# Factura'} *
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={form.invoiceNumber}
+                                        onChange={(e) => setForm(f => ({ ...f, invoiceNumber: e.target.value }))}
+                                        placeholder={isCuentaDeCobro ? 'Auto-generado...' : 'FV-2024-001'}
+                                        className={`w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all ${isCuentaDeCobro ? 'bg-gray-50 text-gray-500 select-none' : ''}`}
+                                        disabled={isCuentaDeCobro}
+                                        required
+                                    />
+                                    {loadingCCNumber && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Factura *</label>
                                 <input
-                                    type="text"
-                                    value={form.invoiceNumber}
-                                    onChange={(e) => setForm(f => ({ ...f, invoiceNumber: e.target.value }))}
-                                    placeholder={isCuentaDeCobro ? 'Auto-generado...' : 'FV-2024-001'}
-                                    className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none ${isCuentaDeCobro ? 'bg-gray-100 text-gray-600' : ''}`}
-                                    disabled={isCuentaDeCobro}
+                                    type="date"
+                                    value={form.invoiceDate}
+                                    onChange={(e) => setForm(f => ({ ...f, invoiceDate: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
                                     required
                                 />
-                                {loadingCCNumber && (
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                    </div>
-                                )}
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Factura *</label>
-                            <input
-                                type="date"
-                                value={form.invoiceDate}
-                                onChange={(e) => setForm(f => ({ ...f, invoiceDate: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                                required
-                            />
-                        </div>
-                    </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento</label>
-                        <input
-                            type="date"
-                            value={form.dueDate}
-                            onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal (Base) *</label>
-                            <input
-                                type="number"
-                                required
-                                value={form.subtotal}
-                                onChange={(e) => setForm(f => ({ ...f, subtotal: Number(e.target.value) }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
-                            <input
-                                type="number"
-                                value={form.taxIva}
-                                onChange={(e) => setForm(f => ({ ...f, taxIva: Number(e.target.value) }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Tax Retention Section */}
-                    <div className="grid grid-cols-2 gap-4 bg-amber-50/50 p-3 rounded-lg border border-amber-100">
-                        <div>
-                            <label className="block text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
-                                Retefuente (Sugerida)
-                            </label>
-                            <input
-                                type="number"
-                                value={form.retefuenteAmount}
-                                onChange={(e) => setForm(f => ({ ...f, retefuenteAmount: Number(e.target.value) }))}
-                                className="w-full px-3 py-2 border border-amber-200 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-amber-800 mb-1 flex items-center gap-1">
-                                ReteICA (Sugerida)
-                            </label>
-                            <input
-                                type="number"
-                                value={form.reteicaAmount}
-                                onChange={(e) => setForm(f => ({ ...f, reteicaAmount: Number(e.target.value) }))}
-                                className="w-full px-3 py-2 border border-amber-200 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 text-sm"
-                            />
-                        </div>
-                        <div className="col-span-2 pt-2 border-t border-amber-100 flex justify-between items-center">
-                            <span className="text-xs font-medium text-amber-900">Valor Neto a Pagar:</span>
-                            <span className="text-lg font-bold text-amber-700">
-                                {formatMoney(Number(form.subtotal) + Number(form.taxIva) - Number(form.retefuenteAmount) - Number(form.reteicaAmount))}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor Total Facturado (con IVA)</label>
-                        <input
-                            type="number"
-                            required
-                            value={form.totalAmount}
-                            onChange={(e) => setForm(f => ({ ...f, totalAmount: Number(e.target.value) }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-bold text-indigo-700"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">* Debe coincidir con el total bruto de la factura</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                        <input
-                            type="text"
-                            value={form.description}
-                            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-                            placeholder="Concepto de la factura..."
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Soporte (Factura Original)</label>
-                        <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors relative cursor-pointer">
-                            <input
-                                type="file"
-                                accept="application/pdf,image/*"
-                                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                            <div className="flex flex-col items-center gap-2 text-gray-500">
-                                {file ? (
-                                    <>
-                                        <FileText className="w-8 h-8 text-indigo-600" />
-                                        <span className="text-sm font-medium text-gray-900">{file.name}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="w-6 h-6" />
-                                        <span className="text-sm">Arrastra o selecciona el archivo PDF/Imagen</span>
-                                    </>
-                                )}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal (Base) *</label>
+                                <input
+                                    type="number"
+                                    required
+                                    value={form.subtotal}
+                                    onChange={(e) => setForm(f => ({ ...f, subtotal: Number(e.target.value) }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+                                <input
+                                    type="number"
+                                    value={form.taxIva}
+                                    onChange={(e) => setForm(f => ({ ...f, taxIva: Number(e.target.value) }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                                />
                             </div>
                         </div>
-                        {file && (
-                            <AIButton
-                                variant="primary"
-                                size="sm"
-                                loading={analyzing}
-                                onClick={() => handleAIExtract(file)}
-                                className="mt-2 w-full"
-                            >
-                                {analyzing ? 'Analizando con IA...' : 'Auto-completar con IA'}
-                            </AIButton>
 
-                        )}
-                    </div>
+                        {/* Tax Retention Section */}
+                        <div className="bg-brand-50/30 p-4 rounded-card border border-brand-100">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-brand-800 mb-1">Retefuente</label>
+                                    <input
+                                        type="number"
+                                        value={form.retefuenteAmount}
+                                        onChange={(e) => setForm(f => ({ ...f, retefuenteAmount: Number(e.target.value) }))}
+                                        className="w-full px-3 py-1.5 border border-brand-200 rounded-input bg-white focus:ring-2 focus:ring-brand-500 text-sm outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-brand-800 mb-1">ReteICA</label>
+                                    <input
+                                        type="number"
+                                        value={form.reteicaAmount}
+                                        onChange={(e) => setForm(f => ({ ...f, reteicaAmount: Number(e.target.value) }))}
+                                        className="w-full px-3 py-1.5 border border-brand-200 rounded-input bg-white focus:ring-2 focus:ring-brand-500 text-sm outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-brand-100 flex justify-between items-center">
+                                <span className="text-xs font-bold text-brand-900 uppercase tracking-tight">Neto a Pagar:</span>
+                                <span className="text-xl font-black text-brand-700">
+                                    {formatMoney(Number(form.subtotal) + Number(form.taxIva) - Number(form.retefuenteAmount) - Number(form.reteicaAmount))}
+                                </span>
+                            </div>
+                        </div>
 
-                    <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-xl">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white hover:text-gray-800 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={uploading || !form.providerId || !form.invoiceNumber || !form.subtotal}
-                            className="px-6 py-2 bg-brand-primary hover:bg-brand-700 text-white text-sm font-medium rounded-button shadow-sm shadow-brand-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {uploading ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Registrar Factura')}
-                        </button>
-                    </div>
-                </form>
-            </div >
-        </div >
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Total Facturado (con IVA)</label>
+                            <input
+                                type="number"
+                                required
+                                value={form.totalAmount}
+                                onChange={(e) => setForm(f => ({ ...f, totalAmount: Number(e.target.value) }))}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none font-bold text-brand-700"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción / Concepto</label>
+                            <textarea
+                                value={form.description}
+                                onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                                placeholder="Escribe el concepto de esta factura..."
+                                rows={2}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none resize-none"
+                            />
+                        </div>
+
+                        {/* File Upload Section */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">Soporte (PDF/Imagen)</label>
+                            <div className="border-2 border-dashed border-gray-200 rounded-card p-6 text-center hover:border-brand-300 hover:bg-brand-50/30 transition-all group relative cursor-pointer">
+                                <input
+                                    type="file"
+                                    accept="application/pdf,image/*"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <div className="flex flex-col items-center gap-2">
+                                    {file ? (
+                                        <div className="flex flex-col items-center animate-bounce-in">
+                                            <FileText className="w-10 h-10 text-brand-600 mb-1" />
+                                            <span className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{file.name}</span>
+                                            <span className="text-xs text-brand-600">Cambiar archivo</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="p-3 bg-gray-50 rounded-full group-hover:bg-brand-100 transition-colors">
+                                                <Upload className="w-6 h-6 text-gray-400 group-hover:text-brand-600" />
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-600">
+                                                Haz clic para <span className="text-brand-600">subir un archivo</span>
+                                            </p>
+                                            <p className="text-xs text-gray-400">PDF, JPG o PNG hasta 10MB</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {file && (
+                                <AIButton
+                                    variant="primary"
+                                    size="sm"
+                                    loading={analyzing}
+                                    onClick={() => handleAIExtract(file)}
+                                    className="w-full shadow-brand-100"
+                                >
+                                    {analyzing ? 'Procesando con IA...' : 'Auto-completar con IA ✨'}
+                                </AIButton>
+                            )}
+                        </div>
+                    </form>
+                </div>
+
+                {/* Footer (Fixed) */}
+                <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 sticky bottom-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-button transition-all"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        form="invoice-form"
+                        type="submit"
+                        disabled={uploading || !form.providerId || !form.invoiceNumber || !form.subtotal}
+                        className="px-8 py-2.5 bg-brand-primary hover:bg-brand-700 text-white text-sm font-bold rounded-button shadow-lg shadow-brand-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                    >
+                        {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {uploading ? 'Guardando...' : (isEditMode ? 'Actualizar Factura' : 'Registrar Factura')}
+                    </button>
+                </div>
+            </div>
+        </div>
     )
 }
 
@@ -770,9 +730,12 @@ export default function InvoicesPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         {gmailStatus?.connected ? (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm border border-green-200">
-                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                <span className="font-medium">Conectado: {gmailStatus.email}</span>
+                            <div className="flex flex-col items-end gap-0.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs border border-green-200">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="font-medium line-clamp-1">{gmailStatus.email}</span>
+                                </div>
+                                <span className="text-[10px] text-green-600/80">Scan: {formatRelativeTime(selectedUnit?.gmailLastAutoScan)}</span>
                             </div>
                         ) : (
                             <button

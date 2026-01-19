@@ -344,6 +344,12 @@ async function runBackgroundScan(jobId: string, unitId: string) {
             });
         }
 
+        // Update last scan timestamp for the unit
+        await prisma.unit.update({
+            where: { id: unitId },
+            data: { gmailLastAutoScan: new Date() }
+        });
+
         await prisma.scanningJob.update({
             where: { id: jobId },
             data: { status: 'COMPLETED', progress: 100, completedAt: new Date(), results: results as any }

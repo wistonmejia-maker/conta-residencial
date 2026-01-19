@@ -66,6 +66,10 @@ export async function analyzeDocument(file: File): Promise<{
         invoiceNumber?: string;
         transactionRef?: string;
         bankName?: string;
+        retentions?: {
+            retefuente?: { amount: number; rate: number; type: 'SUGGESTED' | 'EXTRACTED' };
+            reteica?: { amount: number; rate: number; type: 'SUGGESTED' | 'EXTRACTED' };
+        }
     }
 }> {
     const formData = new FormData();

@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, FileWarning, Wallet, ArrowRight, AlertTriangle, RefreshCw, Loader2, Mail, Sparkles, Eye, X, CheckCircle2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, FileWarning, Wallet, ArrowRight, AlertTriangle, RefreshCw, Loader2, Mail, Sparkles, Eye, X, CheckCircle2, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getMissingRecurringInvoices, getInvoiceStats, getPayments, getInvoices, getGmailStatus, getGmailPreview, connectGmail } from '../lib/api'
@@ -8,6 +8,7 @@ import { AIProcessingOverlay } from '../components/ui'
 import type { Payment } from '../lib/api'
 import { useState, useEffect } from 'react'
 import { formatMoney } from '../lib/format'
+import { formatRelativeTime } from '../lib/dateUtils'
 
 const statusStyles: Record<string, string> = {
     DRAFT: 'status-pending',
@@ -212,9 +213,15 @@ export default function DashboardPage() {
                         <div>
                             <h3 className="font-semibold text-gray-900">Centro de Gmail</h3>
                             {gmailStatus?.connected ? (
-                                <div className="flex items-center gap-2 mt-1">
-                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                    <span className="text-sm text-green-700 font-medium">{gmailStatus.email}</span>
+                                <div className="space-y-1 mt-1">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                        <span className="text-sm text-green-700 font-medium">{gmailStatus.email}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <Clock className="w-3 h-3" />
+                                        <span>Último escaneo: {formatRelativeTime(selectedUnit?.gmailLastAutoScan)}</span>
+                                    </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-gray-500 mt-1">No hay cuenta vinculada</p>

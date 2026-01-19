@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { scanGmail, getScanStatus } from './api/gmail';
 
 export interface AIAction {
@@ -41,6 +42,7 @@ const AIHistoryContext = createContext<AIContextType | null>(null);
 
 export function AIHistoryProvider({ children }: { children: ReactNode }) {
     const [actions, setActions] = useState<AIAction[]>([]);
+    const queryClient = useQueryClient();
 
     // Global Scan State
     const [scanState, setScanState] = useState<ScanState>({
@@ -125,6 +127,10 @@ export function AIHistoryProvider({ children }: { children: ReactNode }) {
                         message: `¡Escaneo completado! Procesados: ${status.processedCount}`,
                         processedEmails: status.processedCount
                     }));
+
+                    // Refresh unit data to update Last Scan indicator
+                    queryClient.invalidateQueries({ queryKey: ['units'] });
+
                     // Log to history
                     addAction({
                         type: 'scan',

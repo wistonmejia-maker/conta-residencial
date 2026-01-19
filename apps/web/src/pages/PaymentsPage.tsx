@@ -1,14 +1,14 @@
 import { Plus, Search, FileDown, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check, MessageSquare } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
 import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
 import { useUnit } from '../lib/UnitContext'
-import { FeedbackModal } from '../components/ui'
 import { formatMoney } from '../lib/format'
+import { FeedbackModal } from '../components/ui'
 
 
 const statusStyles: Record<string, string> = {
@@ -49,7 +49,7 @@ export default function PaymentsPage() {
 
         try {
             // Upload to Storage
-            const { url } = await uploadFileToStorage(file, `units/${unitId}/payments/${uploadPaymentId}`)
+            const { url } = await uploadFileToStorage(file, `units / ${unitId} /payments/${uploadPaymentId} `)
 
             // Update Payment in DB
             await updatePayment(uploadPaymentId, { supportFileUrl: url })
@@ -160,7 +160,7 @@ export default function PaymentsPage() {
                         <button
                             onClick={() => {
                                 const dataToExport = filtered.map((p: any) => ({
-                                    consecutiveNumber: p.consecutiveNumber ? `CE-${String(p.consecutiveNumber).padStart(4, '0')}` : 'Sin CE',
+                                    consecutiveNumber: p.consecutiveNumber ? `CE - ${String(p.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE',
                                     paymentDate: p.paymentDate,
                                     invoices: p.invoiceItems?.length || 0,
                                     amountPaid: Number(p.amountPaid),
@@ -178,7 +178,7 @@ export default function PaymentsPage() {
                                     { key: 'reteica', header: 'ReteICA', format: 'money' },
                                     { key: 'netValue', header: 'Valor Neto', format: 'money' },
                                     { key: 'status', header: 'Estado' }
-                                ], `egresos_${new Date().toISOString().split('T')[0]}`)
+                                ], `egresos_${new Date().toISOString().split('T')[0]} `)
                             }}
                             className="px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm flex items-center gap-2"
                         >
@@ -301,15 +301,15 @@ export default function PaymentsPage() {
                                         <td className="px-4 py-3 text-sm text-gray-600">{new Date(payment.paymentDate).toLocaleDateString('es-CO')}</td>
                                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatMoney(Number(payment.amountPaid))}</td>
                                         <td className="px-4 py-3 text-right text-sm text-red-600">
-                                            {Number(payment.retefuenteApplied) > 0 ? `-${formatMoney(Number(payment.retefuenteApplied))}` : '-'}
+                                            {Number(payment.retefuenteApplied) > 0 ? `- ${formatMoney(Number(payment.retefuenteApplied))} ` : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-right text-sm text-red-600">
-                                            {Number(payment.reteicaApplied) > 0 ? `-${formatMoney(Number(payment.reteicaApplied))}` : '-'}
+                                            {Number(payment.reteicaApplied) > 0 ? `- ${formatMoney(Number(payment.reteicaApplied))} ` : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatMoney(Number(payment.netValue))}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-1">
-                                                <span className={`status-pill ${statusStyles[payment.status] || 'status-pending'}`}>
+                                                <span className={`status - pill ${statusStyles[payment.status] || 'status-pending'} `}>
                                                     {statusLabels[payment.status] || payment.status}
                                                 </span>
                                                 {payment.monthlyReportId && (
@@ -369,7 +369,7 @@ export default function PaymentsPage() {
                                                         setUploadPaymentId(payment.id)
                                                         document.getElementById('payment-upload-input')?.click()
                                                     }}
-                                                    className={`p-1 rounded ${payment.supportFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'}`}
+                                                    className={`p - 1 rounded ${payment.supportFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'} `}
                                                     title={payment.supportFileUrl ? "Reemplazar Soporte" : "Subir Soporte Firmado"}
                                                 >
                                                     <UploadIcon className="w-4 h-4" />
@@ -555,7 +555,7 @@ export default function PaymentsPage() {
 
                             <p className="text-gray-600 mb-6">
                                 Estás a punto de eliminar el comprobante <span className="font-mono font-bold text-gray-900">
-                                    {showDeleteConfirm.consecutiveNumber ? `CE-${String(showDeleteConfirm.consecutiveNumber).padStart(4, '0')}` : 'Sin CE'}
+                                    {showDeleteConfirm.consecutiveNumber ? `CE - ${String(showDeleteConfirm.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE'}
                                 </span> de {showDeleteConfirm.provider?.name || 'este proveedor'}.
                                 Esta acción desasociará cualquier factura pagada con este egreso.
                             </p>
@@ -609,7 +609,6 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
     const [amount, setAmount] = useState(Number(payment.amountPaid) || 0)
     const [loading, setLoading] = useState(false)
 
-    // Fetch pending invoices
     const { data: invoicesData } = useQuery({
         queryKey: ['invoices-pending', unitId],
         queryFn: () => getInvoices({ unitId, status: 'PENDING' })
@@ -625,7 +624,8 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
         ...(partialData?.invoices || [])
     ]
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
         if (!selectedInvoiceId) {
             alert('Seleccione una factura')
             return
@@ -644,58 +644,69 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">Asociar Factura al Pago</h2>
-                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
-                        <X className="w-5 h-5 text-gray-500" />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-card shadow-2xl w-full max-w-md flex flex-col max-h-[80vh] overflow-hidden animate-scale-in">
+                <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h2 className="text-lg font-bold text-gray-900">Asociar Factura</h2>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <p className="text-sm text-gray-600">Pago: <strong>CE-{payment.consecutiveNumber}</strong></p>
-                        <p className="text-sm text-gray-600">Valor: <strong>{formatMoney(Number(payment.amountPaid))}</strong></p>
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-card">
+                        <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Pago Seleccionado</p>
+                        <p className="text-sm font-bold text-indigo-900">CE-{String(payment.consecutiveNumber).padStart(4, '0')}</p>
+                        <p className="text-2xl font-black text-indigo-600 mt-1">{formatMoney(Number(payment.amountPaid))}</p>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Factura</label>
-                        <select
-                            value={selectedInvoiceId}
-                            onChange={(e) => setSelectedInvoiceId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        >
-                            <option value="">-- Seleccione --</option>
-                            {pendingInvoices.map((inv: any) => (
-                                <option key={inv.id} value={inv.id}>
-                                    {inv.invoiceNumber} - {inv.provider?.name} - {formatMoney(Number(inv.balance || inv.totalAmount))}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <form id="link-invoice-form" onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Seleccionar Factura Pendiente</label>
+                            <select
+                                value={selectedInvoiceId}
+                                onChange={(e) => setSelectedInvoiceId(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                required
+                            >
+                                <option value="">-- Buscar factura... --</option>
+                                {pendingInvoices.map((inv: any) => (
+                                    <option key={inv.id} value={inv.id}>
+                                        {inv.invoiceNumber} - {inv.provider?.name} ({formatMoney(Number(inv.balance || inv.totalAmount))})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Aplicar</label>
-                        <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        />
-                    </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Monto a Aplicar</label>
+                            <input
+                                type="number"
+                                value={amount}
+                                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm font-bold focus:ring-2 focus:ring-brand-500 outline-none"
+                                required
+                            />
+                        </div>
+                    </form>
                 </div>
 
-                <div className="flex justify-end gap-2 mt-6">
-                    <button onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 sticky bottom-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-button"
+                    >
                         Cancelar
                     </button>
                     <button
-                        onClick={handleSubmit}
+                        form="link-invoice-form"
+                        type="submit"
                         disabled={loading || !selectedInvoiceId}
-                        className="px-4 py-2 bg-brand-primary text-white rounded-button hover:bg-brand-700 disabled:opacity-50"
+                        className="px-6 py-2 bg-brand-primary hover:bg-brand-700 text-white text-sm font-bold rounded-button shadow-lg shadow-brand-200 transition-all disabled:opacity-40 flex items-center gap-2"
                     >
-                        {loading ? 'Guardando...' : 'Asociar Factura'}
+                        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Asociar Factura
                     </button>
                 </div>
             </div>
@@ -721,7 +732,6 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         manualConsecutive: payment?.manualConsecutive || ''
     })
 
-    // Multi-invoice selection state - initialize from payment.invoiceItems if editing
     const [selectedInvoices, setSelectedInvoices] = useState<Map<string, { invoice: Invoice & { provider?: Provider; balance?: number }, amount: number }>>(() => {
         if (payment?.invoiceItems && payment.invoiceItems.length > 0) {
             const map = new Map()
@@ -744,16 +754,12 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         reteica: Number(payment?.reteicaApplied || 0)
     })
 
-    // File upload state for new payment
     const [file, setFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
-
-    // Manual amount for payments without invoice
     const [manualAmount, setManualAmount] = useState(Number(payment?.amountPaid || 0))
     const [analyzing, setAnalyzing] = useState(false)
     const [aiError, setAiError] = useState<string | null>(null)
 
-    // Fetch pending invoices
     const { data: invoicesData } = useQuery({
         queryKey: ['invoices-pending', unitId],
         queryFn: () => getInvoices({ unitId, status: 'PENDING' })
@@ -776,7 +782,6 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
 
     const associatedInvoices = payment?.invoiceItems?.map((item: any) => item.invoice).filter(Boolean) || []
 
-    // Merge: add associated invoices that are not already in pending list
     const allAvailableInvoices = [
         ...pendingInvoices,
         ...associatedInvoices.filter((inv: any) => !pendingInvoices.some(p => p.id === inv.id))
@@ -784,12 +789,10 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
 
     const providers = providersData?.providers || []
 
-    // Filter by provider
     const filteredInvoices = providerFilter
         ? allAvailableInvoices.filter(i => i.providerId === providerFilter)
         : allAvailableInvoices
 
-    // Group invoices by provider for display
     const invoicesByProvider = filteredInvoices.reduce((acc, inv) => {
         const provName = inv.provider?.name || 'Sin proveedor'
         if (!acc[provName]) acc[provName] = []
@@ -807,465 +810,372 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                 setForm(f => ({
                     ...f,
                     paymentDate: data.date || f.paymentDate,
-                    transactionRef: data.transactionRef || f.transactionRef,
-                    bankPaymentMethod: data.bankName ? 'TRANSFER' : f.bankPaymentMethod
+                    transactionRef: data.transactionRef || f.transactionRef
                 }))
-                setManualAmount(data.totalAmount || manualAmount)
+                setManualAmount(data.totalAmount || 0)
 
-                // If it's a payment, maybe we can match provider or description
-                if (data.concept) {
-                    // Try to update some note or similar if available
+                if (data.nit) {
+                    const cleanNit = data.nit.replace(/[^0-9]/g, '')
+                    const provider = providers.find((p: any) => p.nit.replace(/[^0-9]/g, '') === cleanNit)
+                    if (provider) setProviderFilter(provider.id)
                 }
-            } else if (analysis.type === 'INVOICE') {
-                setAiError('Este documento parece ser una factura, no un comprobante de pago. Por favor súbelo en la sección de Facturas.')
             } else {
-                setAiError('No se pudo extraer información válida de este comprobante con IA.')
+                setAiError('No se pudo extraer información clara del comprobante.')
             }
         } catch (err) {
-            console.error('AI Extraction error:', err)
-            setAiError('Error al conectar con el servicio de IA.')
+            setAiError('Error al procesar con IA.')
         } finally {
             setAnalyzing(false)
         }
     }
 
-    // Calculate totals - use manual amount if no invoices selected
-    const totalAmount = selectedInvoices.size > 0
-        ? Array.from(selectedInvoices.values()).reduce((sum, item) => sum + item.amount, 0)
-        : manualAmount
-    const netValue = totalAmount - retentions.retefuente - retentions.reteica
+    const toggleInvoice = (invoice: Invoice & { provider?: Provider; balance?: number }) => {
+        const newSelected = new Map(selectedInvoices)
+        if (newSelected.has(invoice.id)) {
+            newSelected.delete(invoice.id)
+        } else {
+            newSelected.set(invoice.id, { invoice, amount: Number(invoice.balance || invoice.totalAmount) })
+        }
+        setSelectedInvoices(newSelected)
+    }
 
-    // Auto-calculate retentions when selection changes
+    const updateAmount = (invoiceId: string, amount: number) => {
+        const newSelected = new Map(selectedInvoices)
+        const entry = newSelected.get(invoiceId)
+        if (entry) {
+            newSelected.set(invoiceId, { ...entry, amount })
+            setSelectedInvoices(newSelected)
+        }
+    }
+
+    const items = Array.from(selectedInvoices.values())
+    const totalSelected = items.reduce((sum, item) => sum + item.amount, 0)
+
     useEffect(() => {
-        if (autoCalculate && selectedInvoices.size > 0) {
+        if (autoCalculate) {
             let totalRetefuente = 0
             let totalReteica = 0
 
-            selectedInvoices.forEach(({ invoice, amount }) => {
-                const provider = providers.find((p: Provider) => p.id === invoice.providerId)
-                if (provider) {
-                    // Use proportion of subtotal based on amount vs total
-                    const proportion = amount / Number(invoice.totalAmount)
-                    const subtotalPortion = Number(invoice.subtotal) * proportion
-                    totalRetefuente += Math.round(subtotalPortion * (provider.defaultRetefuentePerc / 100))
-                    totalReteica += Math.round(subtotalPortion * (provider.defaultReteicaPerc / 100))
+            items.forEach(({ invoice, amount }) => {
+                const prov = invoice.provider
+                if (prov) {
+                    if (prov.defaultRetefuentePerc) {
+                        totalRetefuente += Math.round(amount * (prov.defaultRetefuentePerc / 100))
+                    }
+                    if (prov.defaultReteicaPerc) {
+                        totalReteica += Math.round(amount * (prov.defaultReteicaPerc / 100))
+                    }
                 }
             })
 
             setRetentions({ retefuente: totalRetefuente, reteica: totalReteica })
         }
-    }, [selectedInvoices, autoCalculate, providers])
+    }, [items, autoCalculate])
 
-    const toggleInvoice = (invoice: Invoice & { provider?: any; balance?: number }) => {
-        setSelectedInvoices(prev => {
-            const newMap = new Map(prev)
-            if (newMap.has(invoice.id)) {
-                newMap.delete(invoice.id)
-            } else {
-                const balance = invoice.balance ?? Number(invoice.totalAmount)
-                newMap.set(invoice.id, { invoice, amount: balance })
-            }
-            return newMap
-        })
-    }
-
-    const updateInvoiceAmount = (invoiceId: string, amount: number) => {
-        setSelectedInvoices(prev => {
-            const newMap = new Map(prev)
-            const item = newMap.get(invoiceId)
-            if (item) {
-                newMap.set(invoiceId, { ...item, amount })
-            }
-            return newMap
-        })
-    }
-
-    const createMutation = useMutation({
-        mutationFn: async (data: { supportFileUrl?: string; hasAuditIssue?: boolean; hasPendingInvoice?: boolean }) => {
-            const invoiceAllocations = Array.from(selectedInvoices.entries()).map(([invoiceId, { amount }]) => ({
-                invoiceId,
-                amount
-            }))
-
-            if (isEditMode) {
-                // Update existing payment
-                return updatePayment(payment.id, {
-                    paymentDate: form.paymentDate,
-                    sourceType: form.sourceType,
-                    manualConsecutive: form.sourceType === 'EXTERNAL' ? form.manualConsecutive : undefined,
-                    amountPaid: totalAmount,
-                    retefuenteApplied: retentions.retefuente,
-                    reteicaApplied: retentions.reteica,
-                    bankPaymentMethod: form.bankPaymentMethod,
-                    transactionRef: form.transactionRef,
-                    supportFileUrl: data.supportFileUrl || payment.supportFileUrl,
-                    invoiceAllocations,
-                    hasAuditIssue: data.hasAuditIssue,
-                    hasPendingInvoice: data.hasPendingInvoice
-                } as any)
-            } else {
-                // Create new payment
-                return createPayment({
-                    unitId,
-                    paymentDate: form.paymentDate,
-                    sourceType: form.sourceType,
-                    manualConsecutive: form.sourceType === 'EXTERNAL' ? form.manualConsecutive : undefined,
-                    amountPaid: totalAmount,
-                    retefuenteApplied: retentions.retefuente,
-                    reteicaApplied: retentions.reteica,
-                    bankPaymentMethod: form.bankPaymentMethod,
-                    transactionRef: form.transactionRef,
-                    supportFileUrl: data.supportFileUrl,
-                    invoiceAllocations,
-                    hasAuditIssue: data.hasAuditIssue,
-                    hasPendingInvoice: data.hasPendingInvoice
-                })
-            }
-        },
-        onSuccess
-    })
+    const grossAmount = items.length > 0 ? totalSelected : manualAmount
+    const netAmount = grossAmount - retentions.retefuente - retentions.reteica
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-
-        // Check if payment date is before any selected invoice date
-        const paymentDate = new Date(form.paymentDate)
-        let hasDateIssue = false
-
-        for (const [invoiceId] of selectedInvoices) {
-            const invoice = filteredInvoices.find((i: any) => i.id === invoiceId)
-            if (invoice) {
-                const invoiceDate = new Date(invoice.invoiceDate)
-                if (paymentDate < invoiceDate) {
-                    hasDateIssue = true
-                    break
-                }
-            }
-        }
-
-        // Show warning for date issue
-        if (hasDateIssue) {
-            if (!confirm('⚠️ La fecha del pago es anterior a la fecha de una o más facturas seleccionadas.\n\nEsto quedará registrado en el log de auditoría.\n\n¿Desea continuar?')) {
-                return
-            }
-        }
-
-        // Check if no invoices selected (pending invoice)
-        const noPendingInvoice = selectedInvoices.size === 0
-        if (noPendingInvoice) {
-            if (!confirm('⚠️ No ha seleccionado ninguna factura para este pago.\n\nEl pago quedará pendiente de asociar factura y no podrá cerrar el mes hasta completarlo.\n\n¿Desea continuar?')) {
-                return
-            }
-        }
-
         setUploading(true)
         try {
-            let supportFileUrl = ''
+            let supportFileUrl = payment?.supportFileUrl || ''
             if (file) {
-                const timestamp = Date.now()
-                const res = await uploadFileToStorage(file, `units/${unitId}/payments/temp_${timestamp}`)
+                const res = await uploadFileToStorage(file, `units / ${unitId}/payments`)
                 supportFileUrl = res.url
             }
 
-            await createMutation.mutateAsync({
+            const payload = {
+                ...form,
+                amountPaid: grossAmount,
+                retefuenteApplied: retentions.retefuente,
+                reteicaApplied: retentions.reteica,
+                netValue: netAmount,
                 supportFileUrl,
-                hasAuditIssue: hasDateIssue,
-                hasPendingInvoice: noPendingInvoice
-            })
+                unitId,
+                invoices: items.map(item => ({
+                    invoiceId: item.invoice.id,
+                    amountApplied: item.amount
+                }))
+            }
+
+            if (isEditMode) {
+                await updatePayment(payment.id, payload)
+            } else {
+                await createPayment(payload)
+            }
+            onSuccess()
         } catch (error) {
-            console.error('Error saving payment:', error)
-            alert(isEditMode ? 'Error al actualizar egreso' : 'Error al crear egreso')
+            console.error(error)
+            alert('Error al guardar el egreso')
         } finally {
             setUploading(false)
         }
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-                <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
-                    <h2 className="text-lg font-semibold text-gray-900">{isEditMode ? 'Editar Egreso' : 'Nuevo Egreso'}</h2>
-                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
-                        <X className="w-5 h-5 text-gray-500" />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-card shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white">
+                    <h2 className="text-lg font-bold text-gray-900">
+                        {isEditMode ? `Editar Egreso ${payment.consecutiveNumber ? `CE-${String(payment.consecutiveNumber).padStart(4, '0')}` : ''}` : 'Nuevo Egreso (Comprobante)'}
+                    </h2>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Provider Filter */}
-                    <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por Proveedor</label>
-                            <select
-                                value={providerFilter}
-                                onChange={(e) => setProviderFilter(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                            >
-                                <option value="">Todos los proveedores</option>
-                                {providers.map((p: Provider) => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        {selectedInvoices.size > 0 && (
-                            <div className="text-right">
-                                <p className="text-xs text-gray-500">Facturas seleccionadas</p>
-                                <p className="text-lg font-bold text-indigo-600">{selectedInvoices.size}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Invoice Selection with Checkboxes */}
-                    <div className="border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th className="px-3 py-2 text-left w-8"></th>
-                                    <th className="px-3 py-2 text-left font-medium text-gray-500">Factura</th>
-                                    <th className="px-3 py-2 text-left font-medium text-gray-500">Proveedor</th>
-                                    <th className="px-3 py-2 text-right font-medium text-gray-500">Saldo</th>
-                                    <th className="px-3 py-2 text-right font-medium text-gray-500">A Pagar</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {Object.entries(invoicesByProvider).map(([provName, invoices]) => (
-                                    (invoices as any[]).map((inv) => {
-                                        const isSelected = selectedInvoices.has(inv.id)
-                                        const balance = inv.balance ?? Number(inv.totalAmount)
-                                        return (
-                                            <tr
-                                                key={inv.id}
-                                                className={`cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
-                                                onClick={() => toggleInvoice(inv)}
-                                            >
-                                                <td className="px-3 py-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => { }}
-                                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                    />
-                                                </td>
-                                                <td className="px-3 py-2 font-mono">{inv.invoiceNumber}</td>
-                                                <td className="px-3 py-2">{provName}</td>
-                                                <td className="px-3 py-2 text-right font-medium">{formatMoney(balance)}</td>
-                                                <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                                                    {isSelected && (
-                                                        <input
-                                                            type="number"
-                                                            value={selectedInvoices.get(inv.id)?.amount || 0}
-                                                            onChange={(e) => updateInvoiceAmount(inv.id, parseFloat(e.target.value) || 0)}
-                                                            max={balance}
-                                                            className="w-28 px-2 py-1 border border-indigo-300 rounded text-right text-sm"
-                                                        />
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })
-                                ))}
-                                {filteredInvoices.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="px-3 py-8 text-center text-gray-400">
-                                            No hay facturas pendientes
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Payment Details */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Egreso *</label>
-                            <select
-                                value={form.sourceType}
-                                onChange={(e) => setForm(f => ({ ...f, sourceType: e.target.value as 'INTERNAL' | 'EXTERNAL' }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                            >
-                                <option value="INTERNAL">Interno (genera consecutivo)</option>
-                                <option value="EXTERNAL">Externo (debe subir soporte PDF)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago *</label>
-                            <input
-                                type="date"
-                                value={form.paymentDate}
-                                onChange={(e) => setForm(f => ({ ...f, paymentDate: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    {/* Retention Section */}
-                    <div className="border border-indigo-100 rounded-lg p-4 bg-indigo-50/30">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                                <Calculator className="w-4 h-4 text-indigo-600" />
-                                <span className="font-medium text-indigo-900">Retenciones</span>
-                            </div>
-                            <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={autoCalculate}
-                                    onChange={(e) => setAutoCalculate(e.target.checked)}
-                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <span className="text-gray-600">Auto-calcular</span>
-                            </label>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-4">
+                {/* Body (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                    <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
+                        {/* Section: Context */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">Total Bruto</label>
-                                {selectedInvoices.size === 0 ? (
-                                    <input
-                                        type="number"
-                                        value={manualAmount || ''}
-                                        onChange={(e) => setManualAmount(parseFloat(e.target.value) || 0)}
-                                        placeholder="Ingrese el valor"
-                                        className="w-full px-2 py-1 border border-gray-200 rounded text-lg font-bold"
-                                    />
-                                ) : (
-                                    <p className="font-bold text-lg">{formatMoney(totalAmount)}</p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">ReteFuente</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
                                 <input
-                                    type="number"
-                                    value={retentions.retefuente || ''}
-                                    onChange={(e) => setRetentions(r => ({ ...r, retefuente: parseFloat(e.target.value) || 0 }))}
-                                    disabled={autoCalculate}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-sm disabled:bg-gray-50"
+                                    type="date"
+                                    value={form.paymentDate}
+                                    onChange={(e) => setForm(f => ({ ...f, paymentDate: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                    required
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-500 mb-1">ReteICA</label>
-                                <input
-                                    type="number"
-                                    value={retentions.reteica || ''}
-                                    onChange={(e) => setRetentions(r => ({ ...r, reteica: parseFloat(e.target.value) || 0 }))}
-                                    disabled={autoCalculate}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-sm disabled:bg-gray-50"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Valor Neto</label>
-                                <p className="font-bold text-lg text-emerald-600">{formatMoney(netValue)}</p>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Origen / Tipo</label>
+                                <select
+                                    value={form.sourceType}
+                                    onChange={(e) => setForm(f => ({ ...f, sourceType: e.target.value as any }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                >
+                                    <option value="INTERNAL">📄 Interno (Caja/Banco Propio)</option>
+                                    <option value="EXTERNAL">📤 Externo (Importado/Gmail)</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Bank details */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                            <select
-                                value={form.bankPaymentMethod}
-                                onChange={(e) => setForm(f => ({ ...f, bankPaymentMethod: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                            >
-                                <option value="">Seleccionar...</option>
-                                <option value="TRANSFER">Transferencia</option>
-                                <option value="CHECK">Cheque</option>
-                                <option value="CASH">Efectivo</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Referencia Bancaria</label>
-                            <input
-                                type="text"
-                                value={form.transactionRef}
-                                onChange={(e) => setForm(f => ({ ...f, transactionRef: e.target.value }))}
-                                placeholder="Ej: TRX-123456"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    {/* File Upload Section */}
-                    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Soporte de Pago (Opcional)</label>
-                        {aiError && (
-                            <div className="mb-3 p-2 bg-red-50 text-red-700 text-xs rounded border border-red-100 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4" />
-                                {aiError}
-                            </div>
-                        )}
-                        <div className="flex items-center gap-4">
-                            <label className="flex-1 cursor-pointer group">
-                                <div className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg transition-colors ${file ? 'border-indigo-300 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-white'}`}>
-                                    {file ? (
-                                        <div className="flex flex-col items-center text-indigo-600">
-                                            <FileText className="w-8 h-8 mb-2" />
-                                            <span className="text-sm font-medium">{file.name}</span>
-                                            <span className="text-xs text-indigo-400">Clic para cambiar</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center text-gray-500 group-hover:text-indigo-500">
-                                            <UploadIcon className="w-8 h-8 mb-2" />
-                                            <span className="text-sm">Clic para subir PDF o Imagen</span>
-                                        </div>
-                                    )}
+                        {/* Section: Support Upload & IA */}
+                        <div className="p-4 bg-gray-50 rounded-card border border-gray-100">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Soporte de Pago (Opcional)</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1">
                                     <input
                                         type="file"
+                                        accept=".pdf,image/*"
+                                        id="modal-payment-file"
                                         className="hidden"
-                                        accept=".pdf,.png,.jpg,.jpeg"
                                         onChange={(e) => setFile(e.target.files?.[0] || null)}
                                     />
+                                    <label
+                                        htmlFor="modal-payment-file"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-button text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                                    >
+                                        <UploadIcon className="w-4 h-4 text-gray-400" />
+                                        {file ? file.name : (payment?.supportFileUrl ? 'Cambiar archivo' : 'Subir Comprobante')}
+                                    </label>
                                 </div>
-                            </label>
-                            {file && (
-                                <button
-                                    type="button"
-                                    onClick={() => setFile(null)}
-                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                    title="Quitar archivo"
+                                {file && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAIExtract(file)}
+                                        disabled={analyzing}
+                                        className="flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-button text-sm font-bold hover:bg-brand-100 transition-colors disabled:opacity-50"
+                                    >
+                                        {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                        {analyzing ? 'Analizando...' : 'Auto-completar'}
+                                    </button>
+                                )}
+                            </div>
+                            {aiError && <p className="text-xs text-red-600 mt-2 font-medium">{aiError}</p>}
+                        </div>
+
+                        {/* Section: Payment Details */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
+                                <input
+                                    type="text"
+                                    value={form.bankPaymentMethod}
+                                    onChange={(e) => setForm(f => ({ ...f, bankPaymentMethod: e.target.value }))}
+                                    placeholder="Transferencia, Cheque, etc."
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Referencia / Transacción</label>
+                                <input
+                                    type="text"
+                                    value={form.transactionRef}
+                                    onChange={(e) => setForm(f => ({ ...f, transactionRef: e.target.value }))}
+                                    placeholder="Número de comprobante o referencia"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Section: Invoices Selection */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-brand-600" />
+                                    Facturas Asociadas
+                                </h3>
+                                <select
+                                    value={providerFilter}
+                                    onChange={(e) => setProviderFilter(e.target.value)}
+                                    className="text-xs border-gray-200 rounded-lg py-1 px-2 focus:ring-brand-500 outline-none"
                                 >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                    <option value="">Filtrar proveedor</option>
+                                    {providers.map((p: Provider) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                {Object.entries(invoicesByProvider).map(([provName, invoices]) => (
+                                    <div key={provName} className="mb-4">
+                                        <h4 className="text-[11px] font-bold text-gray-400 uppercase mb-2 tracking-wide">{provName}</h4>
+                                        <div className="space-y-2">
+                                            {(invoices as (Invoice & { provider?: any; balance?: number })[]).map((inv: Invoice & { provider?: any; balance?: number }) => (
+                                                <div
+                                                    key={inv.id}
+                                                    className={`flex items-center justify-between p-3 rounded-card border transition-all cursor-pointer ${selectedInvoices.has(inv.id) ? 'border-brand-300 bg-brand-50/50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                                                    onClick={() => toggleInvoice(inv)}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedInvoices.has(inv.id)}
+                                                            onChange={() => { }} // Handled by div click
+                                                            className="w-4 h-4 text-brand-600 rounded border-gray-300 pointer-events-none"
+                                                        />
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">{inv.invoiceNumber}</p>
+                                                            <p className="text-xs text-gray-500">{new Date(inv.invoiceDate).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right flex flex-col items-end gap-1">
+                                                        <p className="text-xs font-medium text-gray-400">Saldo: {formatMoney(Number(inv.balance || inv.totalAmount))}</p>
+                                                        {selectedInvoices.has(inv.id) && (
+                                                            <input
+                                                                type="number"
+                                                                value={selectedInvoices.get(inv.id)?.amount}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onChange={(e) => updateAmount(inv.id, Number(e.target.value))}
+                                                                className="w-24 px-2 py-1 text-right text-sm border-brand-200 border rounded font-bold text-brand-700 focus:ring-1 focus:ring-brand-500 outline-none"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {items.length === 0 && (
+                                <div className="p-4 bg-amber-50 rounded-card border border-amber-100">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                        <p className="text-sm font-bold text-amber-800">Pago sin factura asociada</p>
+                                    </div>
+                                    <p className="text-xs text-amber-700 mb-3">Ingresa el monto bruto manualmente. Podrás asociar la factura más tarde.</p>
+                                    <input
+                                        type="number"
+                                        value={manualAmount}
+                                        onChange={(e) => setManualAmount(Number(e.target.value))}
+                                        placeholder="Valor total del egreso"
+                                        className="w-full px-3 py-2 border border-amber-200 rounded-input text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none"
+                                    />
+                                </div>
                             )}
                         </div>
-                        {file && (
-                            <button
-                                type="button"
-                                onClick={() => handleAIExtract(file)}
-                                disabled={analyzing}
-                                className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-medium hover:bg-purple-100 transition-colors disabled:opacity-50"
-                            >
-                                {analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                {analyzing ? 'Analizando con IA...' : 'Auto-completar con IA (Experimental)'}
-                            </button>
-                        )}
-                    </div>
-                </form>
 
-                {/* Footer */}
-                <div className="flex justify-between items-center gap-3 p-4 border-t bg-gray-50">
-                    <div className="text-sm text-gray-500">
-                        {selectedInvoices.size > 0 && (
-                            <span>{selectedInvoices.size} factura{selectedInvoices.size > 1 ? 's' : ''} • Total: <strong className="text-gray-900">{formatMoney(totalAmount)}</strong></span>
+                        {/* Section: Totals & Retentions */}
+                        <div className="bg-brand-900 text-white p-4 rounded-card shadow-lg">
+                            <div className="flex items-center justify-between mb-4 border-b border-brand-800 pb-2">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-brand-300">Resumen y Retenciones</h3>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoCalculate}
+                                        onChange={(e) => setAutoCalculate(e.target.checked)}
+                                        className="w-3 h-3 text-brand-600 bg-brand-800 border-none rounded"
+                                    />
+                                    <span className="text-[10px] font-bold text-brand-300">Auto-calcular</span>
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-brand-400 font-bold uppercase">Rete-Fuente</span>
+                                    <input
+                                        type="number"
+                                        value={retentions.retefuente}
+                                        onChange={(e) => setRetentions({ ...retentions, retefuente: Number(e.target.value) })}
+                                        disabled={autoCalculate}
+                                        className="w-full bg-brand-800 border-none rounded px-2 py-1 text-sm font-bold disabled:opacity-50"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-brand-400 font-bold uppercase">Rete-ICA</span>
+                                    <input
+                                        type="number"
+                                        value={retentions.reteica}
+                                        onChange={(e) => setRetentions({ ...retentions, reteica: Number(e.target.value) })}
+                                        disabled={autoCalculate}
+                                        className="w-full bg-brand-800 border-none rounded px-2 py-1 text-sm font-bold disabled:opacity-50"
+                                    />
+                                </div>
+                                <div className="col-span-2 pt-2 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] text-brand-400 font-bold uppercase">Monto Bruto</p>
+                                        <p className="text-lg font-bold">{formatMoney(grossAmount)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-brand-400 font-bold uppercase">Neto a Pagar</p>
+                                        <p className="text-3xl font-black text-emerald-400">{formatMoney(netAmount)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Custom CE Number (Optional) */}
+                        {!isEditMode && (
+                            <div className="pt-4 border-t border-gray-100 flex items-center gap-4">
+                                <label className="text-xs font-bold text-gray-400 uppercase">CE Manual (Opcional):</label>
+                                <input
+                                    type="number"
+                                    value={form.manualConsecutive}
+                                    onChange={(e) => setForm(f => ({ ...f, manualConsecutive: e.target.value }))}
+                                    placeholder="CE-XXXX"
+                                    className="w-24 px-2 py-1 border border-gray-200 rounded text-sm font-mono focus:ring-brand-500 outline-none"
+                                    title="Si dejas vacío, el sistema asignará el siguiente comprobante disponible."
+                                />
+                            </div>
                         )}
-                    </div>
-                    <div className="flex gap-3">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium">
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={createMutation.isPending || uploading || totalAmount <= 0}
-                            className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
-                        >
-                            {uploading ? (
-                                <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
-                            ) : (
-                                `Registrar Egreso (${formatMoney(netValue)})`
-                            )}
-                        </button>
-                    </div>
+                    </form>
+                </div>
+
+                {/* Footer (Fixed) */}
+                <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 sticky bottom-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-button transition-all"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        form="payment-form"
+                        type="submit"
+                        disabled={uploading || (items.length === 0 && manualAmount <= 0)}
+                        className="px-8 py-2.5 bg-brand-primary hover:bg-brand-700 text-white text-sm font-bold rounded-button shadow-lg shadow-brand-200 transition-all disabled:opacity-40 transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                    >
+                        {uploading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {uploading ? 'Procesando...' : (isEditMode ? 'Actualizar Egreso' : 'Registrar Egreso')}
+                    </button>
                 </div>
             </div>
         </div>

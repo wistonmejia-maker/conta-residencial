@@ -60,7 +60,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/units', unitsRouter)
 app.use('/api/providers', providersRouter)
 app.use('/api/auth', authRouter)
-app.use('/api/invoices', scanRouter) // Register scanRouter FIRST to handle /scan-gmail
+app.use('/api/scan', scanRouter) // Explicit scan route for Cron/Tools
+app.use('/api/invoices', scanRouter) // Legacy: Register scanRouter to handle /scan-gmail under invoices
 app.use('/api/invoices', invoicesRouter)
 app.use('/api/payments', paymentsRouter)
 app.use('/api/bank', bankRouter)

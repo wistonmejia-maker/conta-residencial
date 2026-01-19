@@ -163,22 +163,31 @@ Sistema de escaneo programado con rango de búsqueda configurable.
 - **Campos de Configuración**:
   - `gmailScanDaysBack`: Número de días hacia atrás (default: 7)
   - `gmailAutoScanEnabled`: Toggle para activar escaneo automático
-  - `gmailLastAutoScan`: Timestamp del último escaneo automático
-
+  - `gmailLastAutoScan`: Timestamp del último escaneo exitoso (Manual o Automático)
 | Campo | Propósito |
 |:------|:----------|
 | Días relativos | Escanea "últimos X días" en vez de fecha fija |
 | Auto-scan | Ejecuta escaneo cada hora automáticamente |
 
-- **Backend** (`scan.ts`):
-  - Endpoint cron: `POST /api/scan/cron/scan-all`
-  - Protegido por `CRON_SECRET` header
-  - Filtra units con `gmailAutoScanEnabled = true` y Gmail conectado
-  - Excluye correos ya etiquetados: `-label:Procesado`
-- **Servicio de Disparo** (`apps/cron`):
-  - Script ligero en Node.js que llama al endpoint cada hora.
-  - Diseñado para ejecutarse como un "Cron Job" en Railway.
-  - Requiere variables `API_URL` y `CRON_SECRET`.
+- **Arquitectura de Servicio** (`apps/cron`):
+  - Microservicio independiente en Node.js (optimizado para Railway Cron).
+  - **Endpoint Objetivo**: `POST /api/scan/cron/scan-all` (Dual-mounted en API).
+  - **Variables de Entorno Críticas**:
+    - `API_URL`: Debe apuntar a la URL pública de producción (ej: `https://...up.railway.app`).
+    - `CRON_SECRET`: Token compartido con el API para autenticación.
+  - **Comportamiento**:
+    - Se ejecuta según schedule (ej: cada hora).
+    - Realiza petición HTTP al API.
+    - Loggea respuesta detallada (Status + Body) para depuración.
+    - Termina proceso (`process.exit`) inmediatamente tras respuesta.
+
+- **Backend** (`apps/api/src/routes/scan.ts`):
+  - Ruta montada en doble vía para compatibilidad:
+    - `/api/scan/cron/scan-all` (Estándar para Cron/Tools)
+    - `/api/invoices/cron/scan-all` (Legacy Frontend)
+  - Protegido por `CRON_SECRET` header.
+  - Filtra units con `gmailAutoScanEnabled = true` y Gmail conectado.
+  - Excluye correos ya etiquetados: `-label:Procesado`.
 - **Prioridad de filtro**: Días relativos > Fecha fija > Default 1 día
 
 # 11. Motor de Inferencia Fiscal (IA Híbrida)
@@ -226,15 +235,34 @@ El sistema decide qué valor mostrar en los campos de retención siguiendo este 
   - **Lógica**: Análisis de frecuencia de las últimas 50 consultas de la Unidad.
 - **UX**: Sugerencias persistentes (Chips) que no desaparecen, facilitando la navegación continua.
 
-# 14. Futuro / Roadmap (Pendientes)
+## 13.1 Feedback Explícito (Reglas de Negocio)
+> **Implementado (v1.0)**: Mecanismo para que el usuario corrija la IA y mejore el modelo.
+
+- **Persistencia**:
+  1. **Base de Datos**: Tabla `AIFeedback` (UnitId, DocumentType, Comment, SuggestedRule).
+  2. **Knowledge Base**: Se añade automáticamente una entrada al archivo `AI_RULES.md` en la raíz del proyecto.
+- **Flujo**:
+  1. Usuario marca "Regla Incorrecta" o deja comentario en Facturas/Pagos mediante ícono de mensaje.
+  2. Modal `FeedbackModal` recoge el comentario.
+  3. Backend guarda el feedback y actualiza `AI_RULES.md` para que la IA lo lea en futuros escaneos.
+
+# 14. Estándar de Formularios y Modales (Global Form UX)
+> **Implementado**: Estándar de diseño para garantizar que los formularios extensos sean usables y visualmente consistentes.
+
+- **Estructura Obligatoria**:
+  - **Header Fijo**: Título claro y metadata (ej: NIT) siempre visible. Borde inferior `border-gray-100`.
+  - **Cuerpo Scrolleable**: Clase `flex-1 overflow-y-auto p-6`. Uso de `space-y-6` para separar secciones.
+  - **Footer Fijo**: Fondo `bg-gray-50`, `sticky bottom-0`, borde superior `border-t`. Botones alineados a la derecha (`justify-end`).
+- **Tokens de Diseño**:
+  - **Contenedores**: `rounded-card` (12px), `shadow-2xl`.
+  - **Campos**: `rounded-input` (8px), `focus:ring-brand-500`.
+  - **Visuales**: Backdrop blur en el overlay (`backdrop-blur-sm`).
+- **Implementaciones de Referencia**:
+  - `InvoiceModal`: Agrupación de retenciones en grids compactas.
+  - `PaymentModal`: Sección de totales en alto contraste (`bg-brand-900`, `text-white`).
+  - `ProviderModal`: Pestañas de separación (Info vs Documentos) en el header.
+
+# 15. Futuro / Roadmap (Pendientes)
 Funcionalidades soportadas por la Base de Datos pero aún no implementadas en el Frontend/Backend completo.
 
-## 14.1. Feedback Explícito (Reglas de Negocio)
-> **Estado**: Planificado (Schema Ready)
-
-- **Objetivo**: Permitir al usuario corregir a la IA cuando sugiere una regla contable incorrecta.
-- **Persistencia**: Tabla `AIFeedback` (Ya existe en Schema).
-- **Flujo**:
-  1. Usuario marca "Regla Incorrecta" en UI.
-  2. Se crea registro en `AIFeedback` con `suggestedRule` y `comment`.
-  3. Sistema de "re-entrenamiento" o ajuste de prompts en batch.
+*(Sección Vacía por el momento - Todas las funcionalidades core han sido implementadas)*

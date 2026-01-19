@@ -9,6 +9,7 @@ export interface Unit {
     logoUrl?: string
     taxId?: string
     defaultPaymentType?: string
+    gmailLastAutoScan?: string | null
 }
 
 interface UnitContextType {

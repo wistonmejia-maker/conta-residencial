@@ -3,6 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Users, FileText, CreditCard, GitCompare, FileSpreadsheet, Building2, RefreshCw, ChevronDown, Loader2, BarChart3, Menu, X, Calculator } from 'lucide-react'
 import { useUnit } from '../lib/UnitContext'
 import GlobalSearch from './GlobalSearch'
+import { AIChatWidget } from './AIChatWidget'
 
 const operationalItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -276,6 +277,7 @@ export default function AppLayout() {
                     </button>
                 </div>
             </nav >
+            <AIChatWidget />
         </div >
     )
 }
