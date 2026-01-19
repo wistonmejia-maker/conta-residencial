@@ -121,11 +121,24 @@ function logScan(msg: string) {
 // Helpers for robust parsing
 function parseRobusDate(dateStr: string): Date {
     if (!dateStr) return new Date();
-    const d = new Date(dateStr);
+
+    // 1. First try direct parse (works for ISO YYYY-MM-DD)
+    let d = new Date(dateStr);
+    if (!isNaN(d.getTime()) && dateStr.includes('-')) return d;
+
+    // 2. Try DD/MM/YYYY pattern (common in Colombia)
+    const ddmmyyyy = dateStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (ddmmyyyy) {
+        const day = parseInt(ddmmyyyy[1], 10);
+        const month = parseInt(ddmmyyyy[2], 10) - 1; // 0-indexed
+        const year = parseInt(ddmmyyyy[3], 10);
+        d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d;
+    }
+
+    // 3. Fallback to standard parse if it didn't have hyphens but is valid
     if (!isNaN(d.getTime())) return d;
 
-    // Try common Spanish/Gemini variations if ISO fails
-    // (Actual parsing logic can be expanded)
     return new Date();
 }
 

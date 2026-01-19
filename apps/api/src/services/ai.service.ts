@@ -62,6 +62,11 @@ export async function classifyAndExtractDocument(
         }
     }
 
+    NOTAS SOBRE FECHAS:
+    - Los documentos son de Colombia, por lo que las fechas impresas suelen ser DD/MM/YYYY. 
+    - Por ejemplo, "02/01/2026" es el 2 de ENGERO de 2026. 
+    - DEBES retornar la fecha siempre en formato ISO YYYY-MM-DD.
+
             "concept": "Pago a [Nombre Proveedor] - [Concepto]"
         }
     }
