@@ -33,6 +33,10 @@ model Unit {
   gmailAutoScanEnabled Boolean              @default(false) @map("gmail_auto_scan_enabled")
   gmailLastAutoScan    DateTime?            @map("gmail_last_auto_scan")
   organization_id    String?
+  // Soft Delete Fields
+  isActive           Boolean              @default(true) @map("is_active")
+  deletedAt          DateTime?            @map("deleted_at")
+  deletedBy          String?              @map("deleted_by")
   auditLogs          AuditLog[]
   bankMovements      BankMovement[]
   invoices           Invoice[]

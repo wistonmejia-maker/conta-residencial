@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../lib/prisma';
-
+import logger from '../lib/logger';
 
 import { UnitContextService } from './unitContext.service';
 import { AIRulesService } from './aiRules.service';
@@ -116,8 +116,8 @@ export async function classifyAndExtractDocument(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI response:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI response', { error: e.message, stack: e.stack });
     }
 
     return { type: 'OTHER' };
@@ -175,8 +175,8 @@ export async function extractBankTransactions(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI extraction response:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI extraction response', { error: e.message, stack: e.stack });
     }
 
     return { transactions: [] };
@@ -227,8 +227,8 @@ export async function matchBankMovements(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI matching response:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI matching response', { error: e.message, stack: e.stack });
     }
 
     return { matches: [] };
@@ -285,8 +285,8 @@ export async function generateMonthlyInsights(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI insights response:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI insights response', { error: e.message, stack: e.stack });
     }
 
     return {
@@ -394,8 +394,8 @@ export async function extractBudgetFromDocument(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI budget extraction response:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI budget extraction response', { error: e.message, stack: e.stack });
     }
 
     return { items: [] };
@@ -447,8 +447,8 @@ export async function analyzeBudgetDeeply(
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-    } catch (e) {
-        console.error('Error parsing AI budget analysis:', e);
+    } catch (e: any) {
+        logger.error('Error parsing AI budget analysis', { error: e.message, stack: e.stack });
     }
 
     return { alerts: [], analysis: "No se pudo generar el análisis.", forecast: "" };
@@ -460,8 +460,8 @@ export async function logAIQuery(unitId: string, query: string, source: 'CHAT' |
         await prisma.aiQueryLog.create({
             data: { unitId, query, source }
         });
-    } catch (e) {
-        console.error('Failed to log AI query:', e);
+    } catch (e: any) {
+        logger.error('Failed to log AI query', { error: e.message, unitId, query, source });
     }
 }
 
@@ -500,8 +500,8 @@ export async function getSuggestedQuestions(unitId: string): Promise<string[]> {
             "¿Facturas pendientes?",
             "Compara gastos vs mes anterior"
         ];
-    } catch (e) {
-        console.error('Failed to get suggestions:', e);
+    } catch (e: any) {
+        logger.error('Failed to get AI suggestions', { error: e.message });
         // Fallback defaults
         return [
             "¿Cuánto gasté este mes?",

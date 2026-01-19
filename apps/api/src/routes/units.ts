@@ -3,10 +3,11 @@ import prisma from '../lib/prisma'
 
 const router = Router()
 
-// GET all units
+// GET all active units
 router.get('/', async (req, res) => {
     try {
         const units = await prisma.unit.findMany({
+            where: { isActive: true },
             orderBy: { createdAt: 'desc' }
         })
         res.json({ units })
@@ -119,16 +120,81 @@ router.put('/:id', async (req, res) => {
     }
 })
 
-// DELETE unit
+// DELETE unit (Soft Delete)
 router.delete('/:id', async (req, res) => {
     try {
-        await prisma.unit.delete({
+        // Validate unit exists and is active
+        const unit = await prisma.unit.findUnique({
             where: { id: req.params.id }
         })
-        res.json({ success: true })
+
+        if (!unit) {
+            return res.status(404).json({ error: 'Unit not found' })
+        }
+
+        if (!unit.isActive) {
+            return res.status(400).json({ error: 'Unit is already archived' })
+        }
+
+        // Soft delete - mark as inactive
+        await prisma.unit.update({
+            where: { id: req.params.id },
+            data: {
+                isActive: false,
+                deletedAt: new Date()
+                // deletedBy: req.user?.id // Add when authentication is implemented
+            }
+        })
+
+        res.json({ success: true, message: 'Unit archived successfully' })
     } catch (error) {
-        console.error('Error deleting unit:', error)
-        res.status(500).json({ error: 'Error deleting unit' })
+        console.error('Error archiving unit:', error)
+        res.status(500).json({ error: 'Error archiving unit' })
+    }
+})
+
+// GET archived units
+router.get('/archived/list', async (req, res) => {
+    try {
+        const units = await prisma.unit.findMany({
+            where: { isActive: false },
+            orderBy: { deletedAt: 'desc' }
+        })
+        res.json({ units })
+    } catch (error) {
+        console.error('Error fetching archived units:', error)
+        res.status(500).json({ error: 'Error fetching archived units' })
+    }
+})
+
+// POST restore unit
+router.post('/:id/restore', async (req, res) => {
+    try {
+        const unit = await prisma.unit.findUnique({
+            where: { id: req.params.id }
+        })
+
+        if (!unit) {
+            return res.status(404).json({ error: 'Unit not found' })
+        }
+
+        if (unit.isActive) {
+            return res.status(400).json({ error: 'Unit is already active' })
+        }
+
+        const restoredUnit = await prisma.unit.update({
+            where: { id: req.params.id },
+            data: {
+                isActive: true,
+                deletedAt: null,
+                deletedBy: null
+            }
+        })
+
+        res.json(restoredUnit)
+    } catch (error) {
+        console.error('Error restoring unit:', error)
+        res.status(500).json({ error: 'Error restoring unit' })
     }
 })
 

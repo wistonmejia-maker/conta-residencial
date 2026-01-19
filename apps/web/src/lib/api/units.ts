@@ -38,5 +38,15 @@ export async function updateUnit(id: string, data: Partial<{ name: string; taxId
 
 export async function deleteUnit(id: string) {
     const res = await fetch(`${API_BASE}/units/${id}`, { method: 'DELETE' })
-    return handleResponse(res, 'Error al eliminar la unidad')
+    return handleResponse(res, 'Error al archivar la unidad')
+}
+
+export async function getArchivedUnits() {
+    const res = await fetch(`${API_BASE}/units/archived/list`)
+    return res.json()
+}
+
+export async function restoreUnit(id: string) {
+    const res = await fetch(`${API_BASE}/units/${id}/restore`, { method: 'POST' })
+    return handleResponse(res, 'Error al restaurar la unidad')
 }

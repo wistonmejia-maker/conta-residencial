@@ -540,26 +540,26 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 
 ### Acciones Requeridas para Implementación
 
-1. **Prisma Schema**:
-   - Añadir `previewFeatures = ["driverAdapters"]` en `generator client`.
+1. **Prisma Schema**: ✅ **COMPLETADO (2026-01-19)**
+   - ~~Añadir `previewFeatures = ["driverAdapters"]`~~ - Ya no necesario (estable en Prisma 6.19.1+)
    - Crear tabla `ScanJobs` con campos: `id`, `unitId`, `status`, `progress`, `results`, `startedAt`, `completedAt`, `error`.
-   - Añadir campo opcional `version` a tabla `AIFeedback`.
+   - ✅ Añadido campo `version` a tabla `AIFeedback` (migración SQL ejecutada).
 
-2. **Backend (apps/api)**:
-   - Refactorizar `/api/scan/cron/scan-all` para retornar `202 Accepted`.
-   - Implementar sistema de colas (BullMQ recomendado).
-   - Crear endpoint `GET /api/scan/jobs/:jobId`.
-   - Modificar `ai.service.ts` para inyectar reglas desde `AIFeedback` en system prompt.
-   - Eliminar lógica de escritura en `AI_RULES.md`.
+2. **Backend (apps/api)**: ✅ **PARCIALMENTE COMPLETADO**
+   - Refactorizar `/api/scan/cron/scan-all` para retornar `202 Accepted`. ⏳ Pendiente
+   - Implementar sistema de colas (BullMQ recomendado). ⏳ Pendiente
+   - Crear endpoint `GET /api/scan/jobs/:jobId`. ⏳ Pendiente
+   - ✅ Modificado `ai.service.ts` para inyectar reglas desde `AIFeedback` (usa `AIRulesService.buildDynamicRulesFromDB`).
+   - ✅ Eliminada lógica de escritura en `AI_RULES.md` (ahora solo lectura desde DB).
 
 3. **Cron Service (apps/cron)**:
    - Actualizar para manejar respuestas `202`.
    - Implementar polling de job status o webhook listener.
    - Añadir variable de entorno `WEBHOOK_URL` (opcional).
 
-4. **Migración de Datos**:
-   - Ejecutar script para importar reglas de `AI_RULES.md` a tabla `AIFeedback` (si aplica).
-   - Validar que todas las reglas existentes se inyecten correctamente en prompts.
+4. **Migración de Datos**: ✅ **COMPLETADO (2026-01-19)**
+   - ✅ Ejecutado script `migrate-ai-rules.ts`: 3 reglas importadas a 4 unidades (12 entradas totales).
+   - ✅ Validado que reglas se inyectan correctamente en prompts desde DB.
 
 5. **Observabilidad (Opcional pero Recomendado)**:
    - Integrar logging estructurado (Winston/Pino).
