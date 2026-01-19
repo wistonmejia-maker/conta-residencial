@@ -15,6 +15,7 @@ export interface AIAction {
 
 interface ScanState {
     jobId: string | null;
+    unitId: string | null;
     status: 'IDLE' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
     progress: number;
     message: string;
@@ -47,6 +48,7 @@ export function AIHistoryProvider({ children }: { children: ReactNode }) {
     // Global Scan State
     const [scanState, setScanState] = useState<ScanState>({
         jobId: null,
+        unitId: null,
         status: 'IDLE',
         progress: 0,
         message: '',
@@ -77,6 +79,7 @@ export function AIHistoryProvider({ children }: { children: ReactNode }) {
     const startBackgroundScan = useCallback(async (unitId: string) => {
         setScanState({
             jobId: null,
+            unitId: unitId,
             status: 'PENDING',
             progress: 0,
             message: 'Iniciando escaneo...',
@@ -100,7 +103,7 @@ export function AIHistoryProvider({ children }: { children: ReactNode }) {
 
     const minimizeScanUI = useCallback(() => setScanState(prev => ({ ...prev, minimized: true })), []);
     const maximizeScanUI = useCallback(() => setScanState(prev => ({ ...prev, minimized: false })), []);
-    const dismissScanUI = useCallback(() => setScanState(prev => ({ ...prev, jobId: null, status: 'IDLE' })), []);
+    const dismissScanUI = useCallback(() => setScanState(prev => ({ ...prev, jobId: null, unitId: null, status: 'IDLE' })), []);
 
     // Polling Effect
     useEffect(() => {

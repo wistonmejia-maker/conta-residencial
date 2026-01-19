@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
     // AI Scan context
     const { scanState, startBackgroundScan, minimizeScanUI } = useAI()
-    const isScanning = scanState.status === 'PROCESSING' || scanState.status === 'PENDING'
+    const isScanning = (scanState.status === 'PROCESSING' || scanState.status === 'PENDING') && scanState.unitId === unitId
     const showOverlay = isScanning && !scanState.minimized
 
     // Preview modal state
