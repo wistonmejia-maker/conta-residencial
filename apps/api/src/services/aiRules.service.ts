@@ -48,8 +48,8 @@ ${rulesText}
                     documentType: 'GENERAL',
                     comment: 'Migrado desde AI_RULES.md',
                     suggestedRule: rule,
-                    status: 'APPLIED'
-                    // Note: version field will be added after running SQL migration
+                    status: 'APPLIED',
+                    version: 1
                 }
             });
         }
