@@ -756,7 +756,9 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
   - *Causa*: El frontend no enviaba `unitId` a los endpoints de análisis (`/analyze`).
   - *Solución*: Se actualizó `analyzeDocument` (gmail.ts) y las llamadas en `InvoicesPage` / `PaymentsPage` para inyectar contexto de unidad.
 - **INFRAESTRUCTURA**: Configuración nativa de **Vercel Cron Jobs** para escaneos de facturas.
-  - *Detalle*: Se añadió `vercel.json` con triggers horarios (`0 * * * *`).
+  - *Detalle*: Se añadió `vercel.json` con triggers diarios (`0 10 * * *` = 5:00 AM COL) por límites de plan Hobby.
   - *Backend*: Se habilitó método `GET` en `/api/scan/cron/scan-all` para compatibilidad con Vercel.
+- **UX/UI**: Corrección de alcance visual en barra de progreso de escaneos.
+  - *Detalle*: La barra de estado de escaneo ahora solo es visible dentro de la unidad que inició el proceso.
 
 ---
