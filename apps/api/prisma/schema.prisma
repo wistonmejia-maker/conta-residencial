@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  // Note: driverAdapters is now stable in Prisma 6.19.1+ (no preview needed)
 }
 
 datasource db {
