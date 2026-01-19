@@ -52,7 +52,7 @@ export async function getScanStatus(jobId: string): Promise<{
 }
 
 
-export async function analyzeDocument(file: File): Promise<{
+export async function analyzeDocument(file: File, unitId: string): Promise<{
     type: 'INVOICE' | 'PAYMENT_RECEIPT' | 'OTHER';
     confidence?: number;
     data?: {
@@ -75,7 +75,7 @@ export async function analyzeDocument(file: File): Promise<{
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch(`${API_BASE}/invoices/analyze`, {
+    const res = await fetch(`${API_BASE}/invoices/analyze?unitId=${unitId}`, {
         method: 'POST',
         body: formData
     });

@@ -414,7 +414,12 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
 // ============================================
 // POST /api/scan/cron/scan-all
 // Protected by CRON_SECRET header
-router.post('/cron/scan-all', async (req, res) => {
+// allow GET for Vercel Cron and keep POST for manual/other triggers
+router.all('/cron/scan-all', async (req, res) => {
+    // Only allow GET and POST
+    if (req.method !== 'GET' && req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
     // Verify cron secret (optional security layer)
     const cronSecret = req.headers['x-cron-secret'] || req.query.secret;
     const expectedSecret = process.env.CRON_SECRET;

@@ -847,7 +847,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         setAnalyzing(true)
         setAiError(null)
         try {
-            const analysis = await analyzeDocument(file)
+            const analysis = await analyzeDocument(file, unitId)
             if (analysis.type === 'PAYMENT_RECEIPT' && analysis.data) {
                 const data = analysis.data
                 setForm(f => ({

@@ -183,7 +183,7 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         setValidationWarning(null)
         setExtractedProvider(null)
         try {
-            const analysis = await analyzeDocument(file)
+            const analysis = await analyzeDocument(file, unitId)
             if (analysis.confidence) setAiConfidence(analysis.confidence)
             if (analysis.type === 'INVOICE' && analysis.data) {
                 const data = analysis.data
@@ -691,6 +691,7 @@ export default function InvoicesPage() {
         if (scanState.status === 'COMPLETED') {
             queryClient.invalidateQueries({ queryKey: ['invoices'] })
             queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['units'] })
         }
     }, [scanState.status, scanState.processedEmails, lastProcessedCount, queryClient])
 

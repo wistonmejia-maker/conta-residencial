@@ -99,6 +99,7 @@ export default function DashboardPage() {
             queryClient.invalidateQueries({ queryKey: ['invoices'] })
             queryClient.invalidateQueries({ queryKey: ['payments'] })
             queryClient.invalidateQueries({ queryKey: ['invoice-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['units'] })
         }
     }, [scanState.status, queryClient])
 

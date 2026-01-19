@@ -8,5 +8,11 @@
             "source": "/(.*)",
             "destination": "/index.html"
         }
+    ],
+    "crons": [
+        {
+            "path": "/api/scan/cron/scan-all",
+            "schedule": "0 * * * *"
+        }
     ]
 }

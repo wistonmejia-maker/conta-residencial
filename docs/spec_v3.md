@@ -187,7 +187,7 @@ Sistema de escaneo programado con rango de búsqueda configurable.
 
 ### Especificación del Endpoint Asíncrono
 
-**Endpoint**: `POST /api/scan/cron/scan-all`
+**Endpoint**: `POST /api/scan/cron/scan-all` (o `GET` para Vercel Cron)
 
 **Comportamiento Actual** (✅ Implementado):
 1. ✅ **Procesamiento en Background**: El escaneo se ejecuta de forma asíncrona mediante `runBackgroundScan()`.
@@ -468,6 +468,7 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 
 - **Frontend (Vercel)**:
   - **API Routing**: Uso de `vercel.json` con `rewrites` para dirigir `/api/*` al backend de Railway.
+  - **Cron Jobs**: Configurados en `vercel.json` (`crons`) para disparar tareas programadas (GET) hacia el backend.
   - **Variables de Entorno**: `VITE_API_URL` se establece como `/api` (ruta relativa) para eliminar dependencias de URLs fijas en el bundle de cliente y evitar errores de CORS/Mixed Content.
 - **Backend (Railway)**:
   - Servidor Express procesando peticiones a través de la red privada o pública según configuración.
@@ -742,4 +743,8 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 ### 🛡️ Seguridad Operativa
 - **AÑADIDO**: Validación automática de NIT Receptor vs NIT Conjunto en Facturas.
 - **UX**: Implementación de advertencias no intrusivas ("Yellow Alerts") para discrepancias de datos.
+
+### 🐛 Bug Fixes
+- **CORREGIDO**: Enlace incorrecto en botón "Generar Cierre Mensual" (apuntaba a /reports, ahora /closure).
+- **CORREGIDO**: Sincronización de UI "Scan: Nunca" -> Ahora se actualiza automáticamente al finalizar un escaneo sin recargar página.
 
