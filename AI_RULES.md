@@ -1,5 +1,14 @@
 # Reglas de Entrenamiento y Exclusión de IA (Conta Residencial)
 
+> **⚠️ DEPRECADO (v3.0):** Este archivo es ahora **solo documentación estática**.  
+> Las reglas activas se almacenan en la tabla `ai_feedback` de PostgreSQL y se inyectan dinámicamente en el context window de Gemini.
+> 
+> **NO EDITAR MANUALMENTE.** Para añadir reglas, usar el sistema de Feedback en la UI.
+> 
+> **Migración:** Ejecutar `npx ts-node scripts/migrate-ai-rules.ts` para importar reglas existentes a la base de datos.
+
+---
+
 Este documento centraliza las reglas lógicas, exclusiones y patrones de aprendizaje utilizados por el sistema de escaneo de Gmail y análisis de documentos para Propiedad Horizontal.
 
 ## 1. Reglas de Clasificación (Prompt Engineering)

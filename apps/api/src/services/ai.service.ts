@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 
 
 import { UnitContextService } from './unitContext.service';
+import { AIRulesService } from './aiRules.service';
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -34,18 +35,17 @@ export async function classifyAndExtractDocument(
         model: 'gemini-2.0-flash',
     });
 
-    // 1. Fetch Dynamic Context (Prompt + Rules)
-    const { description: contextDescription, rules: dynamicRules } = await UnitContextService.getUnitContext(unitId);
+    // 1. Fetch Dynamic Context (Prompt)
+    const { description: contextDescription } = await UnitContextService.getUnitContext(unitId);
+
+    // 2. Fetch Dynamic Rules from DB (NEW - Spec v3.0)
+    const dynamicRules = await AIRulesService.buildDynamicRulesFromDB(unitId);
 
     const prompt = `Analiza este documento y determina su tipo y extrae la información relevante. NO INVENTES INFORMACIÓN.
 
     ${contextDescription}
     
-    ${dynamicRules ? `
-    REGLAS DE APRENDIZAJE (Exclusiones dinámicas):
-    Las siguientes son reglas específicas aprendidas de feedback previo. APLÍCALAS CON PRIORIDAD:
-    ${dynamicRules}
-    ` : ''}
+    ${dynamicRules}  // Inyección dinámica desde DB
 
     FORMATO DE RESPUESTA (JSON):
     Si es INVOICE:

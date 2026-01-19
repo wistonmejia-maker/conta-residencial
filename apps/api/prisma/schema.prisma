@@ -370,15 +370,17 @@ model ScanningJob {
   @@map("scanning_jobs")
 }
 
+
 model AIFeedback {
   id            String    @id @default(uuid())
   unitId        String    @map("unit_id")
-  documentType  String    @map("document_type") // INVOICE, PAYMENT
+  documentType  String    @map("document_type") // INVOICE, PAYMENT, GENERAL
   invoiceId     String?   @map("invoice_id")
   paymentId     String?   @map("payment_id")
   comment       String
   suggestedRule String?   @map("suggested_rule")
   status        String    @default("PENDING") // PENDING, APPLIED, RESOLVED
+  version       Int       @default(1) // Track rule evolution
   createdAt     DateTime  @default(now()) @map("created_at")
   resolvedAt    DateTime? @map("resolved_at")
 
@@ -388,3 +390,4 @@ model AIFeedback {
 
   @@map("ai_feedback")
 }
+

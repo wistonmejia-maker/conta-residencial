@@ -168,6 +168,12 @@ Sistema de escaneo programado con rango de búsqueda configurable.
 |:------|:----------|
 | Días relativos | Escanea "últimos X días" en vez de fecha fija |
 | Auto-scan | Ejecuta escaneo cada hora automáticamente |
+| Last Scan Indicator | Muestra tiempo relativo (ej: "Hace 5 min") en Dashboard e Invoices. |
+
+- **Sincronización en Tiempo Real** (`web/src/lib/AIContext.tsx`):
+  - El sistema utiliza `queryClient.invalidateQueries({ queryKey: ['units'] })` inmediatamente después de que un escaneo (manual o automático) finaliza.
+  - Esto garantiza que el indicador "Último escaneo" se actualice en toda la UI sin necesidad de recargar la página.
+  - Utilidad `formatRelativeTime` (`lib/dateUtils.ts`) para visualización amigable.
 
 - **Arquitectura de Servicio** (`apps/cron`):
   - Microservicio independiente en Node.js (optimizado para Railway Cron).
@@ -262,7 +268,17 @@ El sistema decide qué valor mostrar en los campos de retención siguiendo este 
   - `PaymentModal`: Sección de totales en alto contraste (`bg-brand-900`, `text-white`).
   - `ProviderModal`: Pestañas de separación (Info vs Documentos) en el header.
 
-# 15. Futuro / Roadmap (Pendientes)
+# 15. Arquitectura de Despliegue (Producción)
+> **Implementado**: Configuración optimizada para el entorno Vercel + Railway.
+
+- **Frontend (Vercel)**:
+  - **API Routing**: Uso de `vercel.json` con `rewrites` para dirigir `/api/*` al backend de Railway.
+  - **Variables de Entorno**: `VITE_API_URL` se establece como `/api` (ruta relativa) para eliminar dependencias de URLs fijas en el bundle de cliente y evitar errores de CORS/Mixed Content.
+- **Backend (Railway)**:
+  - Servidor Express procesando peticiones a través de la red privada o pública según configuración.
+  - Sincronización mediante `git push origin main` para despliegue continuo (CI/CD).
+
+# 16. Futuro / Roadmap (Pendientes)
 Funcionalidades soportadas por la Base de Datos pero aún no implementadas en el Frontend/Backend completo.
 
 *(Sección Vacía por el momento - Todas las funcionalidades core han sido implementadas)*
