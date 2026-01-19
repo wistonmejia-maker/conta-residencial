@@ -748,3 +748,15 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Enlace incorrecto en botón "Generar Cierre Mensual" (apuntaba a /reports, ahora /closure).
 - **CORREGIDO**: Sincronización de UI "Scan: Nunca" -> Ahora se actualiza automáticamente al finalizar un escaneo sin recargar página.
 
+
+## [3.5.1] - 2026-01-19
+
+### 🐛 Mobile Corrections & AI Stability
+- **CORREGIDO**: Error "Error connecting to AI service" en móviles. 
+  - *Causa*: El frontend no enviaba `unitId` a los endpoints de análisis (`/analyze`).
+  - *Solución*: Se actualizó `analyzeDocument` (gmail.ts) y las llamadas en `InvoicesPage` / `PaymentsPage` para inyectar contexto de unidad.
+- **INFRAESTRUCTURA**: Configuración nativa de **Vercel Cron Jobs** para escaneos de facturas.
+  - *Detalle*: Se añadió `vercel.json` con triggers horarios (`0 * * * *`).
+  - *Backend*: Se habilitó método `GET` en `/api/scan/cron/scan-all` para compatibilidad con Vercel.
+
+---
