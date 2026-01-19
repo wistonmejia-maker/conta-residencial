@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink, Tag, AlertCircle, ToggleLeft, ToggleRight, Clock, Calendar } from 'lucide-react'
-import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail } from '../lib/api'
+import { Plus, Pencil, Archive, Building2, X, Loader2, User, Wallet, Settings, LayoutGrid, Mail, Link2, Unlink, Tag, AlertCircle, ToggleLeft, ToggleRight, Clock, Calendar, RotateCcw } from 'lucide-react'
+import { getUnits, createUnit, updateUnit, deleteUnit, getProviders, uploadFile, getGmailStatus, disconnectGmail, connectGmail, getArchivedUnits, restoreUnit } from '../lib/api'
 
 import { useUnit } from '../lib/UnitContext'
 import { useNavigate } from 'react-router-dom'
@@ -39,13 +39,14 @@ interface Unit {
 export default function UnitsPage() {
     const [showModal, setShowModal] = useState(false)
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
+    const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
     const queryClient = useQueryClient()
     const { setSelectedUnit } = useUnit()
     const navigate = useNavigate()
 
     const { data, isLoading } = useQuery({
-        queryKey: ['units'],
-        queryFn: getUnits
+        queryKey: ['units', activeTab],
+        queryFn: activeTab === 'active' ? getUnits : getArchivedUnits
     })
 
     const units = data?.units || []
@@ -79,17 +80,37 @@ export default function UnitsPage() {
         mutationFn: deleteUnit,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['units'] })
+            alert('Unidad archivada exitosamente')
         },
         onError: (error: any) => {
-            console.error('Error deleting unit:', error)
-            alert('Error al eliminar la unidad: ' + (error.message || 'Error desconocido'))
+            console.error('Error archiving unit:', error)
+            alert('Error al archivar la unidad: ' + (error.message || 'Error desconocido'))
+        }
+    })
+
+    const restoreMutation = useMutation({
+        mutationFn: restoreUnit,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['units'] })
+            alert('Unidad restaurada exitosamente')
+        },
+        onError: (error: any) => {
+            console.error('Error restoring unit:', error)
+            alert('Error al restaurar la unidad: ' + (error.message || 'Error desconocido'))
         }
     })
 
     const handleDelete = (e: React.MouseEvent, unit: Unit) => {
         e.stopPropagation()
-        if (confirm(`¿Eliminar la unidad "${unit.name}"? Esta acción no se puede deshacer.`)) {
+        if (confirm(`¿Archivar la unidad "${unit.name}"? Podrás restaurarla después si es necesario.`)) {
             deleteMutation.mutate(unit.id)
+        }
+    }
+
+    const handleRestore = (e: React.MouseEvent, unit: Unit) => {
+        e.stopPropagation()
+        if (confirm(`¿Restaurar la unidad "${unit.name}"?`)) {
+            restoreMutation.mutate(unit.id)
         }
     }
 
@@ -124,6 +145,28 @@ export default function UnitsPage() {
                     >
                         <Plus className="w-4 h-4" />
                         Nueva Unidad
+                    </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-2 border-b border-gray-200">
+                    <button
+                        onClick={() => setActiveTab('active')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'active'
+                                ? 'border-brand-primary text-brand-primary'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Activas
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('archived')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'archived'
+                                ? 'border-brand-primary text-brand-primary'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Archivadas
                     </button>
                 </div>
 
@@ -182,21 +225,34 @@ export default function UnitsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={(e) => openEditModal(e, unit)}
-                                            className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-button transition-colors"
-                                            title="Editar"
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(e, unit)}
-                                            disabled={deleteMutation.isPending}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {activeTab === 'active' ? (
+                                            <>
+                                                <button
+                                                    onClick={(e) => openEditModal(e, unit)}
+                                                    className="p-2 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-button transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDelete(e, unit)}
+                                                    disabled={deleteMutation.isPending}
+                                                    className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                                                    title="Archivar"
+                                                >
+                                                    <Archive className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button
+                                                onClick={(e) => handleRestore(e, unit)}
+                                                disabled={restoreMutation.isPending}
+                                                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                                                title="Restaurar"
+                                            >
+                                                <RotateCcw className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 {unit.address && (
