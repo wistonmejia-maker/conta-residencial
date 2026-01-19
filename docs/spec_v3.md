@@ -108,6 +108,7 @@ return (
 - [x] **Lógica Fiscal**: Servicio contable desacoplado.
 - [x] **Limpieza de UI/UX**: Theme Maestro aplicado en toda la plataforma refactorizada.
 - [x] **Gmail Center**: Escaneo de inbox centralizado en Dashboard.
+- [x] **Extracción de Fechas**: Estándar DD/MM/YYYY implementado para documentos colombianos.
 
 # 7. Gmail Center - Integración Centralizada (Implementado)
 Patrón UX para el escaneo de facturas y egresos desde Gmail.
@@ -324,6 +325,23 @@ El sistema decide qué valor mostrar en los campos de retención siguiendo este 
 
 3.  **Manual (Intervención)**:
     - El usuario siempre puede editar el campo final.
+
+## 11.2. Estándar de Extracción de Fechas (Patrón Colombiano)
+> **Implementado**: Lógica robusta para evitar la confusión entre Mes y Día en documentos locales.
+
+Para garantizar la precisión en facturas colombianas (donde `02/01/2026` es 2 de Enero y no 1 de Febrero), se ha establecido el siguiente estándar:
+
+- **Prompting**: El system prompt instruye explícitamente a la IA sobre el formato `DD/MM/YYYY` predominante en Colombia.
+- **Backend (Robustness)**: Implementación de `parseRobusDate` que prioriza el patrón `DD/MM/YYYY` si el parseo ISO falla o es abmiguo.
+
+### Lógica de Referencia (parseRobusDate)
+```typescript
+function parseRobusDate(dateStr: string): Date {
+    // 1. Prioriza ISO si el formato es claro (YYYY-MM-DD)
+    // 2. Si detecta separadores (/ o -) intenta patrón DD/MM/YYYY
+    // 3. Conversión manual: new Date(year, month - 1, day)
+}
+```
 
 # 12. Asistente Financiero (CFO Virtual)
 > **Implementado**: Interfaz de chat flotante para consultas en lenguaje natural sobre el estado financiero.
@@ -629,3 +647,13 @@ async function buildSystemPrompt(unitId: string): Promise<string> {
 - **MODIFICADO**: Endpoint `/api/scan/cron/scan-all` ahora retorna formalmente `202 Accepted`.
 - **LIMPIEZA**: Eliminación de dependencias de iconos no utilizados en frontend.
 - **OPT**: Refactor de lógica de apertura de Blobs para manejar errores core de Cloudinary RAW.
+
+---
+
+## [3.2.0] - 2026-01-19
+
+### 🤖 IA & Extracción de Datos
+- **AÑADIDO**: Estándar de extracción de fechas para Colombia (DD/MM/YYYY).
+- **MODIFICADO**: Prompt de Gemini enriquecido con contexto regional para evitar confusión MM/DD.
+- **AÑADIDO**: Función `parseRobusDate` en el backend para normalización de fechas ambiguas.
+- **CORREGIDO**: Error de interpretación de facturas de inicio de año (Enero vs Febrero).
