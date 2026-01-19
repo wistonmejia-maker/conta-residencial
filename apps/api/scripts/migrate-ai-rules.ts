@@ -1,7 +1,7 @@
-import { AIRulesService } from '../services/aiRules.service';
-import prisma from '../lib/prisma';
-import fs from 'fs';
-import path from 'path';
+import { AIRulesService } from '../src/services/aiRules.service';
+import prisma from '../src/lib/prisma';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Script de migración: AI_RULES.md → Base de Datos
@@ -14,11 +14,11 @@ import path from 'path';
 async function migrateAIRules() {
     console.log('🔄 Iniciando migración de AI_RULES.md a base de datos...\n');
 
-    // Leer AI_RULES.md
-    const rulesPath = path.join(__dirname, '../../AI_RULES.md');
+    // Leer AI_RULES.md (usar ruta absoluta)
+    const rulesPath = 'c:/Users/MejIA/Documents/Proyectos Saas MejIA/conta_residencial_repo/AI_RULES.md';
 
     if (!fs.existsSync(rulesPath)) {
-        console.error('❌ No se encontró AI_RULES.md en la raíz del proyecto');
+        console.error('❌ No se encontró AI_RULES.md en:', rulesPath);
         process.exit(1);
     }
 
