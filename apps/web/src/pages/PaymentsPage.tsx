@@ -650,19 +650,15 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
     const [amount, setAmount] = useState(Number(payment.amountPaid) || 0)
     const [loading, setLoading] = useState(false)
 
-    const { data: invoicesData } = useQuery({
-        queryKey: ['invoices-pending', unitId],
-        queryFn: () => getInvoices({ unitId, status: 'PENDING' })
+    const { data: allInvoicesData } = useQuery({
+        queryKey: ['invoices-all-payable', unitId],
+        queryFn: () => getInvoices({ unitId })
     })
 
-    const { data: partialData } = useQuery({
-        queryKey: ['invoices-partial', unitId],
-        queryFn: () => getInvoices({ unitId, status: 'PARTIALLY_PAID' })
-    })
+    const PAYABLE_STATUSES = ['DRAFT', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE']
 
     const pendingInvoices = [
-        ...(invoicesData?.invoices || []),
-        ...(partialData?.invoices || [])
+        ...(allInvoicesData?.invoices || []).filter(inv => PAYABLE_STATUSES.includes(inv.status))
     ]
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -802,14 +798,9 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
     const [analyzing, setAnalyzing] = useState(false)
     const [aiError, setAiError] = useState<string | null>(null)
 
-    const { data: invoicesData } = useQuery({
-        queryKey: ['invoices-pending', unitId],
-        queryFn: () => getInvoices({ unitId, status: 'PENDING' })
-    })
-
-    const { data: partialData } = useQuery({
-        queryKey: ['invoices-partial', unitId],
-        queryFn: () => getInvoices({ unitId, status: 'PARTIALLY_PAID' })
+    const { data: allInvoicesData } = useQuery({
+        queryKey: ['invoices-all-payable', unitId],
+        queryFn: () => getInvoices({ unitId }) // Fetch all to filter locally
     })
 
     const { data: providersData } = useQuery({
@@ -817,9 +808,10 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         queryFn: () => getProviders()
     })
 
+    const PAYABLE_STATUSES = ['DRAFT', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE']
+
     const pendingInvoices: (Invoice & { provider?: { id: string; name: string; defaultRetefuentePerc: number; defaultReteicaPerc: number }; balance?: number })[] = [
-        ...(invoicesData?.invoices || []),
-        ...(partialData?.invoices || [])
+        ...(allInvoicesData?.invoices || []).filter(inv => PAYABLE_STATUSES.includes(inv.status))
     ]
 
     const associatedInvoices = payment?.invoiceItems?.map((item: any) => item.invoice).filter(Boolean) || []

@@ -769,6 +769,14 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
   - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
 
+## [3.5.5] - 2026-01-19
+
+### 🐛 Bug Fixes & Logic Correction
+- **CORREGIDO**: Visibilidad de facturas en Egresos.
+  - *Problema*: Facturas en estado `DRAFT` (escaneadas) y `OVERDUE` (vencidas) no aparecían para asociar.
+  - *Solución*: Se actualizó el filtro en `PaymentModal` y `LinkInvoiceModal` para incluir todos los estados pagables (`DRAFT`, `PENDING`, `PARTIALLY_PAID`, `OVERDUE`).
+- **MEJORA**: Flujo de pago directo desde escaneo (Gmail -> Draft -> Payment).
+
 ## [3.5.4] - 2026-01-19
 
 ### 💄 User Interface
