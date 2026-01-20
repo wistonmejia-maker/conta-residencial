@@ -41,7 +41,13 @@ if (config.FRONTEND_URL) {
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) return callback(null, true);
+
+        const isExplicitlyAllowed = allowedOrigins.includes(origin);
+        const isVercelDomain = origin.endsWith('.vercel.app');
+        const isRailwayDomain = origin.endsWith('.railway.app');
+
+        if (isExplicitlyAllowed || isVercelDomain || isRailwayDomain) {
             callback(null, true);
         } else {
             console.error(`❌ CORS Error: Origin ${origin} is not allowed.`);

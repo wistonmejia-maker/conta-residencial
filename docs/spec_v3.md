@@ -769,6 +769,14 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
   - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
 
+## [3.5.7] - 2026-01-19
+
+### 🔧 Infraestructura & Debugging
+- **AÑADIDO**: Mejor soporte para CORS.
+  - Se agregó la variable de entorno `FRONTEND_URL` al backend para permitir orígenes dinámicos sin modificar código.
+  - Se implementó logging detallado de errores de CORS para identificar exactamente qué origen está siendo rechazado en producción.
+- **FIJO**: Error "Not allowed by CORS" mediante visibilidad mejorada en logs de Railway.
+
 ## [3.5.6] - 2026-01-19
 
 ### 🔄 Refinamiento de Flujo (Business Logic)
