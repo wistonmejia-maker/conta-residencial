@@ -34,11 +34,17 @@ const allowedOrigins = [
     'https://conta-residencial.vercel.app'
 ];
 
+if (config.FRONTEND_URL) {
+    allowedOrigins.push(config.FRONTEND_URL);
+}
+
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.error(`❌ CORS Error: Origin ${origin} is not allowed.`);
             callback(new Error('Not allowed by CORS'));
         }
     },
