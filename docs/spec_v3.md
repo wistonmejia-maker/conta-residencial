@@ -768,5 +768,11 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 ### 🐛 Bug Fixes
 - **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
   - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
-  - *Solución*: Unificación de contrato de API en Frontend.
+
+## [3.5.3] - 2026-01-19
+
+### 🐛 Bug Fixes
+- **CORREGIDO**: Lógica de aprobación de Egresos (Borradores).
+  - *Problema*: Al aprobar un borrador, se marcaba siempre como "Sin Soporte" incluso si ya tenía archivo adjunto.
+  - *Solución*: Se implementó validación condicional en `handleApprovePayment` para asignar estado `COMPLETED` si existe soporte, o `PAID_NO_SUPPORT` si no.
 

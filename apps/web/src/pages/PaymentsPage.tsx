@@ -109,12 +109,11 @@ export default function PaymentsPage() {
     const pendingSupportCount = payments.filter((p: Payment) => p.status === 'PAID_NO_SUPPORT').length
     const draftsCount = payments.filter((p: Payment) => p.status === 'DRAFT').length
 
-    const handleApprovePayment = async (id: string) => {
+    const handleApprovePayment = async (payment: Payment) => {
         try {
-            // If it's a draft payment from Gmail, we might want to mark it as PAID_NO_SUPPORT 
-            // or just COMPLETED if the user manually uploads support later.
-            // For now, let's move it to PAID_NO_SUPPORT if it has no support or COMPLETED if it does.
-            await updatePayment(id, { status: 'PAID_NO_SUPPORT' })
+            // Check if payment has support file to decide status
+            const newStatus = payment.supportFileUrl ? 'COMPLETED' : 'PAID_NO_SUPPORT'
+            await updatePayment(payment.id, { status: newStatus })
             queryClient.invalidateQueries({ queryKey: ['payments'] })
         } catch (error) {
             console.error('Error approving payment:', error)
@@ -422,7 +421,7 @@ export default function PaymentsPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 {payment.status === 'DRAFT' && (
                                                     <button
-                                                        onClick={() => handleApprovePayment(payment.id)}
+                                                        onClick={() => handleApprovePayment(payment)}
                                                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                         title="Aprobar Borrador"
                                                     >
