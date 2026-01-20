@@ -392,8 +392,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                     type="button"
                                     onClick={() => handleDocumentTypeChange('FACTURA')}
                                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all ${form.documentType === 'FACTURA'
-                                            ? 'border-brand-500 bg-brand-50 text-brand-700'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     📄 Factura
@@ -402,8 +402,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                     type="button"
                                     onClick={() => handleDocumentTypeChange('NOTA_CREDITO')}
                                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all ${form.documentType === 'NOTA_CREDITO'
-                                            ? 'border-red-500 bg-red-50 text-red-700'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                        ? 'border-red-500 bg-red-50 text-red-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     📋 Nota Crédito
@@ -412,8 +412,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                     type="button"
                                     onClick={() => handleDocumentTypeChange('CUENTA_COBRO')}
                                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all ${form.documentType === 'CUENTA_COBRO'
-                                            ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     📝 Cuenta Cobro
@@ -962,7 +962,15 @@ export default function InvoicesPage() {
                                 {filtered.map((inv: Invoice & { provider?: { name: string }; balance?: number; fileUrl?: string }) => (
                                     <tr key={inv.id} className="hover:bg-gray-50/50">
                                         <td className="px-4 py-3">
-                                            <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
+                                                {inv.documentType === 'NOTA_CREDITO' && (
+                                                    <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded border border-red-200">NC</span>
+                                                )}
+                                                {inv.documentType === 'CUENTA_COBRO' && (
+                                                    <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200">CC</span>
+                                                )}
+                                            </div>
                                             {inv.source === 'GMAIL' && (
                                                 <div className="flex items-center gap-1 mt-1">
                                                     <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
