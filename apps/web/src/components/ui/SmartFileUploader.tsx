@@ -176,16 +176,77 @@ export function SmartFileUploader({
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <a
-                                href={currentFileUrl!}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
+                            <button
+                                type="button"
+                                onClick={async (e) => {
+                                    e.stopPropagation()
+                                    try {
+                                        const url = currentFileUrl!
+
+                                        // Handle Base64 Data URIs
+                                        if (url.startsWith('data:')) {
+                                            const parts = url.split(',')
+                                            if (parts.length < 2) throw new Error('Invalid data URI')
+                                            const byteString = atob(parts[1])
+                                            const mimeType = parts[0].split(':')[1]?.split(';')[0] || 'application/pdf'
+                                            const ab = new ArrayBuffer(byteString.length)
+                                            const ia = new Uint8Array(ab)
+                                            for (let i = 0; i < byteString.length; i++) {
+                                                ia[i] = byteString.charCodeAt(i)
+                                            }
+                                            const blob = new Blob([ab], { type: mimeType })
+                                            window.open(URL.createObjectURL(blob), '_blank')
+                                            return
+                                        }
+
+                                        // Detect if it's an image
+                                        const isImageFile = /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(url) || url.includes('/image/upload/')
+
+                                        // Handle PDFs and RAW uploads that may have download headers
+                                        if (!isImageFile && (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf'))) {
+                                            // Open window first to avoid popup blocker
+                                            const newWindow = window.open('', '_blank')
+                                            if (newWindow) {
+                                                newWindow.document.write(`
+                                                    <html>
+                                                        <head><title>Cargando documento...</title></head>
+                                                        <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;background:#f3f4f6;">
+                                                            <div style="text-align:center;">
+                                                                <div style="margin-bottom:10px;">Cargando documento...</div>
+                                                                <div style="font-size:12px;color:#6b7280;">Por favor espere</div>
+                                                            </div>
+                                                        </body>
+                                                    </html>
+                                                `)
+                                                try {
+                                                    const response = await fetch(url)
+                                                    const blob = await response.blob()
+                                                    const pdfBlob = new Blob([blob], { type: 'application/pdf' })
+                                                    newWindow.location.href = URL.createObjectURL(pdfBlob)
+                                                } catch (fetchError) {
+                                                    newWindow.close()
+                                                    console.error('Fetch error:', fetchError)
+                                                    alert('No se pudo cargar la vista previa. Abriendo archivo...')
+                                                    window.open(url, '_blank')
+                                                }
+                                            } else {
+                                                // Fallback if popup blocked
+                                                window.open(url, '_blank')
+                                            }
+                                        } else {
+                                            // Standard behavior for normal PDFs and images
+                                            window.open(url, '_blank')
+                                        }
+                                    } catch (err) {
+                                        console.error('Error opening file:', err)
+                                        alert('Archivo corrupto o no disponible.')
+                                    }
+                                }}
                                 className="p-2 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors"
                                 title="Ver archivo"
                             >
                                 <FileText className="w-4 h-4" />
-                            </a>
+                            </button>
                             {!disabled && (
                                 <button
                                     type="button"

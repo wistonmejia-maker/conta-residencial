@@ -23,6 +23,66 @@ const statusStyles: Record<string, string> = {
     PAID: 'bg-green-100 text-green-700'
 }
 
+// Robust file preview handler
+const handleOpenFile = async (url: string) => {
+    try {
+        // Handle Base64 Data URIs
+        if (url.startsWith('data:')) {
+            const parts = url.split(',')
+            if (parts.length < 2) throw new Error('Invalid data URI')
+            const byteString = atob(parts[1])
+            const mimeType = parts[0].split(':')[1]?.split(';')[0] || 'application/pdf'
+            const ab = new ArrayBuffer(byteString.length)
+            const ia = new Uint8Array(ab)
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i)
+            }
+            const blob = new Blob([ab], { type: mimeType })
+            window.open(URL.createObjectURL(blob), '_blank')
+            return
+        }
+
+        // Detect if it's an image
+        const isImageFile = /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(url) || url.includes('/image/upload/')
+
+        // Handle PDFs and RAW uploads that may have download headers
+        if (!isImageFile && (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf'))) {
+            const newWindow = window.open('', '_blank')
+            if (newWindow) {
+                newWindow.document.write(`
+                    <html>
+                        <head><title>Cargando documento...</title></head>
+                        <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;background:#f3f4f6;">
+                            <div style="text-align:center;">
+                                <div style="margin-bottom:10px;">Cargando documento...</div>
+                                <div style="font-size:12px;color:#6b7280;">Por favor espere</div>
+                            </div>
+                        </body>
+                    </html>
+                `)
+                try {
+                    const response = await fetch(url)
+                    const blob = await response.blob()
+                    const pdfBlob = new Blob([blob], { type: 'application/pdf' })
+                    newWindow.location.href = URL.createObjectURL(pdfBlob)
+                } catch (fetchError) {
+                    newWindow.close()
+                    console.error('Fetch error:', fetchError)
+                    alert('No se pudo cargar la vista previa. Abriendo archivo...')
+                    window.open(url, '_blank')
+                }
+            } else {
+                window.open(url, '_blank')
+            }
+        } else {
+            window.open(url, '_blank')
+        }
+    } catch (err) {
+        console.error('Error opening file:', err)
+        alert('Archivo corrupto o no disponible.')
+    }
+}
+
 export default function ProviderDetailPage() {
     const { id } = useParams<{ id: string }>()
     const { selectedUnit } = useUnit()
@@ -157,10 +217,12 @@ export default function ProviderDetailPage() {
                                         </td>
                                         <td className="px-4 py-2 text-center">
                                             {inv.fileUrl && (
-                                                <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer"
-                                                    className="text-indigo-600 hover:text-indigo-800">
+                                                <button
+                                                    onClick={() => handleOpenFile(inv.fileUrl)}
+                                                    className="text-indigo-600 hover:text-indigo-800"
+                                                >
                                                     <ExternalLink className="w-4 h-4 inline" />
-                                                </a>
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -205,10 +267,12 @@ export default function ProviderDetailPage() {
                                         </td>
                                         <td className="px-4 py-2 text-center">
                                             {pay.supportFileUrl && (
-                                                <a href={pay.supportFileUrl} target="_blank" rel="noopener noreferrer"
-                                                    className="text-indigo-600 hover:text-indigo-800">
+                                                <button
+                                                    onClick={() => handleOpenFile(pay.supportFileUrl)}
+                                                    className="text-indigo-600 hover:text-indigo-800"
+                                                >
                                                     <ExternalLink className="w-4 h-4 inline" />
-                                                </a>
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -231,8 +295,11 @@ export default function ProviderDetailPage() {
                 ) : (
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {provider.documents?.map((doc: any) => (
-                            <a key={doc.id} href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <button
+                                key={doc.id}
+                                onClick={() => handleOpenFile(doc.fileUrl)}
+                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left w-full"
+                            >
                                 <FileText className="w-8 h-8 text-indigo-500" />
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-gray-900 truncate">{docTypeLabels[doc.type] || doc.type}</p>
@@ -240,7 +307,7 @@ export default function ProviderDetailPage() {
                                     <p className="text-xs text-gray-400">{formatDate(doc.uploadedAt)}</p>
                                 </div>
                                 <ExternalLink className="w-4 h-4 text-gray-400" />
-                            </a>
+                            </button>
                         ))}
                     </div>
                 )}

@@ -351,7 +351,48 @@ Para garantizar la precisión en facturas colombianas (donde `02/01/2026` es 2 d
 
 ---
 
-### 11.3. Estándar de Cierre Mensual (Reporting)
+## 11.3. Estándar de Vista Previa de Archivos (v3.5.10)
+> **Implementado**: Lógica robusta para visualizar PDFs sin forzar descarga.
+
+### Problema
+Algunos servidores (Firebase, Cloudinary RAW) envían headers `Content-Disposition: attachment` que fuerzan descarga en lugar de vista previa.
+
+### Solución Estándar
+Usar `fetch` → `Blob` → `createObjectURL` para forzar renderizado en navegador:
+
+```typescript
+const handleOpenFile = async (url: string) => {
+    // 1. Manejar Data URIs (Base64)
+    if (url.startsWith('data:')) {
+        const blob = new Blob([...], { type: mimeType })
+        window.open(URL.createObjectURL(blob), '_blank')
+        return
+    }
+    
+    // 2. Detectar si es imagen (no necesita fetch)
+    const isImage = /\.(jpg|jpeg|png|webp)$/i.test(url)
+    
+    // 3. Para PDFs/RAW: fetch → Blob → createObjectURL
+    if (!isImage) {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const pdfBlob = new Blob([blob], { type: 'application/pdf' })
+        window.open(URL.createObjectURL(pdfBlob), '_blank')
+    } else {
+        window.open(url, '_blank')
+    }
+}
+```
+
+### Componentes Actualizados (v3.5.10)
+- `SmartFileUploader.tsx` - Componente central de carga/vista de archivos
+- `ProviderDetailPage.tsx` - Facturas, pagos y documentos del proveedor
+- `InvoicesPage.tsx` (tabla) - Ya tenía lógica correcta
+- `PaymentsPage.tsx` (tabla) - Ya tenía lógica correcta
+
+---
+
+### 11.4. Estándar de Cierre Mensual (Reporting)
 - **Botones de Reporte**: Deben estar habilitados si existe al menos **un egreso** pagado O **una factura** pendiente en el periodo.
 - **Modales de Reporte**: Deben seguir el layout de Modales `spec_v3` (encabezados y pies fijos, backdrop-blur-sm, shadow-2xl).
 
@@ -791,6 +832,19 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
   - Se agregó soporte para wildcard dinámico que permite automáticamente cualquier subdominio de `*.vercel.app` y `*.railway.app`.
   - Se mantiene la variable de entorno `FRONTEND_URL` para orígenes personalizados.
   - Se implementó logging detallado de errores de CORS para identificar exactamente qué origen está siendo rechazado en producción.
+## [3.5.10] - 2026-01-20
+
+### 🐛 Bug Fixes (Vista Previa de Archivos)
+- **CORREGIDO**: PDFs se descargaban en lugar de abrirse en vista previa en modales.
+  - *Problema*: `SmartFileUploader` usaba `<a href target="_blank">` que respeta headers de descarga del servidor.
+  - *Solución*: Implementada lógica robusta con `fetch` → `Blob` → `createObjectURL` para forzar renderizado.
+
+### 🔧 Componentes Actualizados
+- `SmartFileUploader.tsx` - Afecta modales de Facturas y Egresos
+- `ProviderDetailPage.tsx` - Facturas, pagos y documentos del proveedor
+
+---
+
 ## [3.5.9] - 2026-01-20
 
 ### 🏗️ Arquitectura (Retenciones)
