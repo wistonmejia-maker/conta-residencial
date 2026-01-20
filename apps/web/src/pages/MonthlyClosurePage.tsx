@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle } from 'lucide-react'
+import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle, Edit3, CreditCard } from 'lucide-react'
 // ... (existing imports)
 
 // ... (existing functions)
@@ -1044,6 +1044,7 @@ export default function MonthlyClosurePage() {
                                                 <th className="px-4 py-3 text-center font-semibold">PILA</th>
                                                 <th className="px-4 py-3 text-center font-semibold">Soporte</th>
                                                 <th className="px-4 py-3 text-center font-semibold">Factura</th>
+                                                <th className="px-4 py-3 text-center font-semibold">Docs</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -1160,6 +1161,23 @@ export default function MonthlyClosurePage() {
                                                             <span className="text-gray-300">-</span>
                                                         )}
                                                     </td>
+                                                    {/* Document Completeness Indicators */}
+                                                    <td className="px-4 py-3 text-center">
+                                                        <div className="flex items-center justify-center gap-1" title="Factura | Soporte | CE">
+                                                            {/* Invoice indicator */}
+                                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${(payment as any).invoiceItems?.some((item: any) => item.invoice?.fileUrl) ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
+                                                                {(payment as any).invoiceItems?.some((item: any) => item.invoice?.fileUrl) ? '✓' : '!'}
+                                                            </span>
+                                                            {/* Support indicator */}
+                                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${payment.supportFileUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
+                                                                {payment.supportFileUrl ? '✓' : '!'}
+                                                            </span>
+                                                            {/* CE indicator */}
+                                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${payment.consecutiveNumber ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                                {payment.consecutiveNumber ? '✓' : 'E'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1171,7 +1189,7 @@ export default function MonthlyClosurePage() {
                                                 <td className="px-4 py-3 text-right text-red-600">-{formatMoney(totals.retefuente)}</td>
                                                 <td className="px-4 py-3 text-right text-orange-600">-{formatMoney(totals.reteica)}</td>
                                                 <td className="px-4 py-3 text-right text-emerald-600">{formatMoney(totals.net)}</td>
-                                                <td className="px-4 py-3" colSpan={3}></td>
+                                                <td className="px-4 py-3" colSpan={4}></td>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -1196,6 +1214,7 @@ export default function MonthlyClosurePage() {
                                                 <th className="px-4 py-3 font-medium text-right">Valor Total</th>
                                                 <th className="px-4 py-3 font-medium text-right">Saldo Pendiente</th>
                                                 <th className="px-4 py-3 font-medium text-center">Soporte</th>
+                                                <th className="px-4 py-3 font-medium text-center">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -1225,6 +1244,30 @@ export default function MonthlyClosurePage() {
                                                         ) : (
                                                             <span className="text-gray-400">-</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Navigate to invoices page with this invoice selected for editing
+                                                                    window.location.href = `/invoices?edit=${inv.id}`
+                                                                }}
+                                                                className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                title="Editar Factura"
+                                                            >
+                                                                <Edit3 className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Navigate to payments page with this invoice pre-selected
+                                                                    window.location.href = `/payments?invoiceId=${inv.id}`
+                                                                }}
+                                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                                title="Registrar Pago"
+                                                            >
+                                                                <CreditCard className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
