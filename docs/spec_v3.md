@@ -769,6 +769,14 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
   - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
 
+## [3.5.6] - 2026-01-19
+
+### 🔄 Refinamiento de Flujo (Business Logic)
+- **MODIFICADO**: Restricción de facturas en Egresos.
+  - Se removió el estado `DRAFT` de la lista de facturas asociables a pagos.
+  - *Razón*: Mantener la integridad del proceso de aprobación; una factura debe revisarse y pasar a `PENDING` antes de ser pagada.
+- **MANTENIDO**: Inclusión de facturas `OVERDUE` (vencidas) en los procesos de asociación de pagos.
+
 ## [3.5.5] - 2026-01-19
 
 ### 🐛 Bug Fixes & Logic Correction

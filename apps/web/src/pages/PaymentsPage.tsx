@@ -655,7 +655,7 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
         queryFn: () => getInvoices({ unitId })
     })
 
-    const PAYABLE_STATUSES = ['DRAFT', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE']
+    const PAYABLE_STATUSES = ['PENDING', 'PARTIALLY_PAID', 'OVERDUE']
 
     const pendingInvoices = [
         ...(allInvoicesData?.invoices || []).filter(inv => PAYABLE_STATUSES.includes(inv.status))
@@ -808,7 +808,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         queryFn: () => getProviders()
     })
 
-    const PAYABLE_STATUSES = ['DRAFT', 'PENDING', 'PARTIALLY_PAID', 'OVERDUE']
+    const PAYABLE_STATUSES = ['PENDING', 'PARTIALLY_PAID', 'OVERDUE']
 
     const pendingInvoices: (Invoice & { provider?: { id: string; name: string; defaultRetefuentePerc: number; defaultReteicaPerc: number }; balance?: number })[] = [
         ...(allInvoicesData?.invoices || []).filter(inv => PAYABLE_STATUSES.includes(inv.status))
