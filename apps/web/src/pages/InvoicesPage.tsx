@@ -453,8 +453,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                 <input
                                     type="number"
                                     required
-                                    value={form.subtotal}
-                                    onChange={(e) => setForm(f => ({ ...f, subtotal: Number(e.target.value) }))}
+                                    value={form.subtotal || ''}
+                                    onChange={(e) => setForm(f => ({ ...f, subtotal: Number(e.target.value) || 0 }))}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                                 />
                             </div>
@@ -462,8 +462,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                 <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
                                 <input
                                     type="number"
-                                    value={form.taxIva}
-                                    onChange={(e) => setForm(f => ({ ...f, taxIva: Number(e.target.value) }))}
+                                    value={form.taxIva || ''}
+                                    onChange={(e) => setForm(f => ({ ...f, taxIva: Number(e.target.value) || 0 }))}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                                 />
                             </div>
@@ -476,8 +476,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                     <label className="block text-xs font-semibold text-brand-800 mb-1">Retefuente</label>
                                     <input
                                         type="number"
-                                        value={form.retefuenteAmount}
-                                        onChange={(e) => setForm(f => ({ ...f, retefuenteAmount: Number(e.target.value) }))}
+                                        value={form.retefuenteAmount || ''}
+                                        onChange={(e) => setForm(f => ({ ...f, retefuenteAmount: Number(e.target.value) || 0 }))}
                                         className="w-full px-3 py-1.5 border border-brand-200 rounded-input bg-white focus:ring-2 focus:ring-brand-500 text-sm outline-none"
                                     />
                                 </div>
@@ -485,8 +485,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                                     <label className="block text-xs font-semibold text-brand-800 mb-1">ReteICA</label>
                                     <input
                                         type="number"
-                                        value={form.reteicaAmount}
-                                        onChange={(e) => setForm(f => ({ ...f, reteicaAmount: Number(e.target.value) }))}
+                                        value={form.reteicaAmount || ''}
+                                        onChange={(e) => setForm(f => ({ ...f, reteicaAmount: Number(e.target.value) || 0 }))}
                                         className="w-full px-3 py-1.5 border border-brand-200 rounded-input bg-white focus:ring-2 focus:ring-brand-500 text-sm outline-none"
                                     />
                                 </div>
@@ -504,8 +504,8 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                             <input
                                 type="number"
                                 required
-                                value={form.totalAmount}
-                                onChange={(e) => setForm(f => ({ ...f, totalAmount: Number(e.target.value) }))}
+                                value={form.totalAmount || ''}
+                                onChange={(e) => setForm(f => ({ ...f, totalAmount: Number(e.target.value) || 0 }))}
                                 className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none font-bold text-brand-700"
                             />
                         </div>
