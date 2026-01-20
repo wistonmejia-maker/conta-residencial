@@ -784,9 +784,12 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Campo `dueDate` (Fecha de Vencimiento) faltante en modal de registro de facturas.
   - *Problema*: El campo existía en el estado pero no se renderizaba en la UI.
   - *Solución*: Añadido input date en `InvoicesPage.tsx`, siguiendo tokens de diseño `rounded-input` y `focus:ring-brand-500`.
-- **CORREGIDO**: Retenciones (`retefuenteAmount`, `reteicaAmount`) no se guardaban al crear factura manualmente.
+- **CORREGIDO**: Retenciones (`retefuenteAmount`, `reteicaAmount`) no se guardaban al crear/editar factura manualmente.
   - *Problema*: El backend `invoices.ts` no extraía estos campos del request body.
-  - *Solución*: Actualizado endpoint `POST /invoices` para extraer y persistir ambos montos de retención.
+  - *Solución*: Actualizado endpoints `POST` y `PUT` de `/invoices` para extraer y persistir ambos montos de retención.
+- **CORREGIDO**: Ceros a la izquierda en campos numéricos al escribir.
+  - *Problema*: Inputs con `value={0}` causaban concatenación (ej: escribir "5" → "05").
+  - *Solución*: Patrón `value={form.field || ''}` para mostrar input vacío cuando el valor es 0.
 
 ---
 
