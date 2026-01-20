@@ -937,9 +937,9 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                 netValue: netAmount,
                 supportFileUrl: fileUrl || undefined,
                 unitId,
-                invoices: items.map(item => ({
+                invoiceAllocations: items.map(item => ({
                     invoiceId: item.invoice.id,
-                    amountApplied: item.amount
+                    amount: item.amount
                 }))
             }
 

@@ -762,3 +762,11 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
   - *Detalle*: La barra de estado de escaneo ahora solo es visible dentro de la unidad que inició el proceso.
 
 ---
+
+## [3.5.2] - 2026-01-19
+
+### 🐛 Bug Fixes
+- **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
+  - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
+  - *Solución*: Unificación de contrato de API en Frontend.
+
