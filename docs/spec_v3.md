@@ -404,6 +404,76 @@ const handleOpenFile = async (url: string) => {
 
 - **Apertura de Archivos**: Uso de la única función estándar `openFileUrl` (con fetch + blob para PDFs) para garantizar visualización sin errores de CORS.
 
+---
+
+## 11.5. Soporte de Notas Crédito (v3.5.11)
+> **Implementado**: Sistema para manejar notas crédito según normativa DIAN Colombia.
+
+### Normativa DIAN
+Las Notas Crédito son documentos electrónicos que permiten **corregir o anular** total o parcialmente una factura electrónica. Desde enero 2023, su emisión electrónica es obligatoria.
+
+### Requisitos Legales
+| Requisito | Descripción |
+|:----------|:------------|
+| Numeración Consecutiva | NC-0001, NC-0002... (propia del emisor) |
+| Referencia a Factura Original | Debe indicar # y fecha de la factura que modifica |
+| Descripción del Ajuste | Devolución, descuento, corrección, etc. |
+| Valor del Crédito | Monto que reduce el saldo de la factura |
+
+### Campos Añadidos al Modelo Invoice
+```prisma
+model Invoice {
+  // ... campos existentes
+  documentType     String  @default("FACTURA") // FACTURA, NOTA_CREDITO, CUENTA_COBRO
+  relatedInvoiceId String? // Referencia a factura original (para NC)
+  adjustmentReason String? // DEVOLUCION, DESCUENTO, ERROR, OTRO
+  
+  relatedInvoice   Invoice?  @relation("CreditNoteRelation", fields: [relatedInvoiceId], references: [id])
+  creditNotes      Invoice[] @relation("CreditNoteRelation")
+}
+```
+
+### Tipos de Documento
+| Tipo | Descripción | Icono UI |
+|:-----|:------------|:---------|
+| FACTURA | Factura electrónica estándar | 📄 |
+| NOTA_CREDITO | Ajuste/anulación de factura | 📋 |
+| CUENTA_COBRO | Documento sin número oficial (auto-generado) | 📝 |
+
+### Motivos de Ajuste (adjustmentReason)
+| Código | Descripción |
+|:-------|:------------|
+| DEVOLUCION | Devolución de mercancía |
+| DESCUENTO | Descuento posterior a la facturación |
+| ERROR | Corrección de error en factura original |
+| OTRO | Otro motivo (descripción en campo description) |
+
+### Flujo de Registro de Nota Crédito
+1. Usuario selecciona tipo "Nota Crédito" en el modal
+2. Selecciona proveedor (filtra facturas de ese proveedor)
+3. Selecciona factura original que modifica
+4. Indica motivo del ajuste
+5. Ingresa número NC y monto
+6. Sistema resta automáticamente del saldo de factura original
+
+### UI (InvoicesPage)
+```
+┌─────────────────────────────────────────────────────────┐
+│  Tipo de Documento:                                       │
+│  [📄 Factura] [📋 Nota Crédito] [📝 Cuenta Cobro]        │
+│                                                          │
+│  [Si es NC] ──────────────────────────────────────────  │
+│  │ Factura que modifica: [Dropdown de facturas]        │ │
+│  │ Motivo: [Devolución / Descuento / Error / Otro]     │ │
+│  └──────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Impacto Contable
+- Las NC **reducen** el saldo de la factura original
+- Las NC **reducen** los totales de retenciones en reportes
+- Las NC aparecen en la misma tabla de facturas con badge distintivo
+
 ### Lógica de Referencia (parseRobusDate)
 ```typescript
 function parseRobusDate(dateStr: string): Date {
@@ -832,6 +902,24 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
   - Se agregó soporte para wildcard dinámico que permite automáticamente cualquier subdominio de `*.vercel.app` y `*.railway.app`.
   - Se mantiene la variable de entorno `FRONTEND_URL` para orígenes personalizados.
   - Se implementó logging detallado de errores de CORS para identificar exactamente qué origen está siendo rechazado en producción.
+## [3.5.11] - 2026-01-20
+
+### ✨ Nueva Funcionalidad (Notas Crédito)
+- **AÑADIDO**: Soporte completo para Notas Crédito según normativa DIAN Colombia.
+  - Campo `documentType`: FACTURA | NOTA_CREDITO | CUENTA_COBRO
+  - Campo `relatedInvoiceId`: Referencia a factura original
+  - Campo `adjustmentReason`: DEVOLUCION | DESCUENTO | ERROR | OTRO
+
+### 🏗️ Cambios en Base de Datos
+- Migración Prisma: 3 nuevos campos en modelo Invoice
+- Auto-relación para vincular NC con factura original
+
+### 🎨 UI (InvoicesPage)
+- Selector de tipo de documento (3 botones visuales)
+- Campos condicionales para Nota Crédito (factura relacionada, motivo)
+
+---
+
 ## [3.5.10] - 2026-01-20
 
 ### 🐛 Bug Fixes (Vista Previa de Archivos)

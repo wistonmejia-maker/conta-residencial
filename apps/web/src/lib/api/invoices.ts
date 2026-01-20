@@ -23,6 +23,10 @@ export interface Invoice {
     monthlyReportId?: string
     emailSubject?: string
     source?: string
+    // Credit Note Support (v3.5.11)
+    documentType?: 'FACTURA' | 'NOTA_CREDITO' | 'CUENTA_COBRO'
+    relatedInvoiceId?: string
+    adjustmentReason?: 'DEVOLUCION' | 'DESCUENTO' | 'ERROR' | 'OTRO'
 }
 
 export async function getInvoices(filters?: { unitId?: string; providerId?: string; status?: string }): Promise<{ invoices: Invoice[] }> {

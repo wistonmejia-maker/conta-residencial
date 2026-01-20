@@ -186,9 +186,17 @@ model Invoice {
   emailSubject     String?          @map("email_subject")
   emailSender      String?          @map("email_sender")
   emailDate        DateTime?        @map("email_date")
+  
+  // Credit Note Support (v3.5.11)
+  documentType     String           @default("FACTURA") @map("document_type") // FACTURA, NOTA_CREDITO, CUENTA_COBRO
+  relatedInvoiceId String?          @map("related_invoice_id") // For credit notes: reference to original invoice
+  adjustmentReason String?          @map("adjustment_reason") // Reason for credit note (DEVOLUCION, DESCUENTO, ERROR, OTRO)
+  
   report           MonthlyReport?   @relation(fields: [monthlyReportId], references: [id])
   provider         Provider         @relation(fields: [providerId], references: [id])
   unit             Unit             @relation(fields: [unitId], references: [id])
+  relatedInvoice   Invoice?         @relation("CreditNoteRelation", fields: [relatedInvoiceId], references: [id])
+  creditNotes      Invoice[]        @relation("CreditNoteRelation")
   paymentItems     PaymentInvoice[]
   aiFeedback       AIFeedback[]
 
