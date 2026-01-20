@@ -449,30 +449,35 @@ model Invoice {
 | OTRO | Otro motivo (descripción en campo description) |
 
 ### Flujo de Registro de Nota Crédito
-1. Usuario selecciona tipo "Nota Crédito" en el modal
-2. Selecciona proveedor (filtra facturas de ese proveedor)
-3. Selecciona factura original que modifica
-4. Indica motivo del ajuste
-5. Ingresa número NC y monto
-6. Sistema resta automáticamente del saldo de factura original
+### Lógica de Cálculo de Saldo (Dinámico)
+El saldo ("balance") de una factura no se almacena en la base de datos, sino que se calcula dinámicamente en los endpoints `GET /invoices` y `GET /invoices/:id`:
+
+```typescript
+// paidAmount = Pagos Aplicados + Notas Crédito Aplicadas
+const paymentsPaid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
+const cnsApplied = invoice.creditNotes.reduce((sum, cn) => sum + Number(cn.totalAmount), 0)
+const totalPaid = paymentsPaid + cnsApplied
+
+invoice.paidAmount = totalPaid
+invoice.balance = Number(invoice.totalAmount) - totalPaid
+```
+
+### Sincronización Automática de Estados
+La creación, edición o eliminación de documentos afecta el estado de la factura original para mantener la consistencia:
+
+1.  **Creación de NC (POST)**: Se envuelve en una transacción. Al crear la NC, se recalcula el `totalPaid` de la factura relacionada y se actualiza su estado a `PAID` si el saldo llega a cero, o `PARTIALLY_PAID` si hay saldo pendiente pero menor al total original.
+2.  **Edición de NC (PUT)**: Si se cambia el monto de la NC, se dispara un recalculo del estado de la factura original.
+3.  **Eliminación de NC (DELETE)**: Al borrar una NC, se libera el saldo en la factura original y su estado vuelve a `PENDING` o `PARTIALLY_PAID` según los pagos restantes.
+4.  **Restricción de Borrado**: No se puede eliminar una factura que tenga Notas Crédito asociadas. Se deben eliminar primero las NC.
+
+### Estadísticas de Resumen (`/stats/summary`)
+Para evitar duplicidad en las cifras de gestión (que una factura de $1M y su NC de $1M sumen como $2M de deuda o gasto), el endpoint de estadísticas **excluye** los documentos de tipo `NOTA_CREDITO` de las sumatorias de `totalAmount` y conteos.
 
 ### UI (InvoicesPage)
-```
-┌─────────────────────────────────────────────────────────┐
-│  Tipo de Documento:                                       │
-│  [📄 Factura] [📋 Nota Crédito] [📝 Cuenta Cobro]        │
-│                                                          │
-│  [Si es NC] ──────────────────────────────────────────  │
-│  │ Factura que modifica: [Dropdown de facturas]        │ │
-│  │ Motivo: [Devolución / Descuento / Error / Otro]     │ │
-│  └──────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Impacto Contable
-- Las NC **reducen** el saldo de la factura original
-- Las NC **reducen** los totales de retenciones en reportes
-- Las NC aparecen en la misma tabla de facturas con badge distintivo
+- **Badges**: Las facturas en la tabla principal muestran etiquetas visuales:
+  - `NC` (Rojo): Nota Crédito.
+  - `CC` (Ámbar): Cuenta de Cobro.
+- **Formulario**: El selector de tipo de documento activa campos obligatorios (`relatedInvoiceId`, `adjustmentReason`) solo cuando se elije "Nota Crédito".
 
 ### Lógica de Referencia (parseRobusDate)
 ```typescript
@@ -905,18 +910,20 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 ## [3.5.11] - 2026-01-20
 
 ### ✨ Nueva Funcionalidad (Notas Crédito)
-- **AÑADIDO**: Soporte completo para Notas Crédito según normativa DIAN Colombia.
-  - Campo `documentType`: FACTURA | NOTA_CREDITO | CUENTA_COBRO
-  - Campo `relatedInvoiceId`: Referencia a factura original
-  - Campo `adjustmentReason`: DEVOLUCION | DESCUENTO | ERROR | OTRO
+### ✨ Nueva Funcionalidad (Notas Crédito)
+- **AÑADIDO**: Soporte completo para Notas Crédito y Cuentas de Cobro.
+  - Lógica de balance dinámico (Pagos + NCs).
+  - Sincronización automática de estados (`PENDING` -> `PARTIALLY_PAID` -> `PAID`).
+  - Restricciones de integridad referencial para evitar inconsistencias al borrar.
+- **ESTADÍSTICAS**: Exclusión de NCs en resúmenes para datos de gasto real precisos.
 
 ### 🏗️ Cambios en Base de Datos
-- Migración Prisma: 3 nuevos campos en modelo Invoice
-- Auto-relación para vincular NC con factura original
+- **SCHEMA**: Campos `documentType`, `relatedInvoiceId`, `adjustmentReason` en modelo `Invoice`.
+- **RELACIONES**: Auto-relación `CreditNoteRelation` para trazabilidad documental.
 
 ### 🎨 UI (InvoicesPage)
-- Selector de tipo de documento (3 botones visuales)
-- Campos condicionales para Nota Crédito (factura relacionada, motivo)
+- **UX**: Selector de tipo de documento con lógica condicional de campos.
+- **VISUAL**: Badges de colores (`NC`, `CC`) en la tabla principal de facturas.
 
 ---
 
