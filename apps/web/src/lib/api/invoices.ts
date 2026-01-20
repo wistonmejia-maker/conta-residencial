@@ -11,6 +11,8 @@ export interface Invoice {
     dueDate?: string
     subtotal: number
     taxIva: number
+    retefuenteAmount?: number
+    reteicaAmount?: number
     totalAmount: number
     description?: string
     pdfUrl?: string

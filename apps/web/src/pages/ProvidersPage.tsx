@@ -137,7 +137,6 @@ export default function ProvidersPage() {
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">NIT</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Tipo</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Categoría</th>
-                                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">ReteFte</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Docs</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
                                     <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
@@ -167,9 +166,6 @@ export default function ProvidersPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-sm text-gray-600 capitalize">{provider.category?.replace('_', ' ') || '-'}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className="text-sm text-gray-600">{provider.defaultRetefuentePerc}%</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`text-xs px-2 py-0.5 rounded-full ${(provider._count?.documents || 0) > 0
@@ -261,8 +257,9 @@ function ProviderModal({ provider, onClose, onSuccess }: {
         bankAccount: provider?.bankAccount || '',
         bankName: provider?.bankName || '',
         accountType: provider?.accountType || '',
-        defaultRetefuentePerc: provider?.defaultRetefuentePerc || 7,
-        defaultReteicaPerc: provider?.defaultReteicaPerc || 0.5,
+        // Campos de retención deprecados (soft deprecation)
+        defaultRetefuentePerc: provider?.defaultRetefuentePerc || 0,
+        defaultReteicaPerc: provider?.defaultReteicaPerc || 0,
         isRecurring: provider?.isRecurring || false,
         recurringCategory: provider?.recurringCategory || '',
         category: provider?.category || '',
@@ -502,33 +499,7 @@ function ProviderModal({ provider, onClose, onSuccess }: {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Retentions */}
-                            <div className="pt-2 border-t">
-                                <h4 className="text-sm font-medium text-gray-700 mb-3">Retenciones por Defecto</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs text-gray-500 mb-1">% Retención Fuente</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={form.defaultRetefuentePerc}
-                                            onChange={(e) => setForm(f => ({ ...f, defaultRetefuentePerc: parseFloat(e.target.value) || 0 }))}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-500 mb-1">% Retención ICA</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={form.defaultReteicaPerc}
-                                            onChange={(e) => setForm(f => ({ ...f, defaultReteicaPerc: parseFloat(e.target.value) || 0 }))}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Retenciones eliminadas - ahora se definen en la factura */}
 
                             {/* Recurring */}
 

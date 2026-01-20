@@ -890,16 +890,10 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
             let totalRetefuente = 0
             let totalReteica = 0
 
-            items.forEach(({ invoice, amount }) => {
-                const prov = invoice.provider
-                if (prov) {
-                    if (prov.defaultRetefuentePerc) {
-                        totalRetefuente += Math.round(amount * (prov.defaultRetefuentePerc / 100))
-                    }
-                    if (prov.defaultReteicaPerc) {
-                        totalReteica += Math.round(amount * (prov.defaultReteicaPerc / 100))
-                    }
-                }
+            // Nueva lógica: heredar retenciones de las facturas seleccionadas
+            items.forEach(({ invoice }) => {
+                totalRetefuente += Number(invoice.retefuenteAmount || 0)
+                totalReteica += Number(invoice.reteicaAmount || 0)
             })
 
             setRetentions({ retefuente: totalRetefuente, reteica: totalReteica })
@@ -1113,8 +1107,8 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                     <p className="text-xs text-amber-700 mb-3">Ingresa el monto bruto manualmente. Podrás asociar la factura más tarde.</p>
                                     <input
                                         type="number"
-                                        value={manualAmount}
-                                        onChange={(e) => setManualAmount(Number(e.target.value))}
+                                        value={manualAmount || ''}
+                                        onChange={(e) => setManualAmount(Number(e.target.value) || 0)}
                                         placeholder="Valor total del egreso"
                                         className="w-full px-3 py-2 border border-amber-200 rounded-input text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none"
                                     />
@@ -1142,8 +1136,8 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                     <span className="text-[10px] text-brand-400 font-bold uppercase">Rete-Fuente</span>
                                     <input
                                         type="number"
-                                        value={retentions.retefuente}
-                                        onChange={(e) => setRetentions({ ...retentions, retefuente: Number(e.target.value) })}
+                                        value={retentions.retefuente || ''}
+                                        onChange={(e) => setRetentions({ ...retentions, retefuente: Number(e.target.value) || 0 })}
                                         disabled={autoCalculate}
                                         className="w-full bg-brand-800 border-none rounded px-2 py-1 text-sm font-bold disabled:opacity-50"
                                     />
@@ -1152,8 +1146,8 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                     <span className="text-[10px] text-brand-400 font-bold uppercase">Rete-ICA</span>
                                     <input
                                         type="number"
-                                        value={retentions.reteica}
-                                        onChange={(e) => setRetentions({ ...retentions, reteica: Number(e.target.value) })}
+                                        value={retentions.reteica || ''}
+                                        onChange={(e) => setRetentions({ ...retentions, reteica: Number(e.target.value) || 0 })}
                                         disabled={autoCalculate}
                                         className="w-full bg-brand-800 border-none rounded px-2 py-1 text-sm font-bold disabled:opacity-50"
                                     />

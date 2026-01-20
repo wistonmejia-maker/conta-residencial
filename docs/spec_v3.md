@@ -312,19 +312,34 @@ Para garantizar que los documentos (PDF) e imágenes (PNG/JPG) se visualicen cor
   - `ai.service.ts`: Prompt enriquecido con normas Colombia 2025 (UVT $49.799, Bases Servicios/Compras).
   - `InvoicesPage.tsx`: Lógica de prioridad en UI.
 
-## 11.1. Lógica de Prioridad (Cascade)
-El sistema decide qué valor mostrar en los campos de retención siguiendo este orden estricto:
+## 11.1. Lógica de Retenciones (Nueva Arquitectura v3.5.9)
 
-1.  **Configuración del Proveedor (Alta Prioridad)**:
-    - Si el proveedor tiene `defaultRetefuentePerc > 0`, se calcula y **sobrescribe** cualquier otro valor.
-    - *Razón*: La configuración explícita del contador sobre el tercero es la fuente de verdad.
+> **Cambio Breaking**: Los campos `defaultRetefuentePerc` y `defaultReteicaPerc` en Proveedores están **deprecados** (soft deprecation). Las retenciones ahora se definen **únicamente en la Factura**.
 
-2.  **Sugerencia de IA (Media Prioridad)**:
-    - Si el proveedor NO tiene configuración (0%), se acepta el valor sugerido por la IA (`suggestedRetentions`).
-    - La IA puede haber extraído el valor impreso o haberlo calculado por inferencia de concepto.
+### Fuentes de Retenciones (Orden de Prioridad)
 
-3.  **Manual (Intervención)**:
-    - El usuario siempre puede editar el campo final.
+1. **Extracción IA del Documento**:
+   - Si el documento (factura electrónica) tiene retenciones impresas, se extraen automáticamente.
+   
+2. **Sugerencia IA según Normas Colombia**:
+   - Si el documento no tiene retenciones visibles, la IA sugiere valores según UVT 2025 y bases aplicables.
+
+3. **Entrada Manual**:
+   - El usuario/contador puede editar los valores finales en cualquier momento.
+
+### Flujo de Retenciones
+
+```
+FACTURA: Define retenciones (IA extrae o usuario ingresa)
+    ↓
+EGRESO: Hereda retenciones de las facturas seleccionadas (suma)
+    ↓
+Usuario puede ajustar manualmente si es necesario
+```
+
+### Egreso sin Factura Asociada
+- Usuario ingresa retenciones manualmente.
+- El egreso queda marcado con `hasPendingInvoice: true`.
 
 ## 11.2. Estándar de Extracción de Fechas (Patrón Colombiano)
 > **Implementado**: Lógica robusta para evitar la confusión entre Mes y Día en documentos locales.
@@ -776,7 +791,23 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
   - Se agregó soporte para wildcard dinámico que permite automáticamente cualquier subdominio de `*.vercel.app` y `*.railway.app`.
   - Se mantiene la variable de entorno `FRONTEND_URL` para orígenes personalizados.
   - Se implementó logging detallado de errores de CORS para identificar exactamente qué origen está siendo rechazado en producción.
-- **FIJO**: Error "Not allowed by CORS" globalmente para entornos de despliegue estándar.
+## [3.5.9] - 2026-01-20
+
+### 🏗️ Arquitectura (Retenciones)
+- **DEPRECADO**: Campos `defaultRetefuentePerc` y `defaultReteicaPerc` en Proveedores (soft deprecation).
+  - *Razón*: No existe una regla general de retención por proveedor.
+  - *Acción*: Los campos permanecen en DB pero ya no se usan en la UI ni lógica.
+  
+- **MODIFICADO**: Nueva lógica de retenciones.
+  - Las retenciones ahora se definen **únicamente en la Factura** (IA extrae o usuario ingresa).
+  - Los Egresos **heredan** las retenciones de las facturas seleccionadas (suma).
+  - Se eliminó el auto-cálculo desde % del proveedor.
+
+- **CORREGIDO**: Ceros a la izquierda en campos numéricos de Egresos.
+  - *Afectados*: Monto Bruto Manual, Rete-Fuente, Rete-ICA.
+  - *Solución*: Patrón `value={field || ''}`.
+
+---
 
 ## [3.5.8] - 2026-01-20
 

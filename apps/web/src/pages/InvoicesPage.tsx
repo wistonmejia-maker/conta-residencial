@@ -149,32 +149,11 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
         }
     }
 
-    useEffect(() => {
-        if (!form.providerId || form.subtotal <= 0) {
-            setForm(f => ({ ...f, retefuenteAmount: 0, reteicaAmount: 0 }))
-            return
-        }
-
-        const provider = providers.find((p: any) => p.id === form.providerId)
-        if (provider) {
-            const retefuentePerc = Number(provider.defaultRetefuentePerc) || 0
-            const reteicaPerc = Number(provider.defaultReteicaPerc) || 0
-
-            let newRetefuente = form.retefuenteAmount
-            let newReteica = form.reteicaAmount
-
-            if (retefuentePerc > 0) newRetefuente = Math.round(form.subtotal * (retefuentePerc / 100))
-            if (reteicaPerc > 0) newReteica = Math.round(form.subtotal * (reteicaPerc / 100))
-
-            if (newRetefuente !== form.retefuenteAmount || newReteica !== form.reteicaAmount) {
-                setForm(f => ({
-                    ...f,
-                    retefuenteAmount: newRetefuente,
-                    reteicaAmount: newReteica
-                }))
-            }
-        }
-    }, [form.providerId, form.subtotal, providers])
+    // Las retenciones ahora se obtienen de:
+    // 1. Extracción IA del documento (si tiene retenciones impresas)
+    // 2. Sugerencia IA según normas Colombia (si no tiene retenciones)
+    // 3. Entrada manual del usuario
+    // Ya no se auto-calculan desde % del proveedor
 
     const handleAIExtract = async (file: File) => {
         setAnalyzing(true)
