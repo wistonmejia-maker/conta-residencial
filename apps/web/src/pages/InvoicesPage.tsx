@@ -437,6 +437,16 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                             </div>
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento</label>
+                            <input
+                                type="date"
+                                value={form.dueDate}
+                                onChange={(e) => setForm(f => ({ ...f, dueDate: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
+                            />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal (Base) *</label>

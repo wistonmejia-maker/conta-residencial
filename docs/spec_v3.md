@@ -772,12 +772,25 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 ## [3.5.7] - 2026-01-19
 
 ### 🔧 Infraestructura & Debugging
-- **AÑADIDO**: Mejor soporte para CORS.
-  - Se agregó la variable de entorno `FRONTEND_URL` al backend para permitir orígenes dinámicos sin modificar código.
+- **AÑADIDO**: Mejor soporte para CORS (Modo Automático).
+  - Se agregó soporte para wildcard dinámico que permite automáticamente cualquier subdominio de `*.vercel.app` y `*.railway.app`.
+  - Se mantiene la variable de entorno `FRONTEND_URL` para orígenes personalizados.
   - Se implementó logging detallado de errores de CORS para identificar exactamente qué origen está siendo rechazado en producción.
-- **FIJO**: Error "Not allowed by CORS" mediante visibilidad mejorada en logs de Railway.
+- **FIJO**: Error "Not allowed by CORS" globalmente para entornos de despliegue estándar.
 
-## [3.5.6] - 2026-01-19
+## [3.5.8] - 2026-01-20
+
+### 🐛 Bug Fixes (Facturas)
+- **CORREGIDO**: Campo `dueDate` (Fecha de Vencimiento) faltante en modal de registro de facturas.
+  - *Problema*: El campo existía en el estado pero no se renderizaba en la UI.
+  - *Solución*: Añadido input date en `InvoicesPage.tsx`, siguiendo tokens de diseño `rounded-input` y `focus:ring-brand-500`.
+- **CORREGIDO**: Retenciones (`retefuenteAmount`, `reteicaAmount`) no se guardaban al crear factura manualmente.
+  - *Problema*: El backend `invoices.ts` no extraía estos campos del request body.
+  - *Solución*: Actualizado endpoint `POST /invoices` para extraer y persistir ambos montos de retención.
+
+---
+
+## [3.5.7] - 2026-01-19
 
 ### 🔄 Refinamiento de Flujo (Business Logic)
 - **MODIFICADO**: Restricción de facturas en Egresos.
