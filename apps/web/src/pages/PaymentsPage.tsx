@@ -308,8 +308,8 @@ export default function PaymentsPage() {
                                         <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatMoney(Number(payment.netValue))}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-1">
-                                                <span className={`status - pill ${statusStyles[payment.status] || 'status-pending'} `}>
-                                                    {statusLabels[payment.status] || payment.status}
+                                                <span className={`status-pill ${payment.hasPendingInvoice ? 'bg-orange-100 text-orange-800 border border-orange-200' : (statusStyles[payment.status] || 'status-pending')}`}>
+                                                    {payment.hasPendingInvoice ? 'Falta Factura' : (statusLabels[payment.status] || payment.status)}
                                                 </span>
                                                 {payment.monthlyReportId && (
                                                     <span title="Incluido en Cierre Contable">

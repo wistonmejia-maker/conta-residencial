@@ -769,6 +769,13 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Regresión en creación de Egresos que impedía asociar facturas.
   - *Causa*: Desalineación de parámetros en payload (`invoices` vs `invoiceAllocations`).
 
+## [3.5.4] - 2026-01-19
+
+### 💄 User Interface
+- **MEJORA**: Claridad en estado de Egresos.
+  - *Problema*: Egresos con soporte pero sin factura aparecían como "Completo", confundiendo al usuario.
+  - *Solución*: Si un pago tiene `hasPendingInvoice: true`, ahora muestra explicitamente el estado `Falta Factura` en color naranja, independientemente de su estado interno.
+
 ## [3.5.3] - 2026-01-19
 
 ### 🐛 Bug Fixes
