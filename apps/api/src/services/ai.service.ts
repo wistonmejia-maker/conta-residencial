@@ -247,6 +247,8 @@ export async function answerFinancialQuery(query: string, contextData: any): Pro
         
         DATOS (últimos 12 meses): ${JSON.stringify(contextData)}
         
+        USUARIO PREGUNTA: "${query}"
+        
         INSTRUCCIONES DE BÚSQUEDA:
         1. BÚSQUEDA DE FACTURAS: Los usuarios pueden buscar por número parcial. Si preguntan por la "1015", busca coincidencias como "RF-1015", "Factura 1015", etc. NO digas que no existe si hay una coincidencia parcial clara.
         2. CATEGORÍAS Y CONCEPTOS: Usa los campos 'category' y 'concept' para agrupar o filtrar si el usuario pregunta por tipos de gasto (ej: "aseo", "ascensores").
