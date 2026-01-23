@@ -67,14 +67,15 @@ export function AIChatWidget() {
         loadSuggestions()
     }
 
-    const handleSendMessage = async (e?: React.FormEvent) => {
+    const handleSendMessage = async (e?: React.FormEvent, manualText?: string) => {
         e?.preventDefault()
-        if (!inputText.trim() || !unitId || isLoading) return
+        const textToSend = manualText || inputText
+        if (!textToSend.trim() || !unitId || isLoading) return
 
         const userMsg: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: inputText,
+            content: textToSend,
             timestamp: new Date()
         }
 
@@ -233,7 +234,7 @@ export function AIChatWidget() {
                                             key={text}
                                             type="button"
                                             onClick={() => {
-                                                setInputText(text)
+                                                handleSendMessage(undefined, text)
                                             }}
                                             className="text-xs px-2.5 py-1.5 bg-gradient-to-r from-violet-50 to-indigo-50 text-indigo-700 rounded-full border border-indigo-100 hover:from-violet-100 hover:to-indigo-100 hover:border-indigo-200 transition-all flex items-center gap-1 whitespace-nowrap"
                                         >
