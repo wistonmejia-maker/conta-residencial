@@ -137,26 +137,39 @@
 }
 
 /* Chat Markdown Styles */
+.chat-markdown {
+  @apply overflow-x-auto max-w-full;
+  scrollbar-width: thin;
+}
+
 .chat-markdown table {
-  @apply w-full text-xs border-collapse my-2;
+  @apply min-w-full text-[10px] sm:text-xs border-collapse my-3 rounded-lg overflow-hidden border border-gray-100;
 }
 
 .chat-markdown th {
-  @apply bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100 px-2 py-1 text-left;
+  @apply bg-indigo-50 text-indigo-700 font-bold border-b border-indigo-100 px-3 py-2 text-left uppercase tracking-wider;
 }
 
 .chat-markdown td {
-  @apply border border-gray-200 px-2 py-1 text-gray-600;
+  @apply border-b border-gray-100 px-3 py-2 text-gray-600 bg-white;
+}
+
+.chat-markdown tr:last-child td {
+  @apply border-b-0;
 }
 
 .chat-markdown ul {
-  @apply list-disc list-inside my-1 space-y-1;
+  @apply list-disc list-inside my-2 space-y-1.5;
 }
 
 .chat-markdown ol {
-  @apply list-decimal list-inside my-1 space-y-1;
+  @apply list-decimal list-inside my-2 space-y-1.5;
 }
 
 .chat-markdown strong {
-  @apply font-semibold text-indigo-700;
+  @apply font-bold text-indigo-800;
+}
+
+.chat-markdown p {
+  @apply mb-2 last:mb-0 leading-relaxed;
 }
