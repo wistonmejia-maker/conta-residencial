@@ -218,6 +218,13 @@ export default function ProvidersPage() {
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
                                                 <button
+                                                    onClick={() => handleEdit(provider)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteClick(provider)}
                                                     className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-600"
                                                     title="Eliminar"
