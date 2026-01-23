@@ -325,8 +325,7 @@ export async function analyzeBudgetDeeply(month: number, year: number, summary: 
 
 export async function logAIQuery(unitId: string, query: string, source: 'CHAT' | 'FEEDBACK' = 'CHAT') {
     try {
-        // @ts-ignore
-        await (prisma as any).aIQueryLog.create({ data: { unitId, query, source } });
+        await prisma.aIQueryLog.create({ data: { unitId, query, source } });
     } catch (e: any) {
         logger.error('Failed to log AI query', { error: e.message });
     }
@@ -334,8 +333,7 @@ export async function logAIQuery(unitId: string, query: string, source: 'CHAT' |
 
 export async function getSuggestedQuestions(unitId: string): Promise<string[]> {
     try {
-        // @ts-ignore
-        const logs = await (prisma as any).aIQueryLog.findMany({
+        const logs = await prisma.aIQueryLog.findMany({
             where: { unitId },
             orderBy: { timestamp: 'desc' },
             take: 50
