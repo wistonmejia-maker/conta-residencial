@@ -25,28 +25,37 @@ const formatDate = (dateStr: string) =>
 const openFileUrl = async (url: string) => {
     if (!url) return;
 
-    // Direct open for images or non-pdf/non-Cloudinary files
-    const isImage = /\.(png|jpg|jpeg|webp|gif|bmp)$/i.test(url);
-    const isPdf = /\.pdf(_secure)?/i.test(url) || url.includes('/raw/upload/');
+    const isImage = /\.(png|jpg|jpeg|webp|gif|bmp)$/i.test(url) || url.includes('/image/upload/');
 
-    if (isImage) {
-        window.open(url, '_blank');
-        return;
-    }
+    // Handle Cloudinary RAW files or _secure bypass files
+    if (!isImage && (url.includes('/raw/upload/') || url.endsWith('.pdf_secure') || !url.toLowerCase().endsWith('.pdf'))) {
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write(`
+                <html>
+                    <head><title>Cargando documento...</title></head>
+                    <body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;background:#f3f4f6;">
+                        <div style="text-align:center;">
+                            <div style="margin-bottom:10px;">Cargando documento...</div>
+                            <div style="font-size:12px;color:#6b7280;">Por favor espere</div>
+                        </div>
+                    </body>
+                </html>
+            `);
 
-    if (isPdf) {
-        // For PDFs, especially Cloudinary /raw/upload/ or .pdf_secure, 
-        // we use fetch + blob to avoid CORS issues and force view
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, '_blank');
-            // Clean up blob URL after some time
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-        } catch (error) {
-            console.error('Error opening PDF:', error);
-            window.open(url, '_blank'); // Fallback
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                newWindow.location.href = pdfUrl;
+            } catch (error) {
+                newWindow.close();
+                console.error('Error opening PDF:', error);
+                window.open(url, '_blank'); // Fallback
+            }
+        } else {
+            window.open(url, '_blank'); // Fallback if popup blocked
         }
         return;
     }
@@ -1403,6 +1412,7 @@ export default function MonthlyClosurePage() {
                                                     <th className="px-4 py-3 text-left font-semibold">Factura #</th>
                                                     <th className="px-4 py-3 text-left font-semibold">Proveedor</th>
                                                     <th className="px-4 py-3 text-right font-semibold">Monto</th>
+                                                    <th className="px-4 py-3 text-center font-semibold">Soporte</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
@@ -1412,6 +1422,19 @@ export default function MonthlyClosurePage() {
                                                         <td className="px-4 py-3 text-gray-900">{inv.provider?.name || 'N/A'}</td>
                                                         <td className="px-4 py-3 text-right font-bold text-gray-900">
                                                             {formatMoney(Number(inv.totalAmount))}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            {inv.fileUrl ? (
+                                                                <button
+                                                                    onClick={() => openFileUrl(inv.fileUrl!)}
+                                                                    className="text-indigo-600 hover:text-indigo-800 p-1 hover:bg-indigo-50 rounded"
+                                                                    title="Ver Factura"
+                                                                >
+                                                                    <FileSpreadsheet className="w-4 h-4" />
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 ))}
