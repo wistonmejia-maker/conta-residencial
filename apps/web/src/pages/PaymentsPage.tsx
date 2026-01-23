@@ -1017,13 +1017,17 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
-                                <input
-                                    type="text"
+                                <select
                                     value={form.bankPaymentMethod}
                                     onChange={(e) => setForm(f => ({ ...f, bankPaymentMethod: e.target.value }))}
-                                    placeholder="Transferencia, Cheque, etc."
                                     className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                                />
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    <option value="TRANSFER">Transferencia</option>
+                                    <option value="CHECK">Cheque</option>
+                                    <option value="CASH">Efectivo</option>
+                                    <option value="PSE">PSE</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Referencia / Transacción</label>

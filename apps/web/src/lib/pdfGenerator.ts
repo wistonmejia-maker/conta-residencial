@@ -292,8 +292,17 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
     doc.line(margin + 100, y, margin + 100, y + footerH) // Split Type | Net
     doc.line(margin + contentWidth - 40, y, margin + contentWidth - 40, y + footerH) // Split Label | Value
 
+    const getMethodLabel = (method?: string) => {
+        switch (method) {
+            case 'TRANSFER': return 'Transferencia'
+            case 'CHECK': return 'Cheque'
+            case 'CASH': return 'Efectivo'
+            case 'PSE': return 'PSE'
+            default: return method || 'N/A'
+        }
+    }
     drawText("Tipo de Pago:", margin + 2, y + 5.5, 9, true)
-    drawText(data.paymentMethod === 'TRANSFER' ? 'Transferencia' : 'Efectivo/Cheque', margin + 30, y + 5.5, 9, false)
+    drawText(getMethodLabel(data.paymentMethod), margin + 30, y + 5.5, 9, false)
 
     drawText("Pago Neto:", margin + contentWidth - 42, y + 5.5, 9, true, 'right')
     drawText(formatMoney(data.netAmount), margin + contentWidth - 2, y + 5.5, 10, true, 'right')

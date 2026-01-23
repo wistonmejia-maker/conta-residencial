@@ -1,8 +1,8 @@
-import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye } from 'lucide-react'
+import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getProviders, createProvider, updateProvider, validateNit, API_BASE } from '../lib/api'
+import { getProviders, createProvider, updateProvider, deleteProvider, validateNit, API_BASE } from '../lib/api'
 
 import type { Provider } from '../lib/api'
 import { uploadFileToStorage } from '../lib/storage'
@@ -30,6 +30,9 @@ export default function ProvidersPage() {
     const [showModal, setShowModal] = useState(false)
     const [showBulkImport, setShowBulkImport] = useState(false)
     const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [selectedProviderForDelete, setSelectedProviderForDelete] = useState<Provider | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
     const queryClient = useQueryClient()
 
     const { data, isLoading } = useQuery({
@@ -42,6 +45,31 @@ export default function ProvidersPage() {
     // Client-side filter removed, using backend results
     const filtered = providers
 
+
+    const handleDeleteClick = (provider: Provider) => {
+        setSelectedProviderForDelete(provider)
+        setIsDeleteModalOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!selectedProviderForDelete) return
+        setIsDeleting(true)
+        try {
+            const res = await deleteProvider(selectedProviderForDelete.id)
+            if (res.error) {
+                alert(res.error)
+            } else {
+                queryClient.invalidateQueries({ queryKey: ['providers'] })
+                setIsDeleteModalOpen(false)
+                setSelectedProviderForDelete(null)
+            }
+        } catch (error) {
+            console.error('Error deleting provider:', error)
+            alert('Error al intentar eliminar el proveedor')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     const handleEdit = (provider: Provider) => {
         setEditingProvider(provider)
@@ -190,11 +218,11 @@ export default function ProvidersPage() {
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
                                                 <button
-                                                    onClick={() => handleEdit(provider)}
-                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-indigo-600"
-                                                    title="Editar"
+                                                    onClick={() => handleDeleteClick(provider)}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-600"
+                                                    title="Eliminar"
                                                 >
-                                                    <Edit2 className="w-4 h-4" />
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </td>
@@ -233,6 +261,48 @@ export default function ProvidersPage() {
                     />
                 )
             }
+            {/* Simple Modal fallback if no custom Modal component exists in this scope */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+                            <Trash2 className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900">Confirmar Eliminación</h3>
+                            <p className="mt-2 text-sm text-gray-500">
+                                ¿Estás seguro de que deseas eliminar al proveedor <strong>{selectedProviderForDelete?.name}</strong>?
+                            </p>
+                            <p className="mt-1 text-xs text-gray-400">
+                                Esta acción eliminará permanentemente el perfil y sus documentos. No se puede deshacer.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    'Eliminar'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     )
 }

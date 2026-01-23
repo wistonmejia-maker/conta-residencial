@@ -245,13 +245,26 @@ router.put('/:id', async (req, res) => {
 // DELETE provider
 router.delete('/:id', async (req, res) => {
     try {
+        const id = req.params.id
+
+        // Safety check: Don't delete providers that have invoices
+        const invoiceCount = await prisma.invoice.count({
+            where: { providerId: id }
+        })
+
+        if (invoiceCount > 0) {
+            return res.status(400).json({
+                error: 'No se puede eliminar el proveedor porque tiene facturas asociadas. Primero debe eliminar o reasignar las facturas.'
+            })
+        }
+
         await prisma.provider.delete({
-            where: { id: req.params.id }
+            where: { id }
         })
         res.json({ success: true })
     } catch (error) {
         console.error('Error deleting provider:', error)
-        res.status(500).json({ error: 'Error deleting provider' })
+        res.status(500).json({ error: 'Error al eliminar el proveedor' })
     }
 })
 
