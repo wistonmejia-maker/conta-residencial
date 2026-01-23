@@ -243,13 +243,19 @@ export async function answerFinancialQuery(query: string, contextData: any): Pro
     try {
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
         const prompt = `Actúa como el CFO de un edificio residencial. 
-        Datos (últimos 12 meses): ${JSON.stringify(contextData)}
-        Usuario pregunta: "${query}"
+        Hoy es: ${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+        
+        DATOS (últimos 12 meses): ${JSON.stringify(contextData)}
+        
+        INSTRUCCIONES DE BÚSQUEDA:
+        1. BÚSQUEDA DE FACTURAS: Los usuarios pueden buscar por número parcial. Si preguntan por la "1015", busca coincidencias como "RF-1015", "Factura 1015", etc. NO digas que no existe si hay una coincidencia parcial clara.
+        2. CATEGORÍAS Y CONCEPTOS: Usa los campos 'category' y 'concept' para agrupar o filtrar si el usuario pregunta por tipos de gasto (ej: "aseo", "ascensores").
+        3. FECHAS: Usa el campo 'today' para entender "este mes", "el mes pasado", etc.
         
         FORMATO OBLIGATORIO:
-        - Usa Markdown.
-        - SIEMPRE que listes datos, USA UNA TABLA MARKDOWN.
-        - Sé conciso.`;
+        - Usa Markdown profesional.
+        - SIEMPRE que listes múltiples datos, USA UNA TABLA MARKDOWN.
+        - Sé conciso pero amable.`;
         const result = await model.generateContent(prompt);
         await logMetric({ startTime, requestType: 'CHAT', result });
         return result.response.text();

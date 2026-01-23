@@ -43,9 +43,11 @@ router.post('/chat', async (req, res) => {
                 },
                 select: {
                     invoiceDate: true,
+                    invoiceNumber: true,
                     totalAmount: true,
+                    description: true,
                     provider: {
-                        select: { name: true }
+                        select: { name: true, category: true }
                     },
                     status: true
                 }
@@ -58,21 +60,27 @@ router.post('/chat', async (req, res) => {
                 select: {
                     paymentDate: true,
                     amountPaid: true,
+                    consecutiveNumber: true,
                     status: true
                 }
             })
         ])
 
         const contextData = {
+            today: new Date().toISOString().split('T')[0],
             period: `Last 12 months (${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]})`,
             invoices: invoices.map(i => ({
                 date: i.invoiceDate.toISOString().split('T')[0],
+                number: i.invoiceNumber,
+                category: i.provider?.category || 'General',
+                concept: i.description || '',
                 provider: i.provider?.name || 'Unknown',
                 amount: Number(i.totalAmount),
                 status: i.status
             })),
             payments: payments.map(p => ({
                 date: p.paymentDate.toISOString().split('T')[0],
+                number: p.consecutiveNumber,
                 amount: Number(p.amountPaid),
                 status: p.status
             }))
