@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
-import { oauth2Client } from '../config/google';
+import { oauth2Client as globalOauth2Client } from '../config/google';
 import prisma from '../lib/prisma';
+import { config } from '../config/env';
 
 export async function getGmailClient(unitId: string) {
     // Get tokens for unit
@@ -9,37 +10,52 @@ export async function getGmailClient(unitId: string) {
     });
 
     if (!tokenRecord) {
-        throw new Error('No Gmail token found for this unit');
+        throw new Error('GMAIL_TOKEN_MISSING');
     }
+
+    // Create a local client instance to avoid concurrency issues with the singleton
+    const localOauth2Client = new google.auth.OAuth2(
+        config.GOOGLE_CLIENT_ID,
+        config.GOOGLE_CLIENT_SECRET,
+        config.GOOGLE_REDIRECT_URI
+    );
+
+    // Initial credentials
+    localOauth2Client.setCredentials({
+        access_token: tokenRecord.accessToken,
+        refresh_token: tokenRecord.refreshToken,
+        expiry_date: Number(tokenRecord.expiresAt),
+    });
 
     // Check if token is expired (using BigInt conversion)
     const expiresAt = Number(tokenRecord.expiresAt);
     if (expiresAt < Date.now()) {
-        // Refresh token
-        oauth2Client.setCredentials({
-            refresh_token: tokenRecord.refreshToken,
-        });
+        try {
+            console.log(`[Gmail] Refreshing token for unit ${unitId}...`);
+            const { credentials } = await localOauth2Client.refreshAccessToken();
 
-        const { credentials } = await oauth2Client.refreshAccessToken();
+            // Update stored tokens
+            await prisma.gmailToken.update({
+                where: { id: tokenRecord.id },
+                data: {
+                    accessToken: credentials.access_token!,
+                    expiresAt: BigInt(credentials.expiry_date!),
+                    // Only update refresh token if a new one is returned (rare)
+                    ...(credentials.refresh_token ? { refreshToken: credentials.refresh_token } : {})
+                }
+            });
 
-        // Update stored tokens
-        await prisma.gmailToken.update({
-            where: { id: tokenRecord.id },
-            data: {
-                accessToken: credentials.access_token!,
-                expiresAt: BigInt(credentials.expiry_date!),
+            localOauth2Client.setCredentials(credentials);
+        } catch (err: any) {
+            console.error(`[Gmail] Failed to refresh token for unit ${unitId}:`, err.message);
+            if (err.message.includes('invalid_grant')) {
+                throw new Error('GMAIL_AUTH_EXPIRED');
             }
-        });
-
-        oauth2Client.setCredentials(credentials);
-    } else {
-        oauth2Client.setCredentials({
-            access_token: tokenRecord.accessToken,
-            refresh_token: tokenRecord.refreshToken,
-        });
+            throw err;
+        }
     }
 
-    return google.gmail({ version: 'v1', auth: oauth2Client });
+    return google.gmail({ version: 'v1', auth: localOauth2Client });
 }
 
 export async function fetchNewEmails(unitId: string) {

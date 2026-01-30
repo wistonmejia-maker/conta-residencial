@@ -427,9 +427,21 @@ function GmailPreviewModal({ unitId, onClose }: { unitId: string; onClose: () =>
                             <p>Cargando correos...</p>
                         </div>
                     ) : error ? (
-                        <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
-                            Error al cargar la previsualización. Verifica tu conexión.
+                        <div className="p-4 bg-red-50 text-red-700 rounded-lg flex flex-col gap-3">
+                            <div className="flex items-center gap-2 font-medium">
+                                <AlertTriangle className="w-5 h-5" />
+                                {error.message.includes('GMAIL_AUTH_EXPIRED') || error.message.includes('Auth Expired')
+                                    ? 'La conexión con Gmail ha expirado o fue revocada.'
+                                    : 'Error al cargar la previsualización. Verifica tu conexión.'}
+                            </div>
+                            {(error.message.includes('GMAIL_AUTH_EXPIRED') || error.message.includes('Auth Expired')) && (
+                                <button
+                                    onClick={() => connectGmail(unitId)}
+                                    className="w-full py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 shadow-sm"
+                                >
+                                    Reconectar cuenta de Gmail
+                                </button>
+                            )}
                         </div>
                     ) : data?.emails?.length === 0 ? (
                         <div className="py-12 text-center text-gray-500">No se encontraron correos recientes.</div>

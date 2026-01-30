@@ -19,8 +19,11 @@ router.get('/gmail/preview', async (req, res) => {
     try {
         const emails = await fetchRecentEmails(unitId as string);
         res.json({ success: true, emails });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching Gmail preview:', error);
+        if (error.message === 'GMAIL_AUTH_EXPIRED' || error.message === 'GMAIL_TOKEN_MISSING') {
+            return res.status(401).json({ error: 'Auth Expired', code: 'GMAIL_AUTH_EXPIRED' });
+        }
         res.status(500).json({ error: 'Error fetching preview' });
     }
 });
