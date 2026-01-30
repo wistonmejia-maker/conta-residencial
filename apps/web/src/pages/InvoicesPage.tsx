@@ -667,6 +667,7 @@ export default function InvoicesPage() {
     const unitId = selectedUnit?.id || ''
 
     const [search, setSearch] = useState(searchParams.get('search') || '')
+    const [statusFilter, setStatusFilter] = useState<string>('ALL')
     const [showModal, setShowModal] = useState(false)
     const [showPreviewModal, setShowPreviewModal] = useState(false)
     const [uploadInvoiceId, setUploadInvoiceId] = useState<string | null>(null)
@@ -707,15 +708,26 @@ export default function InvoicesPage() {
 
     // Filter logic
     const filtered = useMemo(() => {
-        if (!search) return invoices;
-        const lowerSearch = search.toLowerCase();
-        return invoices.filter((inv: any) =>
-            inv.invoiceNumber.toLowerCase().includes(lowerSearch) ||
-            inv.provider?.name.toLowerCase().includes(lowerSearch) ||
-            inv.description?.toLowerCase().includes(lowerSearch) ||
-            statusLabels[inv.status]?.toLowerCase().includes(lowerSearch)
-        )
-    }, [invoices, search])
+        let result = invoices
+
+        // 1. Status Filter
+        if (statusFilter !== 'ALL') {
+            result = result.filter((inv: any) => inv.status === statusFilter)
+        }
+
+        // 2. Search Filter
+        if (search) {
+            const lowerSearch = search.toLowerCase();
+            result = result.filter((inv: any) =>
+                inv.invoiceNumber.toLowerCase().includes(lowerSearch) ||
+                inv.provider?.name.toLowerCase().includes(lowerSearch) ||
+                inv.description?.toLowerCase().includes(lowerSearch) ||
+                statusLabels[inv.status]?.toLowerCase().includes(lowerSearch)
+            )
+        }
+
+        return result
+    }, [invoices, search, statusFilter])
 
     const handleDeleteInvoice = (invoice: Invoice & { provider?: { name: string } }) => {
         setShowDeleteConfirm(invoice)
@@ -946,8 +958,8 @@ export default function InvoicesPage() {
 
                 {/* Filters */}
                 <div className="card p-4">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-md">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="relative flex-1 w-full md:max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 type="text"
@@ -957,6 +969,19 @@ export default function InvoicesPage() {
                                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                             />
                         </div>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full md:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white cursor-pointer"
+                        >
+                            <option value="ALL">Todos los estados</option>
+                            <option value="PENDING">Pendiente</option>
+                            <option value="PAID">Pagado</option>
+                            <option value="PARTIALLY_PAID">Pago Parcial</option>
+                            <option value="OVERDUE">Vencida</option>
+                            <option value="DRAFT">Borrador</option>
+                            <option value="VOID">Anulada</option>
+                        </select>
                     </div>
                 </div>
 
@@ -964,12 +989,14 @@ export default function InvoicesPage() {
                 <div className="card overflow-x-auto">
                     {isLoading ? (
                         <div className="p-8 text-center text-gray-500">Cargando facturas...</div>
-                    ) : invoices.length === 0 ? (
+                    ) : filtered.length === 0 ? (
                         <div className="p-8 text-center">
-                            <p className="text-gray-500">No hay facturas registradas</p>
-                            <button onClick={() => setShowModal(true)} className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-                                + Registrar primera factura
-                            </button>
+                            <p className="text-gray-500">No se encontraron facturas</p>
+                            {invoices.length === 0 && (
+                                <button onClick={() => setShowModal(true)} className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+                                    + Registrar primera factura
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <table className="w-full">
@@ -987,25 +1014,27 @@ export default function InvoicesPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filtered.map((inv: Invoice & { provider?: { name: string }; balance?: number; fileUrl?: string }) => (
-                                    <tr key={inv.id} className="hover:bg-gray-50/50">
+                                {filtered.map((inv: any) => (
+                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
-                                                {inv.documentType === 'NOTA_CREDITO' && (
-                                                    <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded border border-red-200">NC</span>
-                                                )}
-                                                {inv.documentType === 'CUENTA_COBRO' && (
-                                                    <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200">CC</span>
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-sm font-medium text-indigo-600">{inv.invoiceNumber}</span>
+                                                    {inv.documentType === 'NOTA_CREDITO' && (
+                                                        <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded border border-red-200">NC</span>
+                                                    )}
+                                                    {inv.documentType === 'CUENTA_COBRO' && (
+                                                        <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200">CC</span>
+                                                    )}
+                                                </div>
+                                                {inv.source === 'GMAIL' && (
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                                                            <Mail className="w-3 h-3" /> Gmail
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            {inv.source === 'GMAIL' && (
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
-                                                        <Mail className="w-3 h-3" /> Gmail
-                                                    </span>
-                                                </div>
-                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-gray-900">{inv.provider?.name || 'N/A'}</p>
