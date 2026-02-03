@@ -268,6 +268,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
     y -= 20
 
     let rowCount = 0
+    let totalPayments = 0
     for (const p of data.payments) {
         if (y < 60) {
             currentPage = mergedPdf.addPage([letterWidth, letterHeight])
@@ -292,7 +293,9 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         const dateStr = new Date(p.paymentDate).toLocaleDateString()
         const providerName = p.provider?.name?.substring(0, 30) || 'N/A'
         const invoices = p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-'
-        const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(p.amountPaid))
+        const rawAmount = Number(p.amountPaid)
+        totalPayments += rawAmount
+        const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
 
         currentPage.drawText(ceNum, { x: 50, y, size: fontSize, font: fontReg })
         currentPage.drawText(dateStr, { x: 100, y, size: fontSize, font: fontReg })
@@ -306,6 +309,14 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         y -= 15
         rowCount++
     }
+
+    // Draw Totals for Payments
+    y -= 5
+    currentPage.drawLine({ start: { x: 350, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: brandColor })
+    currentPage.drawText('TOTAL PAGADO ESTE PERIODO', { x: 300, y, size: fontSize, font: fontBold, color: brandColor })
+    const totalPaymentsDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPayments)
+    const totalPaymentsWidth = fontBold.widthOfTextAtSize(totalPaymentsDisplay, fontSize)
+    currentPage.drawText(totalPaymentsDisplay, { x: 580 - totalPaymentsWidth, y, size: fontSize, font: fontBold, color: brandColor })
 
     // --- PENDING INVOICES SECTION ---
     if (data.pendingInvoices && data.pendingInvoices.length > 0) {
@@ -339,6 +350,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         y -= 20
 
         let invCount = 0
+        let totalPending = 0
         for (const inv of data.pendingInvoices) {
             if (y < 60) {
                 currentPage = mergedPdf.addPage([letterWidth, letterHeight])
@@ -358,7 +370,9 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
 
             const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
             const providerName = inv.provider?.name?.substring(0, 35) || 'N/A'
-            const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(inv.balance || inv.totalAmount))
+            const rawAmount = Number(inv.balance || inv.totalAmount)
+            totalPending += rawAmount
+            const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
 
             currentPage.drawText(dateStr, { x: 50, y, size: fontSize, font: fontReg })
             currentPage.drawText(providerName, { x: 130, y, size: fontSize, font: fontReg })
@@ -370,6 +384,14 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             y -= 15
             invCount++
         }
+
+        // Draw Totals for Invoices
+        y -= 5
+        currentPage.drawLine({ start: { x: 320, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: rgb(0, 0, 0) })
+        currentPage.drawText('TOTAL PENDIENTE DE PAGO', { x: 320, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
+        const totalPendingDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPending)
+        const totalPendingWidth = fontBold.widthOfTextAtSize(totalPendingDisplay, fontSize)
+        currentPage.drawText(totalPendingDisplay, { x: 580 - totalPendingWidth, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
     }
 
     // 3. Iterate Payments & Attach
