@@ -36,7 +36,7 @@ const drawBottomWatermark = (page: any, text: string, font: any, size: number) =
         y,
         size,
         font,
-        color: rgb(0.8, 0, 0),
+        color: rgb(0.4, 0.4, 0.4), // Medium gray for B&W compatibility
         rotate: degrees(rotation)
     })
 }
@@ -225,8 +225,8 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
     const fontBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
     const fontReg = await mergedPdf.embedFont(StandardFonts.Helvetica)
     const fontSize = 9
-    const brandColor = rgb(0.1, 0.2, 0.4) // Deep Blue
-    const grayRow = rgb(0.96, 0.96, 0.96)
+    const brandColor = rgb(0.15, 0.15, 0.15) // Dark Gray (Better for B&W printing)
+    const grayRow = rgb(0.97, 0.97, 0.97) // Very Light Gray for subtle Zebra stripes
     const white = rgb(1, 1, 1)
 
     const drawHeader = (page: any, text: string, yPos: number) => {
@@ -315,7 +315,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             y = height - 60
         }
 
-        const pendingColor = rgb(0.8, 0, 0)
+        const pendingColor = rgb(0, 0, 0) // Black (instead of red) for B&W printing
         currentPage.drawText('Facturas Pendientes de Pago', { x: 50, y, size: 14, font: fontBold, color: pendingColor })
         y -= 25
 
