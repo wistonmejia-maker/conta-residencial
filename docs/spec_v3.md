@@ -29,6 +29,7 @@ Se ha establecido un estándar de validación robusto utilizando **Zod**.
 - **Esquemas Críticos**:
   - `invoice.schema.ts`: Valida creación de facturas (montos positivos, fechas, UUIDs).
   - `provider.schema.ts`: Valida creación de proveedores (NIT, Email, Tipos de documento).
+  - `unit.schema.ts`: Valida configuración de unidades (Semillas, NIT, Correos).
 - **Integración**: Middleware o validación directa en controladores (`schema.safeParse`).
 
 ## 3.1. Diccionario de Datos Estándar (Enums)
@@ -1013,9 +1014,43 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **REPORTE**: Integración total de campos dinámicos en la Carpeta Mensual (`accountingFolderGenerator.ts`).
 - **REACTIVIDAD**: Corrección de estado estático en `MonthlyClosurePage.tsx` para permitir carga dinámica de movimientos de cualquier periodo.
 
+## [3.7.0] - 2026-02-03
+
+### 🔢 Lógica de Consecutivos (Re-ingeniería)
+- **ESTABILIZACIÓN**: Implementación de lógica "Pull-Back Friendly" y "Relocation Support".
+  - Permite mover bloques enteros de pagos cambiando la semilla.
+  - Respeta huecos intencionales si la semilla es mayor al bloque actual.
+  - Blindaje contra modificaciones en periodos cerrados.
+- **DATA FIX**: Corrección masiva de secuencias para "Treviso" (1617) y "Ciudad Jardín" (887).
+
+### 🛡️ Validación y Seguridad
+- **SCHEMA**: Implementación de `unit.schema.ts` (Zod) para validación estricta de configuración de Unidades.
+- **API**: Refactor de `units.ts` para usar validación tipada y manejo seguro de errores.
+
 ### 🏗️ Cambios en Base de Datos (Prisma)
 - **MODEL Unit**: `defaultElaboratedBy`, `defaultReviewedBy`, `defaultApprovedBy`, `defaultBankName`, `defaultAccountType`.
 - **MODEL Payment**: `observations`, `referenceNumber`, `bankName`, `accountType`, `elaboratedBy`, `reviewedBy`, `approvedBy`.
+
+---
+
+# 19. Lógica de Consecutivos (Estándar v3.7)
+> **Implementado**: Sistema de numeración robusto, estable y flexible ("Relocation Friendly").
+
+## 19.1. Principios de Estabilidad
+Para garantizar la integridad contable y la flexibilidad operativa, la numeración de Egresos (CE) sigue estas reglas estrictas:
+
+1.  **Respeto a Cierres (Frozen Zones)**:
+    *   Pagos con `monthlyReportId` (pertenecientes a un cierre mensual) son inmutables.
+    *   La lógica de re-secuenciación nunca tocará números iguales o inferiores al `frozenMax` (máximo consecutivo cerrado).
+
+2.  **Universalidad ("Pull-Back & Gap Friendly")**:
+    *   **Retroceso**: Si el usuario configura una `semilla` menor al inicio actual (ej: de 1700 a 1600), el sistema "atrae" todo el bloque de pagos hacia atrás.
+    *   **Huecos**: Si el usuario configura una `semilla` mayor (ej: de 800 a 900), el sistema respeta el hueco y empieza a numerar desde el 900, *sin mover* los anteriores (a menos que sea una reubicación explícita de todo el bloque).
+    *   **Reubicación de Bloque**: Si el usuario cambia la semilla a un valor diferente al inicio actual (y mayor al `frozenMax`), el sistema interpreta que se desea mover **todo el bloque de pagos abiertos** a esa nueva posición.
+
+3.  **Validación Backend-First**:
+    *   Uso estricto de `unit.schema.ts` (Zod) para asegurar que la semilla sea siempre un entero válido.
+    *   Eliminación de re-secuenciación automática en lectura (`GET`), evitando cambios "mágicos" al navegar.
 
 ---
 
