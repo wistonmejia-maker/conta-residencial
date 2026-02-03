@@ -5,7 +5,6 @@ import { generateMonthlyInsights } from '../services/ai.service'
 const router = Router()
 
 // GET /reports?unitId=...
-// GET /reports?unitId=...
 router.get('/', async (req, res) => {
     try {
         const { unitId } = req.query
@@ -32,7 +31,6 @@ router.get('/', async (req, res) => {
                 }
             }
         })
-        res.json(reports)
         res.json(reports)
     } catch (error) {
         console.error('Error fetching reports:', error)
