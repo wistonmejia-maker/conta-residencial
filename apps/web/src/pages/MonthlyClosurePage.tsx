@@ -410,10 +410,10 @@ export default function MonthlyClosurePage() {
         queryFn: () => getProviders()
     })
 
-    const [payments] = useState<Payment[]>(paymentsData?.payments || [])
+    const payments = paymentsData?.payments || []
     const providers: Provider[] = providersData?.providers || []
 
-    const filteredPayments = payments.filter(p => {
+    const filteredPayments = (payments as Payment[]).filter(p => {
         const paymentDate = new Date(p.paymentDate)
         const from = new Date(dateFrom + 'T00:00:00')
         const to = new Date(dateTo + 'T23:59:59')
