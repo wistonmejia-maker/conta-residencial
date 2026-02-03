@@ -1002,4 +1002,39 @@ Para prevenir errores contables donde se suben facturas de otros conjuntos.
 - **CORREGIDO**: Lógica de aprobación de Egresos (Borradores).
   - *Problema*: Al aprobar un borrador, se marcaba siempre como "Sin Soporte" incluso si ya tenía archivo adjunto.
   - *Solución*: Se implementó validación condicional en `handleApprovePayment` para asignar estado `COMPLETED` si existe soporte, o `PAID_NO_SUPPORT` si no.
+---
 
+## [3.6.0] - 2026-02-02
+
+### ✨ Nueva Funcionalidad (Egresos Dinámicos)
+- **AÑADIDO**: Arquitectura de Comprobantes de Egreso Dinámicos.
+  - Firma predeterminada y configuración bancaria a nivel de `Unit`.
+  - Sobreescritura de campos (Observaciones, Cheque, Banco, Firmas) a nivel de `Payment`.
+- **REPORTE**: Integración total de campos dinámicos en la Carpeta Mensual (`accountingFolderGenerator.ts`).
+- **REACTIVIDAD**: Corrección de estado estático en `MonthlyClosurePage.tsx` para permitir carga dinámica de movimientos de cualquier periodo.
+
+### 🏗️ Cambios en Base de Datos (Prisma)
+- **MODEL Unit**: `defaultElaboratedBy`, `defaultReviewedBy`, `defaultApprovedBy`, `defaultBankName`, `defaultAccountType`.
+- **MODEL Payment**: `observations`, `referenceNumber`, `bankName`, `accountType`, `elaboratedBy`, `reviewedBy`, `approvedBy`.
+
+---
+
+# 18. Comprobantes de Egreso Dinámicos (v3.6.0)
+> **Implementado**: Sistema de configuración jerárquica para la generación de comprobantes de egreso.
+
+## 18.1. Jerarquía de Datos (Fallback Logic)
+Para optimizar el registro y garantizar la personalización, el sistema utiliza un esquema de prioridad:
+
+| Campo | Prioridad 1 (Pago) | Prioridad 2 (Unidad) | Default |
+|:---|:---|:---|:---|
+| Firmas | `payment.elaboratedBy...` | `unit.defaultElaboratedBy...` | (Vacío) |
+| Banco | `payment.bankName` | `unit.defaultBankName` | (Vacío) |
+| Cuenta | `payment.accountType` | `unit.defaultAccountType` | "Cuenta Corriente" |
+| Obs. | `payment.observations` | (N/A) | (Vacío) |
+| Ref/Cheque | `payment.referenceNumber` | (N/A) | (Vacío) |
+
+## 18.2. Generación Masiva (Carpeta Mensual)
+La lógica de generación de la Carpeta Contable (`accountingFolderGenerator.ts`) ha sido actualizada para:
+1. Recibir los meta-datos de la unidad como contexto global.
+2. Mapear dinámicamente cada pago individual inyectando sus campos personalizados.
+3. Garantizar que el PDF masivo mantenga la misma fidelidad que la vista previa individual.
