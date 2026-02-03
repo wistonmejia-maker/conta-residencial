@@ -424,12 +424,11 @@ export default function MonthlyClosurePage() {
     const providers: Provider[] = providersData?.providers || []
 
     const filteredPayments = (payments as Payment[]).filter(p => {
-        const paymentDate = new Date(p.paymentDate)
-        const from = new Date(dateFrom + 'T00:00:00')
-        const to = new Date(dateTo + 'T23:59:59')
+        // Safe string comparison for dates YYYY-MM-DD
+        const pDate = p.paymentDate.split('T')[0]
+        const inDateRange = pDate >= dateFrom && pDate <= dateTo
 
-        const inDateRange = paymentDate >= from && paymentDate <= to
-        if (selectedProvider && (p.provider as any)?.id !== selectedProvider) return false
+        if (selectedProvider && (p as any).providerId !== selectedProvider) return false
         return inDateRange
     })
 
@@ -445,11 +444,8 @@ export default function MonthlyClosurePage() {
     const allInvoices: (Invoice & { provider?: Provider })[] = invoicesData?.invoices || []
 
     const pendingInvoices = allInvoices.filter(inv => {
-        const invoiceDate = new Date(inv.invoiceDate)
-        const from = new Date(dateFrom + 'T00:00:00')
-        const to = new Date(dateTo + 'T23:59:59')
-
-        const inRange = invoiceDate >= from && invoiceDate <= to
+        const invDate = inv.invoiceDate.split('T')[0]
+        const inRange = invDate >= dateFrom && invDate <= dateTo
         const isUnpaid = (inv.balance || 0) > 0
 
         const matchesProvider = !selectedProvider || inv.providerId === selectedProvider

@@ -929,6 +929,15 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        const selectedDate = new Date(form.paymentDate)
+        const tomorrow = new Date()
+        tomorrow.setHours(23, 59, 59, 999)
+        if (selectedDate > tomorrow) {
+            alert('La fecha de pago no puede ser futura.')
+            return
+        }
+
         setUploading(true)
         try {
             // File is already uploaded by SmartFileUploader

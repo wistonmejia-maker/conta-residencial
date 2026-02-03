@@ -42,6 +42,29 @@ const drawBottomWatermark = (page: any, text: string, font: any, size: number) =
 }
 
 /**
+ * Splits text into multiple lines if it exceeds maxWidth
+ */
+const splitTextIntoLines = (text: string, maxWidth: number, font: any, fontSize: number): string[] => {
+    if (!text) return ['']
+    const words = text.split(' ')
+    const lines: string[] = []
+    let currentLine = ''
+
+    for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        const testWidth = font.widthOfTextAtSize(testLine, fontSize)
+        if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine)
+            currentLine = word
+        } else {
+            currentLine = testLine
+        }
+    }
+    if (currentLine) lines.push(currentLine)
+    return lines
+}
+
+/**
  * Rescales a source page into a new Letter size page, leaving STAMP_MARGIN at the bottom.
  */
 const rescaleAndPasteIntoLetter = async (mergedPdf: PDFDocument, sourcePdf: PDFDocument, sourcePageIndex: number) => {
@@ -242,8 +265,13 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             color: brandColor
         })
         columns.forEach(col => {
+            let xPos = col.x
+            if (col.align === 'right') {
+                const textWidth = fontBold.widthOfTextAtSize(col.header, fontSize)
+                xPos = 570 - textWidth
+            }
             page.drawText(col.header, {
-                x: col.x,
+                x: xPos,
                 y: yPos,
                 size: fontSize,
                 font: fontBold,
@@ -253,15 +281,15 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
     }
 
     let y = height - 60
-    drawHeader(currentPage, 'Relación de Documentos - Índice', y)
+    drawHeader(currentPage, `Relación de Documentos - ${data.month} ${data.year}`, y)
     y -= 30
 
     const paymentCols = [
         { header: 'CE #', x: 50 },
         { header: 'Fecha', x: 100 },
-        { header: 'Beneficiario', x: 170 },
+        { header: 'Proveedor', x: 170 },
         { header: 'Facturas', x: 350 },
-        { header: 'Valor Total', x: 500 }
+        { header: 'Valor Total', x: 500, align: 'right' }
     ]
 
     drawTableHeaders(currentPage, y, paymentCols)
@@ -273,40 +301,51 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         if (y < 60) {
             currentPage = mergedPdf.addPage([letterWidth, letterHeight])
             y = height - 60
-            drawHeader(currentPage, 'Relación de Documentos (Cont.)', y)
+            drawHeader(currentPage, `Relación de Documentos (Cont.) - ${data.month} ${data.year}`, y)
             y -= 30
             drawTableHeaders(currentPage, y, paymentCols)
             y -= 20
         }
 
-        if (rowCount % 2 === 1) {
-            currentPage.drawRectangle({
-                x: 40,
-                y: y - 4,
-                width: letterWidth - 80,
-                height: 15,
-                color: grayRow
-            })
-        }
-
         const ceNum = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'
         const dateStr = new Date(p.paymentDate).toLocaleDateString()
-        const providerName = p.provider?.name?.substring(0, 30) || 'N/A'
-        const invoices = p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-'
+        const providerLines = splitTextIntoLines(p.provider?.name || 'N/A', 170, fontReg, fontSize)
+        const invoicesLines = splitTextIntoLines(p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-', 140, fontReg, fontSize)
+
         const rawAmount = Number(p.amountPaid)
         totalPayments += rawAmount
         const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
 
+        // Calculate row height based on lines
+        const maxLines = Math.max(providerLines.length, invoicesLines.length, 1)
+        const rowHeight = maxLines * 12 + 4
+
+        if (rowCount % 2 === 1) {
+            currentPage.drawRectangle({
+                x: 40,
+                y: y - (rowHeight - 11),
+                width: letterWidth - 80,
+                height: rowHeight,
+                color: grayRow
+            })
+        }
+
         currentPage.drawText(ceNum, { x: 50, y, size: fontSize, font: fontReg })
         currentPage.drawText(dateStr, { x: 100, y, size: fontSize, font: fontReg })
-        currentPage.drawText(providerName, { x: 170, y, size: fontSize, font: fontReg })
-        currentPage.drawText(invoices.substring(0, 25), { x: 350, y, size: fontSize, font: fontReg })
+
+        providerLines.forEach((line: string, idx: number) => {
+            currentPage.drawText(line, { x: 170, y: y - (idx * 12), size: fontSize, font: fontReg })
+        })
+
+        invoicesLines.forEach((line: string, idx: number) => {
+            currentPage.drawText(line, { x: 350, y: y - (idx * 12), size: fontSize, font: fontReg })
+        })
 
         // Right align amount
         const amountWidth = fontReg.widthOfTextAtSize(amountDisplay, fontSize)
-        currentPage.drawText(amountDisplay, { x: 580 - amountWidth, y, size: fontSize, font: fontReg })
+        currentPage.drawText(amountDisplay, { x: 570 - amountWidth, y, size: fontSize, font: fontReg })
 
-        y -= 15
+        y -= rowHeight
         rowCount++
     }
 
@@ -316,7 +355,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
     currentPage.drawText('TOTAL PAGADO ESTE PERIODO', { x: 300, y, size: fontSize, font: fontBold, color: brandColor })
     const totalPaymentsDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPayments)
     const totalPaymentsWidth = fontBold.widthOfTextAtSize(totalPaymentsDisplay, fontSize)
-    currentPage.drawText(totalPaymentsDisplay, { x: 580 - totalPaymentsWidth, y, size: fontSize, font: fontBold, color: brandColor })
+    currentPage.drawText(totalPaymentsDisplay, { x: 570 - totalPaymentsWidth, y, size: fontSize, font: fontBold, color: brandColor })
 
     // --- PENDING INVOICES SECTION ---
     if (data.pendingInvoices && data.pendingInvoices.length > 0) {
@@ -334,7 +373,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             { header: 'Fecha', x: 50 },
             { header: 'Proveedor', x: 130 },
             { header: 'Factura #', x: 320 },
-            { header: 'Saldo Pendiente', x: 480 }
+            { header: 'Saldo Pendiente', x: 480, align: 'right' }
         ]
 
         currentPage.drawRectangle({
@@ -355,7 +394,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             if (y < 60) {
                 currentPage = mergedPdf.addPage([letterWidth, letterHeight])
                 y = height - 60
-                currentPage.drawText('Facturas Pendientes (Cont.)', { x: 50, y, size: 14, font: fontBold, color: pendingColor })
+                currentPage.drawText(`Facturas Pendientes (Cont.) - ${data.month} ${data.year}`, { x: 50, y, size: 14, font: fontBold, color: pendingColor })
                 y -= 25
                 currentPage.drawRectangle({ x: 40, y: y - 4, width: letterWidth - 80, height: 18, color: rgb(0.3, 0.3, 0.3) })
                 invoiceCols.forEach(col => {
@@ -364,24 +403,30 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
                 y -= 20
             }
 
-            if (invCount % 2 === 1) {
-                currentPage.drawRectangle({ x: 40, y: y - 4, width: letterWidth - 80, height: 15, color: grayRow })
-            }
-
             const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
-            const providerName = inv.provider?.name?.substring(0, 35) || 'N/A'
+            const providerLines = splitTextIntoLines(inv.provider?.name || 'N/A', 180, fontReg, fontSize)
             const rawAmount = Number(inv.balance || inv.totalAmount)
             totalPending += rawAmount
             const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
 
+            const rowHeight = Math.max(providerLines.length * 12 + 4, 15)
+
+            if (invCount % 2 === 1) {
+                currentPage.drawRectangle({ x: 40, y: y - (rowHeight - 11), width: letterWidth - 80, height: rowHeight, color: grayRow })
+            }
+
             currentPage.drawText(dateStr, { x: 50, y, size: fontSize, font: fontReg })
-            currentPage.drawText(providerName, { x: 130, y, size: fontSize, font: fontReg })
+
+            providerLines.forEach((line: string, idx: number) => {
+                currentPage.drawText(line, { x: 130, y: y - (idx * 12), size: fontSize, font: fontReg })
+            })
+
             currentPage.drawText(inv.invoiceNumber, { x: 320, y, size: fontSize, font: fontReg })
 
             const amountWidth = fontReg.widthOfTextAtSize(amountDisplay, fontSize)
-            currentPage.drawText(amountDisplay, { x: 580 - amountWidth, y, size: fontSize, font: fontReg })
+            currentPage.drawText(amountDisplay, { x: 570 - amountWidth, y, size: fontSize, font: fontReg })
 
-            y -= 15
+            y -= rowHeight
             invCount++
         }
 
@@ -391,7 +436,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         currentPage.drawText('TOTAL PENDIENTE DE PAGO', { x: 320, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
         const totalPendingDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPending)
         const totalPendingWidth = fontBold.widthOfTextAtSize(totalPendingDisplay, fontSize)
-        currentPage.drawText(totalPendingDisplay, { x: 580 - totalPendingWidth, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
+        currentPage.drawText(totalPendingDisplay, { x: 570 - totalPendingWidth, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
     }
 
     // 3. Iterate Payments & Attach
