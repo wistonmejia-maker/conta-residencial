@@ -13,8 +13,15 @@ async function main() {
         const payments = await prisma.payment.findMany({
             where: { unitId: unit.id, sourceType: 'INTERNAL' },
             orderBy: [{ paymentDate: 'asc' }, { createdAt: 'asc' }],
-            select: { consecutiveNumber: true, paymentDate: true, createdAt: true, monthlyReportId: true }
+            select: { consecutiveNumber: true, paymentDate: true, createdAt: true, monthlyReportId: true, amountPaid: true, status: true }
         })
+
+        const frozenPayments = payments.filter(p => p.monthlyReportId)
+        const frozenMax = frozenPayments.length > 0
+            ? Math.max(...frozenPayments.map(p => p.consecutiveNumber || 0))
+            : 0
+
+        console.log(`Frozen Max: ${frozenMax}`)
 
         const display = payments.map((p, i) => {
             const dateStr = p.paymentDate.toISOString().split('T')[0]

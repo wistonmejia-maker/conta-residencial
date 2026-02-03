@@ -8,10 +8,7 @@ router.get('/', async (req, res) => {
     try {
         const { unitId, status, month, year } = req.query
 
-        // Auto-resequence on load if unitId is present
-        if (unitId) {
-            await resequencePaymentConsecutives(String(unitId))
-        }
+
 
         const where: any = {}
         if (unitId) where.unitId = unitId
