@@ -311,13 +311,13 @@ export async function resequencePaymentConsecutives(unitId: string) {
         ]
     })
 
-    // STARTING POINT: The current sequence start OR frozenMax + 1.
+    // STARTING POINT: The user-defined seed if valid, otherwise current sequence start or frozenMax + 1.
     let currentNumber = (payments[0]?.consecutiveNumber ?? (frozenMax + 1))
 
-    // Pull-Back Support: If the user manually set a seed LOWER than our current 
-    // block start, they likely want to reset the whole sequence back to that point.
-    // We only allow this if it doesn't collide with frozen payments.
-    if (unit.consecutiveSeed < currentNumber && unit.consecutiveSeed > frozenMax) {
+    // Relocation Support: If the user manually set a seed DIFFERENT than our current 
+    // block start, they likely want to relocate the whole sequence to that point.
+    // We only allow this if it's above the frozen (closed) period.
+    if (unit.consecutiveSeed > frozenMax && unit.consecutiveSeed !== currentNumber) {
         currentNumber = unit.consecutiveSeed
     }
 
