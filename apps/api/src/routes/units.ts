@@ -132,6 +132,10 @@ router.put('/:id', async (req, res) => {
         // If consecutiveSeed was changed, resequence existing unfrozen payments
         if (consecutiveSeed !== undefined) {
             await resequencePaymentConsecutives(req.params.id)
+            const updatedUnit = await prisma.unit.findUnique({
+                where: { id: req.params.id }
+            })
+            return res.json(updatedUnit)
         }
 
         res.json(unit)

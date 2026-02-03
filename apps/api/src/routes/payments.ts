@@ -314,8 +314,10 @@ export async function resequencePaymentConsecutives(unitId: string) {
         ]
     })
 
-    // STARTING POINT: The user's seed OR the next available after frozen, whichever is higher
-    let currentNumber = Math.max(frozenMax + 1, unit.consecutiveSeed)
+    // STARTING POINT: The current first payment's number, or frozenMax + 1.
+    // This maintains stability: we only fill gaps, we don't relocate the whole block
+    // unless the user explicitly shifts the first one.
+    let currentNumber = payments[0]?.consecutiveNumber || (frozenMax + 1)
 
     for (const p of payments) {
         if (p.consecutiveNumber !== currentNumber) {
@@ -327,8 +329,9 @@ export async function resequencePaymentConsecutives(unitId: string) {
         currentNumber++
     }
 
-    // Update the unit seed to the NEXT available number to keep UI in sync
-    if (unit.consecutiveSeed !== currentNumber) {
+    // Update the unit seed to the NEXT available number ONLY if it is 
+    // too low (would cause collision). This respects manual GAPS set by the user.
+    if (unit.consecutiveSeed < currentNumber) {
         await prisma.unit.update({
             where: { id: unitId },
             data: { consecutiveSeed: currentNumber }
