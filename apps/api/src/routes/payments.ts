@@ -103,7 +103,9 @@ router.post('/', async (req, res) => {
             invoiceAllocations, // Array of { invoiceId, amount } - OPTIONAL
             hasAuditIssue,      // Flag for date anomalies
             hasPendingInvoice,   // Flag for no invoice selected
-            pilaFileUrl         // PDF de la PILA
+            pilaFileUrl,         // PDF de la PILA
+            observations, referenceNumber, bankName, accountType,
+            elaboratedBy, reviewedBy, approvedBy
         } = req.body
 
         if (!unitId || !paymentDate || !sourceType || !amountPaid) {
@@ -175,6 +177,13 @@ router.post('/', async (req, res) => {
                 status: isPendingInvoice ? 'DRAFT' : (sourceType === 'INTERNAL' ? 'COMPLETED' : 'PAID_NO_SUPPORT'),
                 hasAuditIssue: hasAuditIssue || false,
                 hasPendingInvoice: isPendingInvoice,
+                observations: observations || null,
+                referenceNumber: referenceNumber || null,
+                bankName: bankName || null,
+                accountType: accountType || null,
+                elaboratedBy: elaboratedBy || null,
+                reviewedBy: reviewedBy || null,
+                approvedBy: approvedBy || null,
                 invoiceItems: invoiceAllocations && invoiceAllocations.length > 0 ? {
                     create: invoiceAllocations.map((alloc: any) => ({
                         invoiceId: alloc.invoiceId,
@@ -323,7 +332,9 @@ router.put('/:id', async (req, res) => {
             bankPaymentMethod, transactionRef,
             paymentDate, amountPaid, retefuenteApplied, reteicaApplied,
             invoiceAllocations, manualConsecutive, sourceType,
-            pilaFileUrl
+            pilaFileUrl,
+            observations, referenceNumber, bankName, accountType,
+            elaboratedBy, reviewedBy, approvedBy
         } = req.body
 
         const paymentId = req.params.id
@@ -347,6 +358,15 @@ router.put('/:id', async (req, res) => {
         if (sourceType) updateData.sourceType = sourceType
         if (bankPaymentMethod !== undefined) updateData.bankPaymentMethod = bankPaymentMethod
         if (transactionRef !== undefined) updateData.transactionRef = transactionRef
+
+        // Dynamic Receipt Fields
+        if (observations !== undefined) updateData.observations = observations
+        if (referenceNumber !== undefined) updateData.referenceNumber = referenceNumber
+        if (bankName !== undefined) updateData.bankName = bankName
+        if (accountType !== undefined) updateData.accountType = accountType
+        if (elaboratedBy !== undefined) updateData.elaboratedBy = elaboratedBy
+        if (reviewedBy !== undefined) updateData.reviewedBy = reviewedBy
+        if (approvedBy !== undefined) updateData.approvedBy = approvedBy
 
         // Handle manual consecutive update for EXTERNAL payments
         if (manualConsecutive && (sourceType === 'EXTERNAL' || existingPayment.sourceType === 'EXTERNAL')) {

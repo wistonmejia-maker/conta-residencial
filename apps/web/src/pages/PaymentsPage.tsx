@@ -474,7 +474,13 @@ export default function PaymentsPage() {
                                                             name: selectedUnit?.name || 'Unidad',
                                                             taxId: selectedUnit?.taxId || 'N/A',
                                                             address: selectedUnit?.address,
-                                                            logoUrl: selectedUnit?.logoUrl
+                                                            logoUrl: selectedUnit?.logoUrl,
+                                                            city: (selectedUnit as any)?.city,
+                                                            defaultElaboratedBy: selectedUnit?.defaultElaboratedBy,
+                                                            defaultReviewedBy: selectedUnit?.defaultReviewedBy,
+                                                            defaultApprovedBy: selectedUnit?.defaultApprovedBy,
+                                                            defaultBankName: selectedUnit?.defaultBankName,
+                                                            defaultAccountType: selectedUnit?.defaultAccountType
                                                         }
 
                                                         // Helper to preview
@@ -494,11 +500,14 @@ export default function PaymentsPage() {
                                                                 unitName: UNIT_INFO.name,
                                                                 unitNit: UNIT_INFO.taxId,
                                                                 unitAddress: UNIT_INFO.address,
+                                                                unitCity: UNIT_INFO.city,
                                                                 consecutiveNumber: payment.consecutiveNumber ?? null,
                                                                 paymentDate: payment.paymentDate,
                                                                 providerName: payment.provider?.name || 'N/A',
                                                                 providerNit: (payment.provider as any)?.nit || '',
                                                                 providerDv: (payment.provider as any)?.dv || '',
+                                                                providerCity: (payment.provider as any)?.city || 'Cali',
+                                                                providerPhone: (payment.provider as any)?.phone || '',
                                                                 invoices: invoices,
                                                                 grossAmount: Number(payment.amountPaid),
                                                                 retefuente: Number(payment.retefuenteApplied),
@@ -507,7 +516,15 @@ export default function PaymentsPage() {
                                                                 paymentMethod: payment.bankPaymentMethod,
                                                                 bankAccount: (payment.provider as any)?.bankAccount,
                                                                 transactionRef: payment.transactionRef,
-                                                                logoUrl: UNIT_INFO.logoUrl
+                                                                logoUrl: UNIT_INFO.logoUrl,
+                                                                // Dynamic Fields
+                                                                observations: (payment as any).observations,
+                                                                referenceNumber: (payment as any).referenceNumber,
+                                                                bankName: (payment as any).bankName || UNIT_INFO.defaultBankName,
+                                                                accountType: (payment as any).accountType || UNIT_INFO.defaultAccountType,
+                                                                elaboratedBy: (payment as any).elaboratedBy || UNIT_INFO.defaultElaboratedBy,
+                                                                reviewedBy: (payment as any).reviewedBy || UNIT_INFO.defaultReviewedBy,
+                                                                approvedBy: (payment as any).approvedBy || UNIT_INFO.defaultApprovedBy
                                                             })
                                                         })
                                                     }}
@@ -766,7 +783,14 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
         sourceType: (payment?.sourceType || selectedUnit?.defaultPaymentType || 'INTERNAL') as 'INTERNAL' | 'EXTERNAL',
         bankPaymentMethod: payment?.bankPaymentMethod || '',
         transactionRef: payment?.transactionRef || '',
-        manualConsecutive: payment?.manualConsecutive || ''
+        manualConsecutive: payment?.manualConsecutive || '',
+        observations: payment?.observations || '',
+        referenceNumber: payment?.referenceNumber || '',
+        bankName: payment?.bankName || '',
+        accountType: payment?.accountType || '',
+        elaboratedBy: payment?.elaboratedBy || '',
+        reviewedBy: payment?.reviewedBy || '',
+        approvedBy: payment?.approvedBy || ''
     })
 
     const [selectedInvoices, setSelectedInvoices] = useState<Map<string, { invoice: Invoice & { provider?: Provider; balance?: number }, amount: number }>>(() => {
@@ -1165,6 +1189,83 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                         <p className="text-[10px] text-brand-400 font-bold uppercase">Neto a Pagar</p>
                                         <p className="text-3xl font-black text-emerald-400">{formatMoney(netAmount)}</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section: Custom Receipt Details */}
+                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-brand-600" />
+                                Detalles para el Comprobante (Opcional)
+                            </h3>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                                <textarea
+                                    value={form.observations}
+                                    onChange={(e) => setForm(f => ({ ...f, observations: e.target.value }))}
+                                    placeholder="Notas específicas para este pago..."
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">No. Cheque / Ref</label>
+                                    <input
+                                        type="text"
+                                        value={form.referenceNumber}
+                                        onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))}
+                                        placeholder="Ej: 52525773"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Banco (Manual)</label>
+                                        <input
+                                            type="text"
+                                            value={form.bankName}
+                                            onChange={(e) => setForm(f => ({ ...f, bankName: e.target.value }))}
+                                            placeholder={selectedUnit?.defaultBankName || 'Nombre del banco'}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-input text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Elaborado</label>
+                                    <input
+                                        type="text"
+                                        value={form.elaboratedBy}
+                                        onChange={(e) => setForm(f => ({ ...f, elaboratedBy: e.target.value }))}
+                                        placeholder={selectedUnit?.defaultElaboratedBy || 'Nombre'}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-input text-xs"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Revisado</label>
+                                    <input
+                                        type="text"
+                                        value={form.reviewedBy}
+                                        onChange={(e) => setForm(f => ({ ...f, reviewedBy: e.target.value }))}
+                                        placeholder={selectedUnit?.defaultReviewedBy || 'Nombre'}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-input text-xs"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Aprobado</label>
+                                    <input
+                                        type="text"
+                                        value={form.approvedBy}
+                                        onChange={(e) => setForm(f => ({ ...f, approvedBy: e.target.value }))}
+                                        placeholder={selectedUnit?.defaultApprovedBy || 'Nombre'}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-input text-xs"
+                                    />
                                 </div>
                             </div>
                         </div>

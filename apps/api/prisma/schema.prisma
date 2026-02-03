@@ -33,6 +33,13 @@ model Unit {
   gmailAutoScanEnabled Boolean              @default(false) @map("gmail_auto_scan_enabled")
   gmailLastAutoScan    DateTime?            @map("gmail_last_auto_scan")
   organization_id    String?
+
+  // Receipt Defaults
+  defaultElaboratedBy String?             @map("default_elaborated_by")
+  defaultReviewedBy   String?             @map("default_reviewed_by")
+  defaultApprovedBy   String?             @map("default_approved_by")
+  defaultBankName     String?             @map("default_bank_name")
+  defaultAccountType  String?             @map("default_account_type")
   // Soft Delete Fields
   isActive           Boolean              @default(true) @map("is_active")
   deletedAt          DateTime?            @map("deleted_at")
@@ -228,6 +235,16 @@ model Payment {
   emailSubject      String?          @map("email_subject")
   emailSender       String?          @map("email_sender")
   emailDate         DateTime?        @map("email_date")
+
+  // Dynamic Receipt Fields
+  observations      String?
+  referenceNumber   String?          @map("reference_number")
+  bankName          String?          @map("bank_name")
+  accountType       String?          @map("account_type")
+  elaboratedBy      String?          @map("elaborated_by")
+  reviewedBy        String?          @map("reviewed_by")
+  approvedBy        String?          @map("approved_by")
+
   conciliation      Conciliation?
   invoiceItems      PaymentInvoice[]
   aiFeedback        AIFeedback[]

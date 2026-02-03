@@ -10,6 +10,11 @@ export interface Unit {
     taxId?: string
     defaultPaymentType?: string
     gmailLastAutoScan?: string | null
+    defaultElaboratedBy?: string
+    defaultReviewedBy?: string
+    defaultApprovedBy?: string
+    defaultBankName?: string
+    defaultAccountType?: string
 }
 
 interface UnitContextType {

@@ -20,6 +20,14 @@ export interface Payment {
     hasAuditIssue?: boolean
     hasPendingInvoice?: boolean
     supportFileUrl?: string
+    // Dynamic Receipt Fields
+    observations?: string
+    referenceNumber?: string
+    bankName?: string
+    accountType?: string
+    elaboratedBy?: string
+    reviewedBy?: string
+    approvedBy?: string
     // Relations (populated by includes from API)
     invoiceItems?: Array<{
         id: string

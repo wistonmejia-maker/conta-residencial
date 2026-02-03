@@ -51,7 +51,9 @@ router.post('/', async (req, res) => {
             propertyType, totalTowers, totalUnits,
             defaultPaymentType,
             accountantId, adminId, fiscalRevisorId,
-            gmailScanStartDate
+            gmailScanStartDate,
+            defaultElaboratedBy, defaultReviewedBy, defaultApprovedBy,
+            defaultBankName, defaultAccountType
         } = req.body
 
         if (!name || !taxId) {
@@ -73,7 +75,12 @@ router.post('/', async (req, res) => {
                 accountantId: accountantId || null,
                 adminId: adminId || null,
                 fiscalRevisorId: fiscalRevisorId || null,
-                gmailScanStartDate: gmailScanStartDate ? new Date(gmailScanStartDate) : null
+                gmailScanStartDate: gmailScanStartDate ? new Date(gmailScanStartDate) : null,
+                defaultElaboratedBy: defaultElaboratedBy || null,
+                defaultReviewedBy: defaultReviewedBy || null,
+                defaultApprovedBy: defaultApprovedBy || null,
+                defaultBankName: defaultBankName || null,
+                defaultAccountType: defaultAccountType || null
             }
         })
         res.status(201).json(unit)
@@ -92,7 +99,9 @@ router.put('/:id', async (req, res) => {
             propertyType, totalTowers, totalUnits,
             defaultPaymentType,
             accountantId, adminId, fiscalRevisorId,
-            gmailScanStartDate
+            gmailScanStartDate,
+            defaultElaboratedBy, defaultReviewedBy, defaultApprovedBy,
+            defaultBankName, defaultAccountType
         } = req.body
 
         const unit = await prisma.unit.update({
@@ -111,7 +120,12 @@ router.put('/:id', async (req, res) => {
                 accountantId: accountantId || null,
                 adminId: adminId || null,
                 fiscalRevisorId: fiscalRevisorId || null,
-                gmailScanStartDate: gmailScanStartDate !== undefined ? (gmailScanStartDate ? new Date(gmailScanStartDate) : null) : undefined
+                gmailScanStartDate: gmailScanStartDate !== undefined ? (gmailScanStartDate ? new Date(gmailScanStartDate) : null) : undefined,
+                defaultElaboratedBy: defaultElaboratedBy !== undefined ? defaultElaboratedBy : undefined,
+                defaultReviewedBy: defaultReviewedBy !== undefined ? defaultReviewedBy : undefined,
+                defaultApprovedBy: defaultApprovedBy !== undefined ? defaultApprovedBy : undefined,
+                defaultBankName: defaultBankName !== undefined ? defaultBankName : undefined,
+                defaultAccountType: defaultAccountType !== undefined ? defaultAccountType : undefined
             }
         })
 

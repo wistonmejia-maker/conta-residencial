@@ -45,6 +45,15 @@ interface PaymentReceiptData {
 
     // Logo
     logoUrl?: string
+
+    // Dynamic Fields
+    observations?: string
+    referenceNumber?: string
+    bankName?: string
+    accountType?: string
+    elaboratedBy?: string
+    reviewedBy?: string
+    approvedBy?: string
 }
 
 
@@ -247,14 +256,14 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
 
     // Prepare Data
     const bodyData = data.invoices.map(inv => [
-        "2205", // Mock PUC
+        "", // Leave PUC blank
         `Pago Factura ${inv.invoiceNumber} - ${inv.description || 'Sin descripción'}`,
         formatMoney(inv.amount)
     ])
 
     // Add retentions
-    if (data.retefuente > 0) bodyData.push(["2365", "RETENCION EN LA FUENTE", `(${formatMoney(data.retefuente)})`])
-    if (data.reteica > 0) bodyData.push(["2368", "RETENCION ICA", `(${formatMoney(data.reteica)})`])
+    if (data.retefuente > 0) bodyData.push(["", "RETENCION EN LA FUENTE", `(${formatMoney(data.retefuente)})`])
+    if (data.reteica > 0) bodyData.push(["", "RETENCION ICA", `(${formatMoney(data.reteica)})`])
 
     // AutoTable
     autoTable(doc, {
@@ -319,8 +328,9 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
     const obsH = 15
     drawRect(margin, y, contentWidth, obsH)
     drawText("Observaciones:", margin + 2, y + 4, 8, true)
-    if (data.transactionRef) {
-        drawText(`Ref: ${data.transactionRef}`, margin + 2, y + 10, 9, false)
+    if (data.observations) {
+        doc.setFont('helvetica', 'normal')
+        doc.text(data.observations, margin + 2, y + 8, { maxWidth: contentWidth - 4 })
     }
 
     y += obsH + 5
@@ -354,8 +364,10 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
     drawText("Sucursal:", margin + (bankW / 2) + 28, y + 13.5, 8, true, 'right')
 
     // Values (Mock or Real)
-    drawText(data.transactionRef || "N/A", margin + 32, y + 5.5, 8)
-    if (data.bankAccount) drawText(data.bankAccount, margin + 32, y + 21.5, 8)
+    if (data.referenceNumber) drawText(data.referenceNumber, margin + 32, y + 5.5, 8)
+    if (data.bankName) drawText(data.bankName, margin + 32, y + 13.5, 8)
+    if (data.accountType) drawText(data.accountType, margin + 32, y + 21.5, 8)
+    else if (data.bankAccount) drawText(data.bankAccount, margin + 32, y + 21.5, 8)
 
     // Beneficiary Signature Block (Right)
     drawRect(margin + bankW, y, signW, 24)
@@ -388,6 +400,11 @@ export async function createPaymentReceiptDoc(data: PaymentReceiptData): Promise
     drawText("REVISADO", margin + (colSigW * 1.5), y + 4.5, 8, true, 'center')
     drawText("APROBADO", margin + (colSigW * 2.5), y + 4.5, 8, true, 'center')
     drawText("CONTABILIZADO", margin + (colSigW * 3.5), y + 4.5, 8, true, 'center')
+
+    // Signatures Values
+    if (data.elaboratedBy) drawText(data.elaboratedBy, margin + (colSigW * 0.5), y + 6 + sigH - 4, 8, false, 'center')
+    if (data.reviewedBy) drawText(data.reviewedBy, margin + (colSigW * 1.5), y + 6 + sigH - 4, 8, false, 'center')
+    if (data.approvedBy) drawText(data.approvedBy, margin + (colSigW * 2.5), y + 6 + sigH - 4, 8, false, 'center')
 
     // Add User Names if available or lines
     // y + 6 + sigH - 5
@@ -434,6 +451,11 @@ export async function generateReceiptFromPayment(payment: {
     address?: string
     logoUrl?: string
     city?: string
+    defaultElaboratedBy?: string
+    defaultReviewedBy?: string
+    defaultApprovedBy?: string
+    defaultBankName?: string
+    defaultAccountType?: string
 }) {
     // Map all invoice items
     const invoices: InvoiceInfo[] = (payment.invoiceItems || []).map(item => ({
@@ -463,6 +485,14 @@ export async function generateReceiptFromPayment(payment: {
         paymentMethod: payment.bankPaymentMethod,
         bankAccount: payment.provider?.bankAccount,
         transactionRef: payment.transactionRef,
-        logoUrl: unit.logoUrl
+        logoUrl: unit.logoUrl,
+        // Dynamic Fields Mapping
+        observations: (payment as any).observations,
+        referenceNumber: (payment as any).referenceNumber,
+        bankName: (payment as any).bankName || unit.defaultBankName,
+        accountType: (payment as any).accountType || unit.defaultAccountType,
+        elaboratedBy: (payment as any).elaboratedBy || unit.defaultElaboratedBy,
+        reviewedBy: (payment as any).reviewedBy || unit.defaultReviewedBy,
+        approvedBy: (payment as any).approvedBy || unit.defaultApprovedBy
     })
 }

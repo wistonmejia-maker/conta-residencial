@@ -34,6 +34,12 @@ interface Unit {
     gmailLabelingEnabled?: boolean
     gmailScanDaysBack?: number
     gmailAutoScanEnabled?: boolean
+    // Receipt Defaults
+    defaultElaboratedBy?: string
+    defaultReviewedBy?: string
+    defaultApprovedBy?: string
+    defaultBankName?: string
+    defaultAccountType?: string
 }
 
 export default function UnitsPage() {
@@ -153,8 +159,8 @@ export default function UnitsPage() {
                     <button
                         onClick={() => setActiveTab('active')}
                         className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'active'
-                                ? 'border-brand-primary text-brand-primary'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            ? 'border-brand-primary text-brand-primary'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
                             }`}
                     >
                         Activas
@@ -162,8 +168,8 @@ export default function UnitsPage() {
                     <button
                         onClick={() => setActiveTab('archived')}
                         className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === 'archived'
-                                ? 'border-brand-primary text-brand-primary'
-                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            ? 'border-brand-primary text-brand-primary'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
                             }`}
                     >
                         Archivadas
@@ -337,7 +343,12 @@ function UnitModal({
         gmailProcessedLabel: unit?.gmailProcessedLabel || 'Procesado',
         gmailLabelingEnabled: unit?.gmailLabelingEnabled ?? true,
         gmailScanDaysBack: unit?.gmailScanDaysBack ?? 7,
-        gmailAutoScanEnabled: unit?.gmailAutoScanEnabled ?? false
+        gmailAutoScanEnabled: unit?.gmailAutoScanEnabled ?? false,
+        defaultElaboratedBy: unit?.defaultElaboratedBy || '',
+        defaultReviewedBy: unit?.defaultReviewedBy || '',
+        defaultApprovedBy: unit?.defaultApprovedBy || '',
+        defaultBankName: unit?.defaultBankName || '',
+        defaultAccountType: unit?.defaultAccountType || ''
     })
 
     // Fetch Providers for Team Selection
@@ -592,6 +603,61 @@ function UnitModal({
                                         placeholder="Ej: Bancolombia Ahorros #..."
                                         className="w-full px-3 py-2 border rounded-lg font-mono text-sm"
                                     />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                    <div className="col-span-2">
+                                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Valores por Defecto para Comprobantes</h4>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Banco</label>
+                                        <input
+                                            type="text"
+                                            value={form.defaultBankName}
+                                            onChange={e => handleChange('defaultBankName', e.target.value)}
+                                            placeholder="Ej: Bancolombia"
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cuenta (Debítese a)</label>
+                                        <input
+                                            type="text"
+                                            value={form.defaultAccountType}
+                                            onChange={e => handleChange('defaultAccountType', e.target.value)}
+                                            placeholder="Ej: Cuenta de Ahorros"
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                        />
+                                    </div>
+                                    <div className="col-span-2 grid grid-cols-3 gap-4 mt-2">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Elaborado por</label>
+                                            <input
+                                                type="text"
+                                                value={form.defaultElaboratedBy}
+                                                onChange={e => handleChange('defaultElaboratedBy', e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Revisado por</label>
+                                            <input
+                                                type="text"
+                                                value={form.defaultReviewedBy}
+                                                onChange={e => handleChange('defaultReviewedBy', e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Aprobado por</label>
+                                            <input
+                                                type="text"
+                                                value={form.defaultApprovedBy}
+                                                onChange={e => handleChange('defaultApprovedBy', e.target.value)}
+                                                className="w-full px-3 py-2 border rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}

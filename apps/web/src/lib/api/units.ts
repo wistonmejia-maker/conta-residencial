@@ -6,6 +6,11 @@ export interface Unit {
     taxId: string
     address?: string
     consecutiveSeed: number
+    defaultElaboratedBy?: string
+    defaultReviewedBy?: string
+    defaultApprovedBy?: string
+    defaultBankName?: string
+    defaultAccountType?: string
 }
 
 export async function getUnits() {
@@ -18,7 +23,7 @@ export async function getUnit(id: string) {
     return res.json()
 }
 
-export async function createUnit(data: { name: string; taxId: string; address?: string; consecutiveSeed?: number }) {
+export async function createUnit(data: Partial<Unit>) {
     const res = await fetch(`${API_BASE}/units`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -27,7 +32,7 @@ export async function createUnit(data: { name: string; taxId: string; address?: 
     return handleResponse(res, 'Error al crear la unidad')
 }
 
-export async function updateUnit(id: string, data: Partial<{ name: string; taxId: string; address: string; consecutiveSeed: number }>) {
+export async function updateUnit(id: string, data: Partial<Unit>) {
     const res = await fetch(`${API_BASE}/units/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
