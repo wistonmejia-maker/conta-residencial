@@ -260,7 +260,15 @@ async function updateInvoiceStatus(invoiceId: string) {
 
 // Helper function to resequence consecutive numbers based on payment dates
 // Only affects INTERNAL payments that are not closed (no monthlyReportId)
-async function resequencePaymentConsecutives(unitId: string) {
+export async function resequencePaymentConsecutives(unitId: string) {
+    // Get the unit to get the consecutiveSeed
+    const unit = await prisma.unit.findUnique({
+        where: { id: unitId },
+        select: { consecutiveSeed: true }
+    })
+
+    if (!unit) return
+
     // Get all unfrozen INTERNAL payments ordered by date
     const payments = await prisma.payment.findMany({
         where: {
@@ -285,9 +293,15 @@ async function resequencePaymentConsecutives(unitId: string) {
         take: 1
     })
 
-    const startConsecutive = frozenPayments.length > 0
-        ? (frozenPayments[0].consecutiveNumber || 0) + 1
-        : 1
+    const frozenMax = frozenPayments.length > 0
+        ? (frozenPayments[0].consecutiveNumber || 0)
+        : 0
+
+    // The sequence for unfrozen payments should end just before the "next" seed
+    // startConsecutive + payments.length - 1 = unit.consecutiveSeed - 1
+    // startConsecutive = unit.consecutiveSeed - payments.length
+    // But it must also be at least frozenMax + 1
+    const startConsecutive = Math.max(frozenMax + 1, unit.consecutiveSeed - payments.length)
 
     // Resequence unfrozen payments
     for (let i = 0; i < payments.length; i++) {

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
+import { resequencePaymentConsecutives } from './payments'
 
 const router = Router()
 
@@ -113,6 +114,12 @@ router.put('/:id', async (req, res) => {
                 gmailScanStartDate: gmailScanStartDate !== undefined ? (gmailScanStartDate ? new Date(gmailScanStartDate) : null) : undefined
             }
         })
+
+        // If consecutiveSeed was changed, resequence existing unfrozen payments
+        if (consecutiveSeed !== undefined) {
+            await resequencePaymentConsecutives(req.params.id)
+        }
+
         res.json(unit)
     } catch (error) {
         console.error('Error updating unit:', error)
