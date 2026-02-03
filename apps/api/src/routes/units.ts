@@ -108,7 +108,7 @@ router.put('/:id', async (req, res) => {
             where: { id: req.params.id },
             data: {
                 name, taxId, address,
-                consecutiveSeed: Number(consecutiveSeed),
+                consecutiveSeed: consecutiveSeed !== undefined ? Number(consecutiveSeed) : undefined,
                 email: email || null,
                 observations: observations || null,
                 logoUrl: logoUrl || null,
