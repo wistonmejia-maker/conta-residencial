@@ -153,6 +153,11 @@ interface MonthlyReportData {
         taxId: string
         address?: string
         logoUrl?: string
+        defaultBankName?: string
+        defaultAccountType?: string
+        defaultElaboratedBy?: string
+        defaultReviewedBy?: string
+        defaultApprovedBy?: string
     }
     pendingInvoices?: Array<{
         invoiceNumber: string
@@ -320,7 +325,15 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
                     paymentMethod: payment.bankPaymentMethod,
                     bankAccount: payment.provider?.bankAccount,
                     transactionRef: payment.transactionRef,
-                    logoUrl: data.unitInfo.logoUrl
+                    logoUrl: data.unitInfo.logoUrl,
+                    // Dynamic Fields Mapping
+                    observations: payment.observations,
+                    referenceNumber: payment.referenceNumber,
+                    bankName: payment.bankName || data.unitInfo.defaultBankName,
+                    accountType: payment.accountType || data.unitInfo.defaultAccountType,
+                    elaboratedBy: payment.elaboratedBy || data.unitInfo.defaultElaboratedBy,
+                    reviewedBy: payment.reviewedBy || data.unitInfo.defaultReviewedBy,
+                    approvedBy: payment.approvedBy || data.unitInfo.defaultApprovedBy
                 }
 
                 const doc = await createPaymentReceiptDoc(receiptData)

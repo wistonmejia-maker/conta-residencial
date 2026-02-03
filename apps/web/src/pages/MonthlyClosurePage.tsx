@@ -164,7 +164,12 @@ export default function MonthlyClosurePage() {
                     name: selectedUnit?.name || "Unidad",
                     taxId: selectedUnit?.taxId || "N/A",
                     address: selectedUnit?.address || "Sin dirección",
-                    logoUrl: selectedUnit?.logoUrl
+                    logoUrl: selectedUnit?.logoUrl,
+                    defaultBankName: selectedUnit?.defaultBankName,
+                    defaultAccountType: selectedUnit?.defaultAccountType,
+                    defaultElaboratedBy: selectedUnit?.defaultElaboratedBy,
+                    defaultReviewedBy: selectedUnit?.defaultReviewedBy,
+                    defaultApprovedBy: selectedUnit?.defaultApprovedBy
                 },
                 includePila: true
             })
@@ -381,7 +386,12 @@ export default function MonthlyClosurePage() {
                     name: selectedUnit?.name || "Unidad",
                     taxId: selectedUnit?.taxId || "N/A",
                     address: selectedUnit?.address || "Sin dirección",
-                    logoUrl: selectedUnit?.logoUrl
+                    logoUrl: selectedUnit?.logoUrl,
+                    defaultBankName: selectedUnit?.defaultBankName,
+                    defaultAccountType: selectedUnit?.defaultAccountType,
+                    defaultElaboratedBy: selectedUnit?.defaultElaboratedBy,
+                    defaultReviewedBy: selectedUnit?.defaultReviewedBy,
+                    defaultApprovedBy: selectedUnit?.defaultApprovedBy
                 },
                 includePila: true
             })
@@ -598,7 +608,12 @@ export default function MonthlyClosurePage() {
                     name: selectedUnit?.name || "Unidad",
                     taxId: selectedUnit?.taxId || "N/A",
                     address: selectedUnit?.address || "Sin dirección",
-                    logoUrl: selectedUnit?.logoUrl
+                    logoUrl: selectedUnit?.logoUrl,
+                    defaultBankName: selectedUnit?.defaultBankName,
+                    defaultAccountType: selectedUnit?.defaultAccountType,
+                    defaultElaboratedBy: selectedUnit?.defaultElaboratedBy,
+                    defaultReviewedBy: selectedUnit?.defaultReviewedBy,
+                    defaultApprovedBy: selectedUnit?.defaultApprovedBy
                 },
                 skipInternalCE: true,
                 includePila: true
