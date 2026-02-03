@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
 import { resequencePaymentConsecutives } from './payments'
+import { unitSchema } from '../schemas/unit.schema'
 
 const router = Router()
 
@@ -45,42 +46,20 @@ router.get('/:id', async (req, res) => {
 // POST create unit
 router.post('/', async (req, res) => {
     try {
-        const {
-            name, taxId, address, consecutiveSeed,
-            email, observations, logoUrl, bankAccountInfo,
-            propertyType, totalTowers, totalUnits,
-            defaultPaymentType,
-            accountantId, adminId, fiscalRevisorId,
-            gmailScanStartDate,
-            defaultElaboratedBy, defaultReviewedBy, defaultApprovedBy,
-            defaultBankName, defaultAccountType
-        } = req.body
-
-        if (!name || !taxId) {
-            return res.status(400).json({ error: 'Name and taxId are required' })
+        const validated = unitSchema.safeParse(req.body)
+        if (!validated.success) {
+            return res.status(400).json({ error: validated.error.issues[0].message })
         }
+
+        const data = validated.data
 
         const unit = await prisma.unit.create({
             data: {
-                name, taxId, address,
-                consecutiveSeed: Number(consecutiveSeed) || 1,
-                email: email || null,
-                observations: observations || null,
-                logoUrl: logoUrl || null,
-                bankAccountInfo: bankAccountInfo || null,
-                propertyType: propertyType || 'RESIDENTIAL',
-                totalTowers: totalTowers ? Number(totalTowers) : null,
-                totalUnits: totalUnits ? Number(totalUnits) : null,
-                defaultPaymentType: defaultPaymentType || 'INTERNAL',
-                accountantId: accountantId || null,
-                adminId: adminId || null,
-                fiscalRevisorId: fiscalRevisorId || null,
-                gmailScanStartDate: gmailScanStartDate ? new Date(gmailScanStartDate) : null,
-                defaultElaboratedBy: defaultElaboratedBy || null,
-                defaultReviewedBy: defaultReviewedBy || null,
-                defaultApprovedBy: defaultApprovedBy || null,
-                defaultBankName: defaultBankName || null,
-                defaultAccountType: defaultAccountType || null
+                ...data,
+                gmailScanStartDate: data.gmailScanStartDate ? new Date(data.gmailScanStartDate) : null,
+                accountantId: data.accountantId || null,
+                adminId: data.adminId || null,
+                fiscalRevisorId: data.fiscalRevisorId || null
             }
         })
         res.status(201).json(unit)
@@ -90,47 +69,30 @@ router.post('/', async (req, res) => {
     }
 })
 
-// PUT update unit
 router.put('/:id', async (req, res) => {
     try {
-        const {
-            name, taxId, address, consecutiveSeed,
-            email, observations, logoUrl, bankAccountInfo,
-            propertyType, totalTowers, totalUnits,
-            defaultPaymentType,
-            accountantId, adminId, fiscalRevisorId,
-            gmailScanStartDate,
-            defaultElaboratedBy, defaultReviewedBy, defaultApprovedBy,
-            defaultBankName, defaultAccountType
-        } = req.body
+        const validated = unitSchema.partial().safeParse(req.body)
+        if (!validated.success) {
+            return res.status(400).json({ error: validated.error.issues[0].message })
+        }
+
+        const data = validated.data
+
+        // Track if consecutiveSeed is being changed
+        const seedChanged = data.consecutiveSeed !== undefined
+
+        const unitData: any = { ...data }
+        if (data.gmailScanStartDate !== undefined) {
+            unitData.gmailScanStartDate = data.gmailScanStartDate ? new Date(data.gmailScanStartDate) : null
+        }
 
         const unit = await prisma.unit.update({
             where: { id: req.params.id },
-            data: {
-                name, taxId, address,
-                consecutiveSeed: consecutiveSeed !== undefined ? Number(consecutiveSeed) : undefined,
-                email: email || null,
-                observations: observations || null,
-                logoUrl: logoUrl || null,
-                bankAccountInfo: bankAccountInfo || null,
-                propertyType,
-                totalTowers: totalTowers ? Number(totalTowers) : null,
-                totalUnits: totalUnits ? Number(totalUnits) : null,
-                defaultPaymentType,
-                accountantId: accountantId || null,
-                adminId: adminId || null,
-                fiscalRevisorId: fiscalRevisorId || null,
-                gmailScanStartDate: gmailScanStartDate !== undefined ? (gmailScanStartDate ? new Date(gmailScanStartDate) : null) : undefined,
-                defaultElaboratedBy: defaultElaboratedBy !== undefined ? defaultElaboratedBy : undefined,
-                defaultReviewedBy: defaultReviewedBy !== undefined ? defaultReviewedBy : undefined,
-                defaultApprovedBy: defaultApprovedBy !== undefined ? defaultApprovedBy : undefined,
-                defaultBankName: defaultBankName !== undefined ? defaultBankName : undefined,
-                defaultAccountType: defaultAccountType !== undefined ? defaultAccountType : undefined
-            }
+            data: unitData
         })
 
         // If consecutiveSeed was changed, resequence existing unfrozen payments
-        if (consecutiveSeed !== undefined) {
+        if (seedChanged) {
             await resequencePaymentConsecutives(req.params.id)
             const updatedUnit = await prisma.unit.findUnique({
                 where: { id: req.params.id }
