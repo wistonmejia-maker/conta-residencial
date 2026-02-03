@@ -311,10 +311,15 @@ export async function resequencePaymentConsecutives(unitId: string) {
         ]
     })
 
-    // STARTING POINT: The current first payment's number, or frozenMax + 1.
-    // This maintains stability: we only fill gaps, we don't relocate the whole block
-    // unless the user explicitly shifts the first one.
-    let currentNumber = payments[0]?.consecutiveNumber || (frozenMax + 1)
+    // STARTING POINT: The current sequence start OR frozenMax + 1.
+    let currentNumber = (payments[0]?.consecutiveNumber ?? (frozenMax + 1))
+
+    // Pull-Back Support: If the user manually set a seed LOWER than our current 
+    // block start, they likely want to reset the whole sequence back to that point.
+    // We only allow this if it doesn't collide with frozen payments.
+    if (unit.consecutiveSeed < currentNumber && unit.consecutiveSeed > frozenMax) {
+        currentNumber = unit.consecutiveSeed
+    }
 
     for (const p of payments) {
         if (p.consecutiveNumber !== currentNumber) {
