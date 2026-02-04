@@ -101,9 +101,13 @@ router.put('/:id', async (req, res) => {
         }
 
         res.json(unit)
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating unit:', error)
-        res.status(500).json({ error: 'Error updating unit' })
+        // Return specific error message to help debugging
+        res.status(500).json({
+            error: error.message || 'Error updating unit',
+            details: error.meta || undefined
+        })
     }
 })
 

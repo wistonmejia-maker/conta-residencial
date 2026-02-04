@@ -321,22 +321,53 @@ export async function resequencePaymentConsecutives(unitId: string) {
         currentNumber = unit.consecutiveSeed
     }
 
-    for (const p of payments) {
-        if (p.consecutiveNumber !== currentNumber) {
+    // Determine shift direction to avoid Unique Constraint Collisions
+    // If we are shifting UP (e.g. 1, 2, 3 -> 2, 3, 4), we must process in REVERSE (3->4, then 2->3, then 1->2)
+    // If we are shifting DOWN, we process normally (1->0, 2->1...)
+    const firstPayment = payments[0]
+    const isShiftingUp = firstPayment && currentNumber > (firstPayment.consecutiveNumber || 0)
+
+    // SAFE UPDATE ALGORITHM
+    const procesablePayments = isShiftingUp ? [...payments].reverse() : payments
+
+    // We need to map the TARGET number for each payment based on its index
+    // If shifting UP (Reverse):
+    //   Original: [P1(1), P2(2), P3(3)] -> Target Start: 2
+    //   Reverse Loop: 
+    //     P3(3) -> Target: 2 + 2 = 4. Update 3 to 4. OK.
+    //     P2(2) -> Target: 2 + 1 = 3. Update 2 to 3. OK.
+    //     P1(1) -> Target: 2 + 0 = 2. Update 1 to 2. OK.
+
+    // If shifting DOWN (Normal):
+    //   Original: [P1(2), P2(3)] -> Target Start: 1
+    //   Normal Loop:
+    //     P1(2) -> Target: 1 + 0 = 1. Update 2 to 1. OK.
+    //     P2(3) -> Target: 1 + 1 = 2. Update 3 to 2. OK.
+
+    for (let i = 0; i < procesablePayments.length; i++) {
+        const p = procesablePayments[i]
+
+        // Calculate the target relative index
+        // If normal: index is i
+        // If reverse: index is (length - 1) - i
+        const originalIndex = isShiftingUp ? (procesablePayments.length - 1) - i : i
+        const targetNumber = currentNumber + originalIndex
+
+        if (p.consecutiveNumber !== targetNumber) {
             await prisma.payment.update({
                 where: { id: p.id },
-                data: { consecutiveNumber: currentNumber }
+                data: { consecutiveNumber: targetNumber }
             })
         }
-        currentNumber++
     }
 
     // Update the unit seed to the NEXT available number ONLY if it is 
     // too low (would cause collision). This respects manual GAPS set by the user.
-    if (unit.consecutiveSeed < currentNumber) {
+    const lastNumber = currentNumber + payments.length
+    if (unit.consecutiveSeed < lastNumber) {
         await prisma.unit.update({
             where: { id: unitId },
-            data: { consecutiveSeed: currentNumber }
+            data: { consecutiveSeed: lastNumber }
         })
     }
 }
