@@ -86,6 +86,11 @@ router.put('/:id', async (req, res) => {
             unitData.gmailScanStartDate = data.gmailScanStartDate ? new Date(data.gmailScanStartDate) : null
         }
 
+        // Fix: Sanitize relation fields. If empty string, convert to null to avoid FK constraint violations.
+        if (unitData.accountantId === '') unitData.accountantId = null
+        if (unitData.adminId === '') unitData.adminId = null
+        if (unitData.fiscalRevisorId === '') unitData.fiscalRevisorId = null
+
         const unit = await prisma.unit.update({
             where: { id: req.params.id },
             data: unitData
