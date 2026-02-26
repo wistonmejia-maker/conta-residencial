@@ -453,8 +453,9 @@ router.put('/:id', async (req, res) => {
         if (retefuenteApplied !== undefined) updateData.retefuenteApplied = retefuenteApplied
         if (reteicaApplied !== undefined) updateData.reteicaApplied = reteicaApplied
 
-        // If setting consecutive and support file, mark as COMPLETED
-        if (consecutiveNumber && supportFileUrl) {
+        // If support file is provided (or consecutive number is provided), mark as COMPLETED
+        // Bug fix: previously required BOTH consecutiveNumber AND supportFileUrl; now either is enough
+        if (supportFileUrl || (consecutiveNumber && !existingPayment.supportFileUrl)) {
             updateData.status = 'COMPLETED'
         }
 
@@ -492,6 +493,17 @@ router.put('/:id', async (req, res) => {
                 for (const alloc of invoiceAllocations) {
                     await updateInvoiceStatus(alloc.invoiceId)
                 }
+            }
+        } else if (supportFileUrl !== undefined) {
+            // Bug fix: when only the support file is uploaded (no invoiceAllocations change),
+            // we still need to recalculate the status of all already-associated invoices
+            // because having a support file can now trigger COMPLETED status on the payment,
+            // which should be reflected on the linked invoices.
+            const currentItems = await prisma.paymentInvoice.findMany({
+                where: { paymentId }
+            })
+            for (const item of currentItems) {
+                await updateInvoiceStatus(item.invoiceId)
             }
         }
 
