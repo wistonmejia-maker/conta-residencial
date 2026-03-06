@@ -235,8 +235,8 @@ router.post('/', async (req, res) => {
                 }
             }
 
-            // Resequence consecutives based on payment dates
-            await resequencePaymentConsecutives(unitId)
+            // Resequence removed: once assigned, it stays fixed.
+            // await resequencePaymentConsecutives(unitId)
 
             return newPayment
         })
@@ -497,8 +497,8 @@ router.put('/:id', async (req, res) => {
             }
         })
 
-        // Resequence consecutives if date changed
-        await resequencePaymentConsecutives(existingPayment.unitId)
+        // Resequence removed: once assigned, it stays fixed.
+        // await resequencePaymentConsecutives(existingPayment.unitId)
 
         res.json(payment)
     } catch (error) {
@@ -595,10 +595,10 @@ router.delete('/:id', async (req, res) => {
             await updateInvoiceStatus(invoiceId)
         }
 
-        // Resequence consecutives to fill gaps
-        if (payment?.unitId) {
-            await resequencePaymentConsecutives(payment.unitId)
-        }
+        // Resequence removed: once assigned, it stays fixed.
+        // if (payment?.unitId) {
+        //     await resequencePaymentConsecutives(payment.unitId)
+        // }
 
         res.json({ success: true })
     } catch (error) {
@@ -620,6 +620,61 @@ router.get('/next-consecutive/:unitId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching next consecutive:', error)
         res.status(500).json({ error: 'Error fetching consecutive' })
+    }
+})
+
+// POST void payment
+router.post('/:id/void', async (req, res) => {
+    try {
+        const paymentId = req.params.id
+
+        const payment = await prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: {
+                conciliation: true,
+                invoiceItems: true
+            }
+        })
+
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' })
+        }
+
+        if (payment.conciliation) {
+            return res.status(400).json({ error: 'No se puede anular un pago ya conciliado' })
+        }
+
+        if (payment.status === 'VOIDED') {
+            return res.status(400).json({ error: 'El pago ya se encuentra anulado' })
+        }
+
+        // VOID the payment: zero out amounts, keep consecutive, set status to VOIDED
+        const updatedPayment = await prisma.$transaction(async (tx) => {
+            const up = await tx.payment.update({
+                where: { id: paymentId },
+                data: {
+                    status: 'VOIDED',
+                    amountPaid: 0,
+                    netValue: 0,
+                    retefuenteApplied: 0,
+                    reteicaApplied: 0,
+                    observations: `[ANULADO] ${payment.observations || ''}`.trim()
+                },
+                include: { invoiceItems: true }
+            })
+
+            // Update associated invoices
+            for (const item of payment.invoiceItems) {
+                await updateInvoiceStatus(item.invoiceId, tx)
+            }
+
+            return up
+        })
+
+        res.json(updatedPayment)
+    } catch (error) {
+        console.error('Error voiding payment:', error)
+        res.status(500).json({ error: 'Error voiding payment' })
     }
 })
 

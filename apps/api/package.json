@@ -7,7 +7,9 @@
     "build": "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy npx prisma generate && tsc",
     "start": "node -r ./dist/preload.js ./dist/index.js",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:validate": "node scripts/validate-db.js",
+    "db:push": "node scripts/validate-db.js && prisma db push",
+    "db:migrate": "node scripts/validate-db.js && prisma migrate deploy",
     "db:studio": "prisma studio",
     "seed:demo": "ts-node seed-demo.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -35,7 +37,9 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
+    "@types/pg": "^8.16.0",
     "cross-env": "^10.1.0",
+    "pg": "^8.18.0",
     "prisma": "^6.19.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"

@@ -98,6 +98,12 @@ export async function deletePayment(id: string): Promise<{ success: boolean }> {
 }
 
 
+export async function voidPayment(id: string): Promise<Payment> {
+    const res = await fetch(`${API_BASE}/payments/${id}/void`, { method: 'POST' })
+    return handleResponse<Payment>(res, 'Error al anular pago')
+}
+
+
 export async function linkInvoiceToPayment(paymentId: string, invoiceId: string, amount: number) {
     const res = await fetch(`${API_BASE}/payments/${paymentId}/link-invoice`, {
         method: 'POST',

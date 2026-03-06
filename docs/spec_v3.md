@@ -1073,3 +1073,53 @@ La lógica de generación de la Carpeta Contable (`accountingFolderGenerator.ts`
 1. Recibir los meta-datos de la unidad como contexto global.
 2. Mapear dinámicamente cada pago individual inyectando sus campos personalizados.
 3. Garantizar que el PDF masivo mantenga la misma fidelidad que la vista previa individual.
+
+---
+
+# 19. Política de Protección de Base de Datos
+
+> [!IMPORTANT]
+> **Regla de Oro**: Cada proyecto del monorepo **DEBE** tener su propio proyecto dedicado en Neon. Está prohibido compartir una base de datos entre proyectos distintos.
+
+Esta política fue establecida después de un incidente (Feb 17, 2026) en el que `prisma db push` de otro proyecto sobreescribió el schema de producción de `conta-residencial`.
+
+## 19.1. Aislamiento de Proyectos
+
+| Proyecto | Proyecto Neon |
+|:---|:---|
+| `conta-residencial` | `conta-residencial` (endpoint: `ep-floral-star-ad96dnn6`) |
+| `cartera_lc` | `cartera_lc` (proyecto propio) |
+| `opps-audit` | `opps-audit` (proyecto propio) |
+| `inventory-system` | `inventory-system` (proyecto propio) |
+
+## 19.2. Validador de Base de Datos (Obligatorio)
+
+Antes de cualquier migración, el script `scripts/validate-db.js` ejecuta dos verificaciones:
+
+1. **Fingerprint de Endpoint Neon** (Chequeo principal): Extrae el ID del endpoint de `DATABASE_URL` y lo compara contra `EXPECTED_DB_ENDPOINT` en `.env`. Si no coincide, aborta inmediatamente.
+2. **Detección de Schemas/Tablas Foráneas** (Chequeo secundario): Verifica que no haya schemas o tablas de otros proyectos conocidos en la misma base de datos.
+
+### Configuración requerida en `.env`
+
+```env
+# 🔒 FINGERPRINT: ID único del endpoint de Neon para este proyecto.
+# Cambia esto si migras a una nueva instancia de Neon.
+EXPECTED_DB_ENDPOINT="ep-floral-star-ad96dnn6"
+```
+
+### Scripts protegidos en `package.json`
+
+```json
+"db:validate": "node scripts/validate-db.js",
+"db:push":    "node scripts/validate-db.js && prisma db push",
+"db:migrate": "node scripts/validate-db.js && prisma migrate deploy"
+```
+
+> [!CAUTION]
+> **Nunca ejecutes `prisma db push` directamente** (sin `npm run db:push`) ya que omitiría la validación de protección.
+
+## 19.3. Qué Hacer si se Requiere Cambiar la Base de Datos
+
+Si se migra a una nueva instancia de Neon (por ejemplo, upgrade de plan), se deben actualizar **ambos** valores de forma sincronizada:
+1. `DATABASE_URL` en `.env` y en las variables de Railway/Vercel.
+2. `EXPECTED_DB_ENDPOINT` en `.env` con el nuevo endpoint ID.

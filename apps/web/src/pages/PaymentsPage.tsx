@@ -2,7 +2,7 @@ import { Plus, Search, Upload as UploadIcon, X, Calculator, Download, Loader2, F
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoices, createPayment, getProviders, updatePayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
+import { getPayments, getInvoices, createPayment, getProviders, updatePayment, voidPayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
 import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -16,6 +16,7 @@ const statusStyles: Record<string, string> = {
     PAID_NO_SUPPORT: 'status-error',
     COMPLETED: 'status-paid',
     CONCILIATED: 'status-conciliated',
+    VOIDED: 'bg-gray-100 text-gray-500 border border-gray-200 line-through',
 }
 
 const statusLabels: Record<string, string> = {
@@ -23,6 +24,7 @@ const statusLabels: Record<string, string> = {
     PAID_NO_SUPPORT: 'Sin Soporte',
     COMPLETED: 'Completo',
     CONCILIATED: 'Conciliado',
+    VOIDED: 'Anulado',
 }
 
 export default function PaymentsPage() {
@@ -41,6 +43,8 @@ export default function PaymentsPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [showFeedbackModal, setShowFeedbackModal] = useState(false)
     const [feedbackItem, setFeedbackItem] = useState<{ id: string, type: 'INVOICE' | 'PAYMENT' } | null>(null)
+    const [showVoidConfirm, setShowVoidConfirm] = useState<Payment | null>(null)
+    const [voidingId, setVoidingId] = useState<string | null>(null)
     const queryClient = useQueryClient()
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +81,22 @@ export default function PaymentsPage() {
             alert(error instanceof Error ? error.message : 'Error al eliminar el pago. Por favor intente de nuevo.')
         } finally {
             setDeletingId(null)
+        }
+    }
+
+    const confirmVoid = async () => {
+        if (!showVoidConfirm) return
+        setVoidingId(showVoidConfirm.id)
+        try {
+            await voidPayment(showVoidConfirm.id)
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['invoices'] })
+            setShowVoidConfirm(null)
+        } catch (error) {
+            console.error('Error voiding payment:', error)
+            alert(error instanceof Error ? error.message : 'Error al anular el pago.')
+        } finally {
+            setVoidingId(null)
         }
     }
 
@@ -456,6 +476,17 @@ export default function PaymentsPage() {
                                                 >
                                                     {deletingId === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                 </button>
+                                                 <button
+                                                     onClick={(e) => {
+                                                         e.stopPropagation()
+                                                         setShowVoidConfirm(payment)
+                                                     }}
+                                                     disabled={voidingId === payment.id || !!payment.monthlyReportId || payment.status === 'VOIDED'}
+                                                     className="p-1.5 bg-gray-50 hover:bg-orange-50 rounded-lg text-gray-500 hover:text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                     title={payment.status === 'VOIDED' ? 'Ya está anulado' : (payment.monthlyReportId ? 'No se puede anular (incluido en cierre)' : 'Anular Pago')}
+                                                 >
+                                                     {voidingId === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                                 </button>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation()
@@ -600,6 +631,49 @@ export default function PaymentsPage() {
             }
 
             {/* Delete Confirmation Modal */}
+            {/* Void Confirmation Modal */}
+            {
+                showVoidConfirm && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+                            <div className="flex items-center gap-3 text-orange-600 mb-4">
+                                <div className="p-2 bg-orange-50 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">¿Anular Egreso?</h3>
+                            </div>
+
+                            <p className="text-gray-600 mb-6">
+                                Estás a punto de anular el comprobante <span className="font-mono font-bold text-gray-900">
+                                    {showVoidConfirm.consecutiveNumber ? `CE - ${String(showVoidConfirm.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE'}
+                                </span>. 
+                                <br /><br />
+                                <strong>Importante:</strong> Se mantendrá el número de consecutivo pero el valor pasará a $0 y se liberarán las facturas asociadas. Esta acción no se puede deshacer.
+                            </p>
+
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowVoidConfirm(null)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmVoid}
+                                    disabled={voidingId !== null}
+                                    className="px-6 py-2 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition-colors shadow-lg shadow-orange-200 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {voidingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                    {voidingId ? 'Anulando...' : 'Sí, Anular'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
             {
                 showDeleteConfirm && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

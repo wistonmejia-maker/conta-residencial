@@ -192,6 +192,7 @@ interface MonthlyReportData {
     }>
     skipInternalCE?: boolean
     includePila?: boolean
+    vouchersOnly?: boolean
 }
 
 /**
@@ -207,44 +208,46 @@ interface MonthlyReportData {
 export async function generateAccountingFolder(data: MonthlyReportData): Promise<Uint8Array> {
     const mergedPdf = await PDFDocument.create()
     const [letterWidth, letterHeight] = PageSizes.Letter
-
-    // 1. Cover Sheet
-    const coverPage = mergedPdf.addPage([letterWidth, letterHeight])
     const width = letterWidth
     const height = letterHeight
 
-    const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
-    const regularFont = await mergedPdf.embedFont(StandardFonts.Helvetica)
+    // 1. Cover Sheet (Skip if vouchersOnly)
+    if (!data.vouchersOnly) {
+        const coverPage = mergedPdf.addPage([letterWidth, letterHeight])
 
-    // Draw Logo on cover if exists
-    if (data.unitInfo.logoUrl) {
-        try {
-            const logoBytes = await fetch(data.unitInfo.logoUrl).then(res => res.arrayBuffer())
-            // Simple type check from URL or default to png
-            const isPng = data.unitInfo.logoUrl.toLowerCase().includes('.png')
-            let logoImage
-            if (isPng) logoImage = await mergedPdf.embedPng(logoBytes)
-            else logoImage = await mergedPdf.embedJpg(logoBytes)
+        const font = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
+        const regularFont = await mergedPdf.embedFont(StandardFonts.Helvetica)
 
-            const dims = logoImage.scale(0.5)
-            coverPage.drawImage(logoImage, {
-                x: (width - dims.width) / 2,
-                y: height - 150,
-                width: dims.width,
-                height: dims.height,
-            })
-        } catch (e) {
-            console.error('Error drawing logo on cover:', e)
+        // Draw Logo on cover if exists
+        if (data.unitInfo.logoUrl) {
+            try {
+                const logoBytes = await fetch(data.unitInfo.logoUrl).then(res => res.arrayBuffer())
+                // Simple type check from URL or default to png
+                const isPng = data.unitInfo.logoUrl.toLowerCase().includes('.png')
+                let logoImage
+                if (isPng) logoImage = await mergedPdf.embedPng(logoBytes)
+                else logoImage = await mergedPdf.embedJpg(logoBytes)
+
+                const dims = logoImage.scale(0.5)
+                coverPage.drawImage(logoImage, {
+                    x: (width - dims.width) / 2,
+                    y: height - 150,
+                    width: dims.width,
+                    height: dims.height,
+                })
+            } catch (e) {
+                console.error('Error drawing logo on cover:', e)
+            }
         }
+
+        const titleY = data.unitInfo.logoUrl ? height - 300 : height - 100
+        coverPage.drawText(data.unitName, { x: 50, y: titleY, size: 24, font })
+        coverPage.drawText(`Carpeta Contable${data.skipInternalCE ? ' (Solo Soportes)' : ''} - ${data.month} ${data.year}`, { x: 50, y: titleY - 50, size: 18, font: regularFont })
+        coverPage.drawText(`Generado: ${new Date().toLocaleDateString()}`, { x: 50, y: titleY - 80, size: 12, font: regularFont })
     }
 
-    const titleY = data.unitInfo.logoUrl ? height - 300 : height - 100
-    coverPage.drawText(data.unitName, { x: 50, y: titleY, size: 24, font })
-    coverPage.drawText(`Carpeta Contable${data.skipInternalCE ? ' (Solo Soportes)' : ''} - ${data.month} ${data.year}`, { x: 50, y: titleY - 50, size: 18, font: regularFont })
-    coverPage.drawText(`Generado: ${new Date().toLocaleDateString()}`, { x: 50, y: titleY - 80, size: 12, font: regularFont })
-
     // 2. Index Page(s)
-    let currentPage = mergedPdf.addPage([letterWidth, letterHeight])
+    let currentPage: any = null
     const fontBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
     const fontReg = await mergedPdf.embedFont(StandardFonts.Helvetica)
     const fontSize = 9
@@ -252,191 +255,195 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
     const grayRow = rgb(0.97, 0.97, 0.97) // Very Light Gray for subtle Zebra stripes
     const white = rgb(1, 1, 1)
 
-    const drawHeader = (page: any, text: string, yPos: number) => {
-        page.drawText(text, { x: 50, y: yPos, size: 16, font: fontBold, color: brandColor })
-    }
+    if (!data.vouchersOnly) {
+        currentPage = mergedPdf.addPage([letterWidth, letterHeight])
 
-    const drawTableHeaders = (page: any, yPos: number, columns: any[]) => {
-        page.drawRectangle({
-            x: 40,
-            y: yPos - 4,
-            width: letterWidth - 80,
-            height: 18,
-            color: brandColor
-        })
-        columns.forEach(col => {
-            let xPos = col.x
-            if (col.align === 'right') {
-                const textWidth = fontBold.widthOfTextAtSize(col.header, fontSize)
-                xPos = 570 - textWidth
-            }
-            page.drawText(col.header, {
-                x: xPos,
-                y: yPos,
-                size: fontSize,
-                font: fontBold,
-                color: white
-            })
-        })
-    }
-
-    let y = height - 60
-    drawHeader(currentPage, `Relación de Documentos - ${data.month} ${data.year}`, y)
-    y -= 30
-
-    const paymentCols = [
-        { header: 'CE #', x: 50 },
-        { header: 'Fecha', x: 100 },
-        { header: 'Proveedor', x: 170 },
-        { header: 'Facturas', x: 350 },
-        { header: 'Valor Total', x: 500, align: 'right' }
-    ]
-
-    drawTableHeaders(currentPage, y, paymentCols)
-    y -= 20
-
-    let rowCount = 0
-    let totalPayments = 0
-    for (const p of data.payments) {
-        if (y < 60) {
-            currentPage = mergedPdf.addPage([letterWidth, letterHeight])
-            y = height - 60
-            drawHeader(currentPage, `Relación de Documentos (Cont.) - ${data.month} ${data.year}`, y)
-            y -= 30
-            drawTableHeaders(currentPage, y, paymentCols)
-            y -= 20
+        const drawHeader = (page: any, text: string, yPos: number) => {
+            page.drawText(text, { x: 50, y: yPos, size: 16, font: fontBold, color: brandColor })
         }
 
-        const ceNum = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'
-        const dateStr = new Date(p.paymentDate).toLocaleDateString()
-        const providerLines = splitTextIntoLines(p.provider?.name || 'N/A', 170, fontReg, fontSize)
-        const invoicesLines = splitTextIntoLines(p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-', 140, fontReg, fontSize)
-
-        const rawAmount = Number(p.amountPaid)
-        totalPayments += rawAmount
-        const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
-
-        // Calculate row height based on lines
-        const maxLines = Math.max(providerLines.length, invoicesLines.length, 1)
-        const rowHeight = maxLines * 12 + 4
-
-        if (rowCount % 2 === 1) {
-            currentPage.drawRectangle({
+        const drawTableHeaders = (page: any, yPos: number, columns: any[]) => {
+            page.drawRectangle({
                 x: 40,
-                y: y - (rowHeight - 11),
+                y: yPos - 4,
                 width: letterWidth - 80,
-                height: rowHeight,
-                color: grayRow
+                height: 18,
+                color: brandColor
+            })
+            columns.forEach(col => {
+                let xPos = col.x
+                if (col.align === 'right') {
+                    const textWidth = fontBold.widthOfTextAtSize(col.header, fontSize)
+                    xPos = 570 - textWidth
+                }
+                page.drawText(col.header, {
+                    x: xPos,
+                    y: yPos,
+                    size: fontSize,
+                    font: fontBold,
+                    color: white
+                })
             })
         }
 
-        currentPage.drawText(ceNum, { x: 50, y, size: fontSize, font: fontReg })
-        currentPage.drawText(dateStr, { x: 100, y, size: fontSize, font: fontReg })
+        let y = height - 60
+        drawHeader(currentPage, `Relación de Documentos - ${data.month} ${data.year}`, y)
+        y -= 30
 
-        providerLines.forEach((line: string, idx: number) => {
-            currentPage.drawText(line, { x: 170, y: y - (idx * 12), size: fontSize, font: fontReg })
-        })
-
-        invoicesLines.forEach((line: string, idx: number) => {
-            currentPage.drawText(line, { x: 350, y: y - (idx * 12), size: fontSize, font: fontReg })
-        })
-
-        // Right align amount
-        const amountWidth = fontReg.widthOfTextAtSize(amountDisplay, fontSize)
-        currentPage.drawText(amountDisplay, { x: 570 - amountWidth, y, size: fontSize, font: fontReg })
-
-        y -= rowHeight
-        rowCount++
-    }
-
-    // Draw Totals for Payments
-    y -= 5
-    currentPage.drawLine({ start: { x: 350, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: brandColor })
-    currentPage.drawText('TOTAL PAGADO ESTE PERIODO', { x: 300, y, size: fontSize, font: fontBold, color: brandColor })
-    const totalPaymentsDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPayments)
-    const totalPaymentsWidth = fontBold.widthOfTextAtSize(totalPaymentsDisplay, fontSize)
-    currentPage.drawText(totalPaymentsDisplay, { x: 570 - totalPaymentsWidth, y, size: fontSize, font: fontBold, color: brandColor })
-
-    // --- PENDING INVOICES SECTION ---
-    if (data.pendingInvoices && data.pendingInvoices.length > 0) {
-        y -= 20
-        if (y < 120) {
-            currentPage = mergedPdf.addPage([letterWidth, letterHeight])
-            y = height - 60
-        }
-
-        const pendingColor = rgb(0, 0, 0) // Black (instead of red) for B&W printing
-        currentPage.drawText('Facturas Pendientes de Pago', { x: 50, y, size: 14, font: fontBold, color: pendingColor })
-        y -= 25
-
-        const invoiceCols = [
-            { header: 'Fecha', x: 50 },
-            { header: 'Proveedor', x: 130 },
-            { header: 'Factura #', x: 320 },
-            { header: 'Saldo Pendiente', x: 480, align: 'right' }
+        const paymentCols = [
+            { header: 'CE #', x: 50 },
+            { header: 'Fecha', x: 100 },
+            { header: 'Proveedor', x: 170 },
+            { header: 'Facturas', x: 350 },
+            { header: 'Valor Total', x: 500, align: 'right' }
         ]
 
-        currentPage.drawRectangle({
-            x: 40,
-            y: y - 4,
-            width: letterWidth - 80,
-            height: 18,
-            color: rgb(0.3, 0.3, 0.3)
-        })
-        invoiceCols.forEach(col => {
-            currentPage.drawText(col.header, { x: col.x, y: y, size: fontSize, font: fontBold, color: white })
-        })
+        drawTableHeaders(currentPage, y, paymentCols)
         y -= 20
 
-        let invCount = 0
-        let totalPending = 0
-        for (const inv of data.pendingInvoices) {
+        let rowCount = 0
+        let totalPayments = 0
+        for (const p of data.payments) {
             if (y < 60) {
                 currentPage = mergedPdf.addPage([letterWidth, letterHeight])
                 y = height - 60
-                currentPage.drawText(`Facturas Pendientes (Cont.) - ${data.month} ${data.year}`, { x: 50, y, size: 14, font: fontBold, color: pendingColor })
-                y -= 25
-                currentPage.drawRectangle({ x: 40, y: y - 4, width: letterWidth - 80, height: 18, color: rgb(0.3, 0.3, 0.3) })
-                invoiceCols.forEach(col => {
-                    currentPage.drawText(col.header, { x: col.x, y: y, size: fontSize, font: fontBold, color: white })
-                })
+                drawHeader(currentPage, `Relación de Documentos (Cont.) - ${data.month} ${data.year}`, y)
+                y -= 30
+                drawTableHeaders(currentPage, y, paymentCols)
                 y -= 20
             }
 
-            const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
-            const providerLines = splitTextIntoLines(inv.provider?.name || 'N/A', 180, fontReg, fontSize)
-            const rawAmount = Number(inv.balance || inv.totalAmount)
-            totalPending += rawAmount
+            const ceNum = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'
+            const dateStr = new Date(p.paymentDate).toLocaleDateString()
+            const providerLines = splitTextIntoLines(p.provider?.name || 'N/A', 170, fontReg, fontSize)
+            const invoicesLines = splitTextIntoLines(p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-', 140, fontReg, fontSize)
+
+            const rawAmount = Number(p.amountPaid)
+            totalPayments += rawAmount
             const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
 
-            const rowHeight = Math.max(providerLines.length * 12 + 4, 15)
+            // Calculate row height based on lines
+            const maxLines = Math.max(providerLines.length, invoicesLines.length, 1)
+            const rowHeight = maxLines * 12 + 4
 
-            if (invCount % 2 === 1) {
-                currentPage.drawRectangle({ x: 40, y: y - (rowHeight - 11), width: letterWidth - 80, height: rowHeight, color: grayRow })
+            if (rowCount % 2 === 1) {
+                currentPage.drawRectangle({
+                    x: 40,
+                    y: y - (rowHeight - 11),
+                    width: letterWidth - 80,
+                    height: rowHeight,
+                    color: grayRow
+                })
             }
 
-            currentPage.drawText(dateStr, { x: 50, y, size: fontSize, font: fontReg })
+            currentPage.drawText(ceNum, { x: 50, y, size: fontSize, font: fontReg })
+            currentPage.drawText(dateStr, { x: 100, y, size: fontSize, font: fontReg })
 
             providerLines.forEach((line: string, idx: number) => {
-                currentPage.drawText(line, { x: 130, y: y - (idx * 12), size: fontSize, font: fontReg })
+                currentPage.drawText(line, { x: 170, y: y - (idx * 12), size: fontSize, font: fontReg })
             })
 
-            currentPage.drawText(inv.invoiceNumber, { x: 320, y, size: fontSize, font: fontReg })
+            invoicesLines.forEach((line: string, idx: number) => {
+                currentPage.drawText(line, { x: 350, y: y - (idx * 12), size: fontSize, font: fontReg })
+            })
 
+            // Right align amount
             const amountWidth = fontReg.widthOfTextAtSize(amountDisplay, fontSize)
             currentPage.drawText(amountDisplay, { x: 570 - amountWidth, y, size: fontSize, font: fontReg })
 
             y -= rowHeight
-            invCount++
+            rowCount++
         }
 
-        // Draw Totals for Invoices
+        // Draw Totals for Payments
         y -= 5
-        currentPage.drawLine({ start: { x: 320, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: rgb(0, 0, 0) })
-        currentPage.drawText('TOTAL PENDIENTE DE PAGO', { x: 320, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
-        const totalPendingDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPending)
-        const totalPendingWidth = fontBold.widthOfTextAtSize(totalPendingDisplay, fontSize)
-        currentPage.drawText(totalPendingDisplay, { x: 570 - totalPendingWidth, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
+        currentPage.drawLine({ start: { x: 350, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: brandColor })
+        currentPage.drawText('TOTAL PAGADO ESTE PERIODO', { x: 300, y, size: fontSize, font: fontBold, color: brandColor })
+        const totalPaymentsDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPayments)
+        const totalPaymentsWidth = fontBold.widthOfTextAtSize(totalPaymentsDisplay, fontSize)
+        currentPage.drawText(totalPaymentsDisplay, { x: 570 - totalPaymentsWidth, y, size: fontSize, font: fontBold, color: brandColor })
+
+        // --- PENDING INVOICES SECTION ---
+        if (data.pendingInvoices && data.pendingInvoices.length > 0) {
+            y -= 20
+            if (y < 120) {
+                currentPage = mergedPdf.addPage([letterWidth, letterHeight])
+                y = height - 60
+            }
+
+            const pendingColor = rgb(0, 0, 0) // Black (instead of red) for B&W printing
+            currentPage.drawText('Facturas Pendientes de Pago', { x: 50, y, size: 14, font: fontBold, color: pendingColor })
+            y -= 25
+
+            const invoiceCols = [
+                { header: 'Fecha', x: 50 },
+                { header: 'Proveedor', x: 130 },
+                { header: 'Factura #', x: 320 },
+                { header: 'Saldo Pendiente', x: 480, align: 'right' }
+            ]
+
+            currentPage.drawRectangle({
+                x: 40,
+                y: y - 4,
+                width: letterWidth - 80,
+                height: 18,
+                color: rgb(0.3, 0.3, 0.3)
+            })
+            invoiceCols.forEach(col => {
+                currentPage.drawText(col.header, { x: col.x, y: y, size: fontSize, font: fontBold, color: white })
+            })
+            y -= 20
+
+            let invCount = 0
+            let totalPending = 0
+            for (const inv of data.pendingInvoices) {
+                if (y < 60) {
+                    currentPage = mergedPdf.addPage([letterWidth, letterHeight])
+                    y = height - 60
+                    currentPage.drawText(`Facturas Pendientes (Cont.) - ${data.month} ${data.year}`, { x: 50, y, size: 14, font: fontBold, color: pendingColor })
+                    y -= 25
+                    currentPage.drawRectangle({ x: 40, y: y - 4, width: letterWidth - 80, height: 18, color: rgb(0.3, 0.3, 0.3) })
+                    invoiceCols.forEach(col => {
+                        currentPage.drawText(col.header, { x: col.x, y: y, size: fontSize, font: fontBold, color: white })
+                    })
+                    y -= 20
+                }
+
+                const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
+                const providerLines = splitTextIntoLines(inv.provider?.name || 'N/A', 180, fontReg, fontSize)
+                const rawAmount = Number(inv.balance || inv.totalAmount)
+                totalPending += rawAmount
+                const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(rawAmount)
+
+                const rowHeight = Math.max(providerLines.length * 12 + 4, 15)
+
+                if (invCount % 2 === 1) {
+                    currentPage.drawRectangle({ x: 40, y: y - (rowHeight - 11), width: letterWidth - 80, height: rowHeight, color: grayRow })
+                }
+
+                currentPage.drawText(dateStr, { x: 50, y, size: fontSize, font: fontReg })
+
+                providerLines.forEach((line: string, idx: number) => {
+                    currentPage.drawText(line, { x: 130, y: y - (idx * 12), size: fontSize, font: fontReg })
+                })
+
+                currentPage.drawText(inv.invoiceNumber, { x: 320, y, size: fontSize, font: fontReg })
+
+                const amountWidth = fontReg.widthOfTextAtSize(amountDisplay, fontSize)
+                currentPage.drawText(amountDisplay, { x: 570 - amountWidth, y, size: fontSize, font: fontReg })
+
+                y -= rowHeight
+                invCount++
+            }
+
+            // Draw Totals for Invoices
+            y -= 5
+            currentPage.drawLine({ start: { x: 320, y: y + 12 }, end: { x: 580, y: y + 12 }, thickness: 1, color: rgb(0, 0, 0) })
+            currentPage.drawText('TOTAL PENDIENTE DE PAGO', { x: 320, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
+            const totalPendingDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(totalPending)
+            const totalPendingWidth = fontBold.widthOfTextAtSize(totalPendingDisplay, fontSize)
+            currentPage.drawText(totalPendingDisplay, { x: 570 - totalPendingWidth, y, size: fontSize, font: fontBold, color: rgb(0, 0, 0) })
+        }
     }
 
     // 3. Iterate Payments & Attach
@@ -499,7 +506,9 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             }
         }
 
-        // B. Attach Original Invoices
+        // B. Attach Original Invoices (Skip if vouchersOnly)
+        if (data.vouchersOnly) continue;
+
         const ceLabel = payment.consecutiveNumber ? `CE-${payment.consecutiveNumber}` : 'EXT'
 
         if (payment.invoiceItems) {
@@ -603,8 +612,8 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         }
     }
 
-    // 4. Attach Pending Invoices
-    if (data.pendingInvoices && data.pendingInvoices.length > 0) {
+    // 4. Attach Pending Invoices (Skip if vouchersOnly)
+    if (!data.vouchersOnly && data.pendingInvoices && data.pendingInvoices.length > 0) {
         for (const inv of data.pendingInvoices) {
             if (inv.fileUrl) {
                 const watermarkText = "FACTURA PENDIENTE"

@@ -77,9 +77,20 @@ router.put('/:id', async (req, res) => {
         }
 
         const data = validated.data
+        const unitId = req.params.id
 
-        // Track if consecutiveSeed is being changed
-        const seedChanged = data.consecutiveSeed !== undefined
+        // Fetch current unit to check if consecutiveSeed actually changes
+        const existingUnit = await prisma.unit.findUnique({
+            where: { id: unitId },
+            select: { consecutiveSeed: true }
+        })
+
+        if (!existingUnit) {
+            return res.status(404).json({ error: 'Unit not found' })
+        }
+
+        // Track if consecutiveSeed is being changed to a DIFFERENT value
+        const seedChanged = data.consecutiveSeed !== undefined && data.consecutiveSeed !== existingUnit.consecutiveSeed
 
         const unitData: any = { ...data }
         if (data.gmailScanStartDate !== undefined) {
@@ -92,15 +103,15 @@ router.put('/:id', async (req, res) => {
         if (unitData.fiscalRevisorId === '') unitData.fiscalRevisorId = null
 
         const unit = await prisma.unit.update({
-            where: { id: req.params.id },
+            where: { id: unitId },
             data: unitData
         })
 
-        // If consecutiveSeed was changed, resequence existing unfrozen payments
+        // If consecutiveSeed was changed to a different value, resequence existing unfrozen payments
         if (seedChanged) {
-            await resequencePaymentConsecutives(req.params.id)
+            await resequencePaymentConsecutives(unitId)
             const updatedUnit = await prisma.unit.findUnique({
-                where: { id: req.params.id }
+                where: { id: unitId }
             })
             return res.json(updatedUnit)
         }

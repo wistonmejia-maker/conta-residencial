@@ -13,7 +13,9 @@ export async function calculateInvoiceStatus(invoiceId: string) {
     const invoice = await prisma.invoice.findUnique({
         where: { id: invoiceId },
         include: {
-            paymentItems: true,
+            paymentItems: {
+                include: { payment: true }
+            },
             creditNotes: true,
         },
     })
@@ -22,9 +24,12 @@ export async function calculateInvoiceStatus(invoiceId: string) {
         throw new Error('Invoice not found')
     }
 
-    // Sum of all payments applied
+    // Sum of all payments applied (excluding VOIDED ones)
     const totalPaid = invoice.paymentItems.reduce(
-        (sum, item) => sum + Number(item.amountApplied),
+        (sum, item) => {
+            if (item.payment?.status === 'VOIDED') return sum
+            return sum + Number(item.amountApplied)
+        },
         0
     )
 

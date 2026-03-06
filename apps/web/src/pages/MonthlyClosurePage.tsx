@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle, Edit3, CreditCard } from 'lucide-react'
+import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle, Edit3, CreditCard, FileDown } from 'lucide-react'
 // ... (existing imports)
 
 // ... (existing functions)
@@ -91,6 +91,7 @@ export default function MonthlyClosurePage() {
     // History Tab State
     const [activeTab, setActiveTab] = useState<'generate' | 'history' | 'audit'>('generate')
     const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
+    const [showVoucherModal, setShowVoucherModal] = useState(false)
 
     // AI Audit State
     const { data: auditData, isLoading: isLoadingAudit } = useQuery({
@@ -176,7 +177,7 @@ export default function MonthlyClosurePage() {
 
             // Upload PDF to storage
             const filename = `Carpeta_${monthName}_${yearVal}_${Date.now()}.pdf`
-            const pdfFile = new File([pdfBytes as unknown as BlobPart], filename, { type: 'application/pdf' })
+            const pdfFile = new File([pdfBytes as any], filename, { type: 'application/pdf' })
             const uploadResult = await uploadFileToStorage(pdfFile, `reports/${unitId}`)
             const pdfUrl = uploadResult.url
 
@@ -910,6 +911,15 @@ export default function MonthlyClosurePage() {
                                     Paquete Contador
                                 </button>
                                 <button
+                                    onClick={() => setShowVoucherModal(true)}
+                                    disabled={filteredPayments.length === 0 || generating}
+                                    className="px-4 py-2 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    title="Descargar Comprobantes de Egreso (PDF consolidado o individual)"
+                                >
+                                    <FileDown className="w-4 h-4" />
+                                    Descargar Egresos
+                                </button>
+                                <button
                                     onClick={handleGenerateFolder}
                                     disabled={(filteredPayments.length === 0 && pendingInvoices.length === 0) || generating}
                                     className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
@@ -1497,6 +1507,145 @@ export default function MonthlyClosurePage() {
           }
         }
       `}</style>
+
+            {/* Voucher Download Modal */}
+            {showVoucherModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-fade-in">
+                        <div className="sticky top-0 bg-white p-6 border-b border-gray-100 flex items-center justify-between z-10">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Descarga de Egresos
+                                </h2>
+                                <p className="text-sm text-gray-500">
+                                    {filteredPayments.length} comprobantes encontrados en el periodo seleccionado
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowVoucherModal(false)}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                            <div className="bg-brand-50 rounded-xl p-4 border border-brand-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-white p-2 rounded-lg shadow-sm">
+                                        <FileText className="w-5 h-5 text-brand-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-brand-900">Consolidado Total</p>
+                                        <p className="text-xs text-brand-700">Un solo PDF con todos los comprobantes (uno por página)</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        setGenerating(true);
+                                        try {
+                                            const reportDate = new Date(dateFrom + 'T12:00:00');
+                                            const monthName = reportDate.toLocaleString('es-CO', { month: 'long' });
+                                            const yearVal = reportDate.getFullYear().toString();
+
+                                            const pdfBytes = await generateAccountingFolder({
+                                                unitName: selectedUnit?.name || "Unidad",
+                                                unitNit: selectedUnit?.taxId || "N/A",
+                                                unitAddress: selectedUnit?.address || "Sin dirección",
+                                                month: monthName,
+                                                year: yearVal,
+                                                payments: filteredPayments as any,
+                                                unitInfo: {
+                                                    name: selectedUnit?.name || "Unidad",
+                                                    taxId: selectedUnit?.taxId || "N/A",
+                                                    address: selectedUnit?.address || "Sin dirección",
+                                                    logoUrl: selectedUnit?.logoUrl,
+                                                    defaultBankName: selectedUnit?.defaultBankName,
+                                                    defaultAccountType: selectedUnit?.defaultAccountType,
+                                                    defaultElaboratedBy: selectedUnit?.defaultElaboratedBy,
+                                                    defaultReviewedBy: selectedUnit?.defaultReviewedBy,
+                                                    defaultApprovedBy: selectedUnit?.defaultApprovedBy
+                                                },
+                                                vouchersOnly: true
+                                            });
+
+                                            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+                                            const url = URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = `Egresos_${monthName}_${yearVal}.pdf`;
+                                            link.click();
+                                        } catch (error) {
+                                            console.error(error);
+                                            alert('Error al generar el PDF consolidado');
+                                        } finally {
+                                            setGenerating(false);
+                                        }
+                                    }}
+                                    disabled={generating}
+                                    className="px-6 py-2 bg-brand-primary text-white rounded-button text-sm font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center gap-2"
+                                >
+                                    {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                    Descargar Todo
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Lista de Comprobantes</h3>
+                                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left font-semibold">CE</th>
+                                                <th className="px-4 py-3 text-left font-semibold">Fecha</th>
+                                                <th className="px-4 py-3 text-left font-semibold">Proveedor</th>
+                                                <th className="px-4 py-3 text-right font-semibold">Monto</th>
+                                                <th className="px-4 py-3 text-center font-semibold">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {filteredPayments.map((p) => (
+                                                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-4 py-3">
+                                                        <span className="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
+                                                            {p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600">{formatDate(p.paymentDate)}</td>
+                                                    <td className="px-4 py-3 font-medium text-gray-900">
+                                                        {p.provider?.name || 'N/A'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right font-bold text-gray-900">
+                                                        {formatMoney(Number(p.amountPaid))}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <button
+                                                            onClick={() => handlePreviewVoucher(p)}
+                                                            className="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+                                                            title="Ver/Descargar CE"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="sticky bottom-0 bg-gray-50 p-6 border-t border-gray-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowVoucherModal(false)}
+                                className="px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-button text-sm font-bold hover:bg-gray-50 transition-all"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     )
 }
