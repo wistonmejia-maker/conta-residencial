@@ -571,18 +571,28 @@ function UnitModal({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Total Torres/Bloques</label>
                                         <input
                                             type="number"
-                                            value={form.totalTowers || ''}
-                                            onChange={e => handleChange('totalTowers', parseInt(e.target.value) || undefined)}
+                                            value={form.totalTowers ?? ''}
+                                            placeholder="Ej: 4"
+                                            onChange={e => {
+                                                const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                handleChange('totalTowers', val !== null && val < 1 ? 1 : val);
+                                            }}
                                             className="w-full px-3 py-2 border rounded-lg"
+                                            min="1"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Total Unidades Privadas</label>
                                         <input
                                             type="number"
-                                            value={form.totalUnits || ''}
-                                            onChange={e => handleChange('totalUnits', parseInt(e.target.value) || undefined)}
+                                            value={form.totalUnits ?? ''}
+                                            placeholder="Ej: 120"
+                                            onChange={e => {
+                                                const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                handleChange('totalUnits', val !== null && val < 1 ? 1 : val);
+                                            }}
                                             className="w-full px-3 py-2 border rounded-lg"
+                                            min="1"
                                         />
                                     </div>
                                 </div>
@@ -687,8 +697,11 @@ function UnitModal({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Consecutivo Inicial (Interno)</label>
                                         <input
                                             type="number"
-                                            value={form.consecutiveSeed}
-                                            onChange={e => handleChange('consecutiveSeed', parseInt(e.target.value) || 1)}
+                                            value={form.consecutiveSeed ?? 1}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value);
+                                                handleChange('consecutiveSeed', isNaN(val) || val < 1 ? 1 : val);
+                                            }}
                                             min={1}
                                             className="w-full px-3 py-2 border rounded-lg"
                                         />
@@ -802,9 +815,12 @@ function UnitModal({
                                                                 <input
                                                                     type="number"
                                                                     min="1"
-                                                                    max="30"
-                                                                    value={form.gmailScanDaysBack || 7}
-                                                                    onChange={e => handleChange('gmailScanDaysBack', parseInt(e.target.value) || 7)}
+                                                                    max="90"
+                                                                    value={form.gmailScanDaysBack ?? 7}
+                                                                    onChange={e => {
+                                                                        const val = parseInt(e.target.value);
+                                                                        handleChange('gmailScanDaysBack', isNaN(val) || val < 1 ? 7 : val);
+                                                                    }}
                                                                     className="w-16 px-2 py-1.5 border border-gray-200 rounded-input text-sm text-center bg-brand-surface focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
                                                                 />
                                                                 <span className="text-sm text-gray-700">días</span>
@@ -819,7 +835,7 @@ function UnitModal({
                                                                 value={form.gmailScanStartDate ? new Date(form.gmailScanStartDate).toISOString().split('T')[0] : ''}
                                                                 onChange={e => {
                                                                     handleChange('gmailScanStartDate', e.target.value);
-                                                                    if (e.target.value) handleChange('gmailScanDaysBack', 0);
+                                                                    if (e.target.value) handleChange('gmailScanDaysBack', 7);
                                                                 }}
                                                                 className="ml-2 px-2 py-1 border border-gray-200 rounded text-xs bg-white"
                                                             />
