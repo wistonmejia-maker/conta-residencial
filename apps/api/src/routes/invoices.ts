@@ -2,6 +2,7 @@ import { Router } from 'express'
 import prisma from '../lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
 import { createInvoiceSchema } from '../schemas/invoice.schema'
+import { calculateInvoiceStatus, updateInvoiceStatus } from '../lib/invoice-utils'
 
 const router = Router()
 
@@ -34,13 +35,19 @@ router.get('/', async (req, res) => {
             const paymentsPaid = inv.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
             const creditNotesTotal = (inv as any).creditNotes?.reduce((sum: number, cn: any) => sum + Number(cn.totalAmount), 0) || 0
 
-            // Total "paid" is sum of actual payments + sum of credit notes applied to this invoice
-            const totalPaid = paymentsPaid + creditNotesTotal
+            const retefuente = Number(inv.retefuenteAmount || 0)
+            const reteica = Number(inv.reteicaAmount || 0)
+            const grossAmount = Number(inv.totalAmount)
+            const netThreshold = grossAmount - retefuente - reteica
+
+            // Total settled = Payments + Credit Notes
+            const totalSettled = paymentsPaid + creditNotesTotal
 
             return {
                 ...inv,
-                paidAmount: totalPaid,
-                balance: Number(inv.totalAmount) - totalPaid
+                paidAmount: totalSettled,
+                // Balance is what's left to pay from the net amount
+                balance: Math.max(0, netThreshold - totalSettled)
             }
         })
 
@@ -247,23 +254,7 @@ router.post('/', async (req, res) => {
                 })
 
                 if (originalInvoice) {
-                    const paymentsPaid = originalInvoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
-                    const cnsPaid = originalInvoice.creditNotes.reduce((sum, cn) => sum + Number(cn.totalAmount), 0)
-                    const totalPaid = paymentsPaid + cnsPaid
-
-                    let newStatus = originalInvoice.status
-                    if (totalPaid >= Number(originalInvoice.totalAmount)) {
-                        newStatus = 'PAID'
-                    } else if (totalPaid > 0) {
-                        newStatus = 'PARTIALLY_PAID'
-                    }
-
-                    if (newStatus !== originalInvoice.status) {
-                        await tx.invoice.update({
-                            where: { id: relatedInvoiceId },
-                            data: { status: newStatus }
-                        })
-                    }
+                    await updateInvoiceStatus(relatedInvoiceId, tx)
                 }
             }
 
@@ -329,23 +320,7 @@ router.put('/:id', async (req, res) => {
                 })
 
                 if (originalInvoice) {
-                    const paymentsPaid = originalInvoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
-                    const cnsPaid = originalInvoice.creditNotes.reduce((sum, cn) => sum + Number(cn.totalAmount), 0)
-                    const totalPaid = paymentsPaid + cnsPaid
-
-                    let newStatus = 'PENDING'
-                    if (totalPaid >= Number(originalInvoice.totalAmount)) {
-                        newStatus = 'PAID'
-                    } else if (totalPaid > 0) {
-                        newStatus = 'PARTIALLY_PAID'
-                    }
-
-                    if (newStatus !== originalInvoice.status) {
-                        await tx.invoice.update({
-                            where: { id: updatedInvoice.relatedInvoiceId },
-                            data: { status: newStatus }
-                        })
-                    }
+                    await updateInvoiceStatus(updatedInvoice.relatedInvoiceId, tx)
                 }
             }
 
@@ -407,21 +382,7 @@ router.delete('/:id', async (req, res) => {
                 })
 
                 if (originalInvoice) {
-                    const paymentsPaid = originalInvoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
-                    const cnsPaid = originalInvoice.creditNotes.reduce((sum, cn) => sum + Number(cn.totalAmount), 0)
-                    const totalPaid = paymentsPaid + cnsPaid
-
-                    let newStatus = 'PENDING'
-                    if (totalPaid >= Number(originalInvoice.totalAmount)) {
-                        newStatus = 'PAID'
-                    } else if (totalPaid > 0) {
-                        newStatus = 'PARTIALLY_PAID'
-                    }
-
-                    await tx.invoice.update({
-                        where: { id: relatedInvoiceId },
-                        data: { status: newStatus }
-                    })
+                    await updateInvoiceStatus(relatedInvoiceId, tx)
                 }
             }
         })
@@ -455,12 +416,17 @@ router.get('/:id', async (req, res) => {
 
         const paymentsPaid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
         const creditNotesTotal = (invoice as any).creditNotes?.reduce((sum: number, cn: any) => sum + Number(cn.totalAmount), 0) || 0
-        const totalPaid = paymentsPaid + creditNotesTotal
+        const totalSettled = paymentsPaid + creditNotesTotal
+
+        const retefuente = Number(invoice.retefuenteAmount || 0)
+        const reteica = Number(invoice.reteicaAmount || 0)
+        const grossAmount = Number(invoice.totalAmount)
+        const netThreshold = grossAmount - retefuente - reteica
 
         res.json({
             ...invoice,
-            paidAmount: totalPaid,
-            balance: Number(invoice.totalAmount) - totalPaid
+            paidAmount: totalSettled,
+            balance: Math.max(0, netThreshold - totalSettled)
         })
     } catch (error) {
         console.error('Error fetching invoice:', error)

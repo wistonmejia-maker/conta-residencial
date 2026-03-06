@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import prisma from '../lib/prisma'
+import { updateInvoiceStatus } from '../lib/invoice-utils'
 
 const router = Router()
 
@@ -230,7 +231,7 @@ router.post('/', async (req, res) => {
             // Update invoice statuses
             if (invoiceAllocations && invoiceAllocations.length > 0) {
                 for (const alloc of invoiceAllocations) {
-                    await updateInvoiceStatus(alloc.invoiceId)
+                    await updateInvoiceStatus(alloc.invoiceId, tx)
                 }
             }
 
@@ -247,30 +248,7 @@ router.post('/', async (req, res) => {
     }
 })
 
-// Helper function to update invoice status based on payments
-async function updateInvoiceStatus(invoiceId: string) {
-    const invoice = await prisma.invoice.findUnique({
-        where: { id: invoiceId },
-        include: { paymentItems: true }
-    })
 
-    if (!invoice) return
-
-    const totalPaid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
-    const totalAmount = Number(invoice.totalAmount)
-
-    let newStatus = 'PENDING'
-    if (totalPaid >= totalAmount) {
-        newStatus = 'PAID'
-    } else if (totalPaid > 0) {
-        newStatus = 'PARTIALLY_PAID'
-    }
-
-    await prisma.invoice.update({
-        where: { id: invoiceId },
-        data: { status: newStatus }
-    })
-}
 
 // Helper to check if a date is in the future
 function isFutureDate(date: Date | string) {
