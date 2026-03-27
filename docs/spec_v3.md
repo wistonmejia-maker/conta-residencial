@@ -1138,3 +1138,38 @@ Si se migra a una nueva instancia de Neon (por ejemplo, upgrade de plan), se deb
   - *Problema*: Facturas asociadas a pagos recién creados o editados no actualizaban su estado a `PAID` u `PARTIALLY_PAID` debido a que el cálculo de `updateInvoiceStatus` corría antes de que las relaciones (PaymentInvoices) estuviesen completamente commiteadas en la base de datos de transacciones de Prisma.
   - *Solución*: Se ajustó el endpoint de Egresos (`POST /` y `PUT /:id`) para forzar un retardo de la ejecución del recálculo de status garantizando que se base en los datos finales de la tabla. 
 - **DATA FIX**: Script de migración ejecutado para recuperar 10 facturas desfasadas ("G01", etc) nivelando todo a `PAID`.
+ 
+ ---
+ 
+ # 20. Conciliación Manual "Ghost Match" (v3.8.0)
+ > **Implementado**: Sistema para conciliar egresos sin necesidad de importar el extracto bancario.
+ 
+ - **Propósito**: Agilizar la conciliación cuando el usuario ya verificó el movimiento en su portal bancario.
+ - **Lógica "Ghost Match"**:
+   1. Crea un **Movimiento Bancario Interno** (tipo "Manual") con el valor exacto del egreso.
+   2. Aplica la conciliación inmediatamente entre el egreso y este nuevo movimiento.
+ - **UX**: Botón de "Check Circle" (`CheckCircle2`) esmeralda en la tabla de Egresos y en el módulo de Conciliación.
+ 
+ # 21. Optimización de Filtros y Cierre (Reporting)
+ > **Implementado**: Mejoras en la precisión del reporte mensual y usabilidad de filtros.
+ 
+ ## 21.1. Inclusión de Deuda Histórica en Cierre
+ - **Lógica**: El Cierre Mensual ahora incluye todas las facturas pendientes de periodos anteriores.
+ - **Objetivo**: Asegurar que el reporte refleje fielmente la deuda total de la copropiedad.
+ 
+ ## 21.2. Filtrado por Rango de Fechas (UX)
+ - **Implementación**: Filtros `dateFrom` y `dateTo` en `InvoicesPage` y `PaymentsPage`.
+ 
+ ---
+ 
+ ## [3.8.0] - 2026-03-27 (Sesión Actual)
+ 
+ ### ✨ Nueva Funcionalidad (Conciliación Manual)
+ - **AÑADIDO**: Botón de **Conciliación Manual** ("Ghost Match") en tabla de Egresos.
+ 
+ ### 📊 Reportes & Cierre
+ - **OPTIMIZADO**: El Cierre Mensual ahora incluye todas las facturas impagas históricas.
+ - **FILTROS**: Implementación de rango de fechas con etiquetas "Fechas:" en UI.
+ 
+ ### 🎨 UI/UX & Global Branding
+ - **MEJORA**: Etiquetas "Fechas:" para filtros y cambio del título global a **"ContaResidencial"**.
