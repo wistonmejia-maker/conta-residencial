@@ -5,6 +5,7 @@ import { getMissingRecurringInvoices, getInvoiceStats, getPayments, getInvoices,
 import { useUnit } from '../lib/UnitContext'
 import { useAI } from '../lib/AIContext'
 import { AIProcessingOverlay } from '../components/ui'
+import { DashboardCharts } from '../components/dashboard/DashboardCharts'
 import type { Payment } from '../lib/api'
 import { useState, useEffect } from 'react'
 import { formatMoney } from '../lib/format'
@@ -111,6 +112,14 @@ export default function DashboardPage() {
         { label: 'Pendiente Conciliar', value: formatMoney(pendingConciliation), change: `${payments.filter(p => p.status !== 'CONCILIATED').length} movimientos`, positive: false, icon: TrendingUp },
     ]
 
+    // Quality Control Metrics
+    const missingSupports = payments.filter(p => p.status === 'PAID_NO_SUPPORT').length
+    const overdueInvoices = (invoicesData?.invoices || []).filter((inv: any) => {
+        if (inv.status !== 'PENDING' && inv.status !== 'PARTIALLY_PAID') return false
+        if (!inv.dueDate) return false
+        return new Date(inv.dueDate) < now
+    }).length
+
     const currentMonth = now.toLocaleString('es-CO', { month: 'long', year: 'numeric' })
 
     // Loading state when no unit selected
@@ -204,6 +213,11 @@ export default function DashboardPage() {
                     progress={scanState.progress > 0 ? scanState.progress : undefined}
                     onMinimize={minimizeScanUI}
                 />
+
+                {/* Charts Section */}
+                {!paymentsLoading && payments.length > 0 && (
+                    <DashboardCharts payments={payments} />
+                )}
 
                 {/* Gmail Center Card */}
                 <div className="card p-5 bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100">
@@ -389,6 +403,34 @@ export default function DashboardPage() {
                                     <p className="text-xs text-indigo-600">Generar informes y carpeta mensual</p>
                                 </div>
                             </Link>
+                        </div>
+
+                        {/* Quality Control Panel */}
+                        <div className="mt-6 pt-6 border-t border-gray-100">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Control de Calidad</h4>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <AlertTriangle className={`w-4 h-4 ${missingSupports > 0 ? 'text-red-500' : 'text-gray-300'}`} />
+                                        <span>Soportes Faltantes</span>
+                                    </div>
+                                    <span className={`text-sm font-semibold ${missingSupports > 0 ? 'text-red-600' : 'text-gray-500'}`}>{missingSupports}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <FileWarning className={`w-4 h-4 ${overdueInvoices > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
+                                        <span>Facturas Vencidas</span>
+                                    </div>
+                                    <span className={`text-sm font-semibold ${overdueInvoices > 0 ? 'text-amber-600' : 'text-gray-500'}`}>{overdueInvoices}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <Clock className="w-4 h-4 text-gray-300" />
+                                        <span>Items en Borrador</span>
+                                    </div>
+                                    <span className="text-sm font-semibold text-gray-500">{pendingReviewCount}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
