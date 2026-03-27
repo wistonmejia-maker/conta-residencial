@@ -215,8 +215,11 @@ export default function DashboardPage() {
                 />
 
                 {/* Charts Section */}
-                {!paymentsLoading && payments.length > 0 && (
-                    <DashboardCharts payments={payments} />
+                {!paymentsLoading && payments.length > 0 && invoicesData?.invoices && (
+                    <DashboardCharts 
+                        payments={payments} 
+                        invoices={invoicesData.invoices} 
+                    />
                 )}
 
                 {/* Gmail Center Card */}
