@@ -12,10 +12,10 @@ https.get('https://conta-residencial.vercel.app/invoices', (res) => {
         let jsData = '';
         res2.on('data', chunk => jsData += chunk);
         res2.on('end', () => {
-          if (jsData.includes('DashboardCharts')) {
-            console.log('✅ DashboardCharts IS PRESENT IN PRODUCTION BUNDLE!');
+          if (jsData.includes('Tendencia de Egresos')) {
+            console.log('✅ Dashboard Improvements ARE PRESENT IN PRODUCTION BUNDLE!');
           } else {
-            console.log('❌ DashboardCharts IS NOT PRESENT IN BUNDLE! Old version is still live.');
+            console.log('❌ Dashboard Improvements ARE NOT PRESENT IN BUNDLE! Old version is still live.');
           }
         });
       });

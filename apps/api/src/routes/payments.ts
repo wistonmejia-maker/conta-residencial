@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
                     include: {
                         invoice: {
                             include: {
-                                provider: { select: { name: true, nit: true } }
+                                provider: { select: { name: true, nit: true, category: true } }
                             }
                         }
                     }

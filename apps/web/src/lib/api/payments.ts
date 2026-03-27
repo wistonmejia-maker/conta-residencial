@@ -41,6 +41,7 @@ export interface Payment {
     }>
     provider?: {
         name: string
+        category?: string | null
     }
 }
 
