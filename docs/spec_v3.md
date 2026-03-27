@@ -1123,3 +1123,18 @@ EXPECTED_DB_ENDPOINT="ep-floral-star-ad96dnn6"
 Si se migra a una nueva instancia de Neon (por ejemplo, upgrade de plan), se deben actualizar **ambos** valores de forma sincronizada:
 1. `DATABASE_URL` en `.env` y en las variables de Railway/Vercel.
 2. `EXPECTED_DB_ENDPOINT` en `.env` con el nuevo endpoint ID.
+
+---
+
+## [3.7.1] - 2026-03-06
+
+### 🔢 Lógica de Consecutivos (Mejora Pagos Externos)
+- **AÑADIDO**: Inteligencia en la asignación de consecutivos para Pagos de Origen Externo (Ej: extraídos de Gmail).
+  - Si un pago `EXTERNAL` se guarda **sin** proporcionar un `manualConsecutive`, el backend ahora asume un comportamiento semi-automático y le asigna el siguiente consecutivo interno (`unit.consecutiveSeed`) en lugar de fallar y bloquear la creación.
+  - Esto agiliza la conciliación de extractos y pagos automáticos que carecen de un número de comprobante formal provisto por la contraparte.
+
+### 🐛 Bug Fixes & Sincronización de Estados
+- **CORREGIDO**: Sincronización Asíncrona de Estados de Facturas (Pending -> Paid).
+  - *Problema*: Facturas asociadas a pagos recién creados o editados no actualizaban su estado a `PAID` u `PARTIALLY_PAID` debido a que el cálculo de `updateInvoiceStatus` corría antes de que las relaciones (PaymentInvoices) estuviesen completamente commiteadas en la base de datos de transacciones de Prisma.
+  - *Solución*: Se ajustó el endpoint de Egresos (`POST /` y `PUT /:id`) para forzar un retardo de la ejecución del recálculo de status garantizando que se base en los datos finales de la tabla. 
+- **DATA FIX**: Script de migración ejecutado para recuperar 10 facturas desfasadas ("G01", etc) nivelando todo a `PAID`.

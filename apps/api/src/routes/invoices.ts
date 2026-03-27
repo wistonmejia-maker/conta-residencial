@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
             include: {
                 provider: { select: { name: true, nit: true } },
                 paymentItems: {
-                    select: { amountApplied: true }
+                    select: { amountApplied: true, payment: { select: { status: true } } }
                 },
                 creditNotes: {
                     select: { totalAmount: true }
@@ -32,7 +32,10 @@ router.get('/', async (req, res) => {
 
         // Calculate paid amount and balance for each invoice
         const invoicesWithBalance = invoices.map(inv => {
-            const paymentsPaid = inv.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
+            const paymentsPaid = inv.paymentItems.reduce((sum: number, pi: any) => {
+                if (pi.payment?.status === 'VOIDED') return sum
+                return sum + Number(pi.amountApplied)
+            }, 0)
             const creditNotesTotal = (inv as any).creditNotes?.reduce((sum: number, cn: any) => sum + Number(cn.totalAmount), 0) || 0
 
             const retefuente = Number(inv.retefuenteAmount || 0)
@@ -414,7 +417,10 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Invoice not found' })
         }
 
-        const paymentsPaid = invoice.paymentItems.reduce((sum, pi) => sum + Number(pi.amountApplied), 0)
+        const paymentsPaid = invoice.paymentItems.reduce((sum: number, pi: any) => {
+            if (pi.payment?.status === 'VOIDED') return sum
+            return sum + Number(pi.amountApplied)
+        }, 0)
         const creditNotesTotal = (invoice as any).creditNotes?.reduce((sum: number, cn: any) => sum + Number(cn.totalAmount), 0) || 0
         const totalSettled = paymentsPaid + creditNotesTotal
 

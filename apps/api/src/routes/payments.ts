@@ -119,7 +119,7 @@ router.post('/', async (req, res) => {
         let consecutiveNumber = null
         let finalManualConsecutive = null
 
-        if (sourceType === 'INTERNAL') {
+        if (sourceType === 'INTERNAL' || (sourceType === 'EXTERNAL' && !req.body.manualConsecutive)) {
             const unit = await prisma.unit.findUnique({ where: { id: unitId } })
             if (!unit) {
                 return res.status(400).json({ error: 'Unit not found' })
@@ -131,12 +131,7 @@ router.post('/', async (req, res) => {
                 where: { id: unitId },
                 data: { consecutiveSeed: unit.consecutiveSeed + 1 }
             })
-        } else if (sourceType === 'EXTERNAL') {
-            // Validate manual consecutive
-            if (!req.body.manualConsecutive) {
-                return res.status(400).json({ error: 'El número de comprobante es requerido para pagos externos' })
-            }
-
+        } else if (sourceType === 'EXTERNAL' && req.body.manualConsecutive) {
             // Check uniqueness
             const existing = await prisma.payment.findFirst({
                 where: {
@@ -230,13 +225,11 @@ router.post('/', async (req, res) => {
 
             // Update invoice statuses
             if (invoiceAllocations && invoiceAllocations.length > 0) {
+                // Must pass 'tx' so the updated payment values are visible to the calculation
                 for (const alloc of invoiceAllocations) {
                     await updateInvoiceStatus(alloc.invoiceId, tx)
                 }
             }
-
-            // Resequence removed: once assigned, it stays fixed.
-            // await resequencePaymentConsecutives(unitId)
 
             return newPayment
         })
@@ -398,12 +391,10 @@ router.put('/:id', async (req, res) => {
         if (approvedBy !== undefined) updateData.approvedBy = approvedBy
 
         // Handle manual consecutive update for EXTERNAL payments
-        if (manualConsecutive && (sourceType === 'EXTERNAL' || existingPayment.sourceType === 'EXTERNAL')) {
-            // If manualConsecutive is provided, always update it if it is different or just update it
-            // Check uniqueness if changed or if switching to EXTERNAL
-            const targetSource = sourceType || existingPayment.sourceType
-
-            if (targetSource === 'EXTERNAL') {
+        const targetSource = sourceType || existingPayment.sourceType
+        if (targetSource === 'EXTERNAL') {
+            if (manualConsecutive) {
+                // User provided a manual consecutive, treat as external with valid manual number
                 if (manualConsecutive !== existingPayment.manualConsecutive) {
                     const existing = await prisma.payment.findFirst({
                         where: {
@@ -418,7 +409,35 @@ router.put('/:id', async (req, res) => {
                     }
                 }
                 updateData.manualConsecutive = manualConsecutive
+                // If it previously had a consecutiveNumber (auto), we must unset it
+                updateData.consecutiveNumber = null
+            } else if (!existingPayment.consecutiveNumber && !existingPayment.manualConsecutive) {
+                // It was DRAFT without any number and user decided not to add manual CE.
+                // We need to auto-generate a consecutive number since it's going to be saved.
+                const unit = await prisma.unit.findUnique({ where: { id: existingPayment.unitId } })
+                if (unit) {
+                    updateData.consecutiveNumber = unit.consecutiveSeed
+                    await prisma.unit.update({
+                        where: { id: existingPayment.unitId },
+                        data: { consecutiveSeed: unit.consecutiveSeed + 1 }
+                    })
+                }
+            } else if (existingPayment.consecutiveNumber) {
+                updateData.manualConsecutive = null
             }
+        } else if (targetSource === 'INTERNAL') {
+            // If changed to internal and didn't have auto-number, generate one.
+            if (!existingPayment.consecutiveNumber) {
+                const unit = await prisma.unit.findUnique({ where: { id: existingPayment.unitId } })
+                if (unit) {
+                    updateData.consecutiveNumber = unit.consecutiveSeed
+                    await prisma.unit.update({
+                        where: { id: existingPayment.unitId },
+                        data: { consecutiveSeed: unit.consecutiveSeed + 1 }
+                    })
+                }
+            }
+            updateData.manualConsecutive = null
         }
         if (paymentDate) updateData.paymentDate = new Date(paymentDate)
         if (amountPaid !== undefined) {
@@ -461,28 +480,11 @@ router.put('/:id', async (req, res) => {
                 updateData.hasPendingInvoice = true
             }
 
-            // Update old invoice statuses
-            for (const invoiceId of oldInvoiceIds) {
-                await updateInvoiceStatus(invoiceId)
-            }
+            // Note: Update invoices AFTER the payment block saves
+            // We'll collect the IDs to update down below.
 
-            // Update new invoice statuses
-            if (invoiceAllocations) {
-                for (const alloc of invoiceAllocations) {
-                    await updateInvoiceStatus(alloc.invoiceId)
-                }
-            }
         } else if (supportFileUrl !== undefined) {
-            // Bug fix: when only the support file is uploaded (no invoiceAllocations change),
-            // we still need to recalculate the status of all already-associated invoices
-            // because having a support file can now trigger COMPLETED status on the payment,
-            // which should be reflected on the linked invoices.
-            const currentItems = await prisma.paymentInvoice.findMany({
-                where: { paymentId }
-            })
-            for (const item of currentItems) {
-                await updateInvoiceStatus(item.invoiceId)
-            }
+            // We'll collect the IDs to update down below.
         }
 
         const payment = await prisma.payment.update({
@@ -497,8 +499,24 @@ router.put('/:id', async (req, res) => {
             }
         })
 
-        // Resequence removed: once assigned, it stays fixed.
-        // await resequencePaymentConsecutives(existingPayment.unitId)
+        // UPDATE INVOICES STATUS EXPLICITLY AFTER SAVING REVISIONS TO PAYMENT / ASSIGNMENTS
+        if (invoiceAllocations !== undefined) {
+            // Handle the IDs that were replaced
+            const currentInvoices = await prisma.paymentInvoice.findMany({ where: { paymentId } })
+            const newInvoiceIds = currentInvoices.map(p => p.invoiceId)
+            // We use a Set to avoid duplicates and gather old and new IDs
+            const allIdsToUpdate = Array.from(new Set([...(existingPayment.invoiceItems.map(p => p.invoiceId)), ...newInvoiceIds]))
+
+            for (const id of allIdsToUpdate) {
+                await updateInvoiceStatus(id)
+            }
+        } else if (supportFileUrl !== undefined) {
+            // Just update all currently associated invoices
+            const currentInvoices = await prisma.paymentInvoice.findMany({ where: { paymentId } })
+            for (const item of currentInvoices) {
+                await updateInvoiceStatus(item.invoiceId)
+            }
+        }
 
         res.json(payment)
     } catch (error) {

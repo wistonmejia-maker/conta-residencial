@@ -9,8 +9,9 @@ import prisma from './prisma'
  * 
  * An invoice is considered PAID if (Payments + Credit Notes) >= (Total Amount - Retentions)
  */
-export async function calculateInvoiceStatus(invoiceId: string) {
-    const invoice = await prisma.invoice.findUnique({
+export async function calculateInvoiceStatus(invoiceId: string, tx?: any) {
+    const db = tx || prisma
+    const invoice = await db.invoice.findUnique({
         where: { id: invoiceId },
         include: {
             paymentItems: {
@@ -26,7 +27,7 @@ export async function calculateInvoiceStatus(invoiceId: string) {
 
     // Sum of all payments applied (excluding VOIDED ones)
     const totalPaid = invoice.paymentItems.reduce(
-        (sum, item) => {
+        (sum: number, item: any) => {
             if (item.payment?.status === 'VOIDED') return sum
             return sum + Number(item.amountApplied)
         },
@@ -35,7 +36,7 @@ export async function calculateInvoiceStatus(invoiceId: string) {
 
     // Sum of all credit notes applied
     const totalAdjusted = invoice.creditNotes.reduce(
-        (sum, cn) => sum + Number(cn.totalAmount),
+        (sum: number, cn: any) => sum + Number(cn.totalAmount),
         0
     )
 
@@ -72,7 +73,7 @@ export async function calculateInvoiceStatus(invoiceId: string) {
  * Updates an invoice status in the database using the centralized logic
  */
 export async function updateInvoiceStatus(invoiceId: string, tx?: any) {
-    const { status } = await calculateInvoiceStatus(invoiceId)
+    const { status } = await calculateInvoiceStatus(invoiceId, tx)
 
     const db = tx || prisma
     return await db.invoice.update({
