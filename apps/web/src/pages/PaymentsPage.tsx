@@ -912,7 +912,9 @@ function LinkInvoiceModal({ payment, unitId, onClose, onSuccess }: {
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-card">
                         <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Pago Seleccionado</p>
-                        <p className="text-sm font-bold text-indigo-900">CE-{String(payment.consecutiveNumber).padStart(4, '0')}</p>
+                        <p className="text-sm font-bold text-indigo-900">
+                            {payment.consecutiveNumber ? `CE-${String(payment.consecutiveNumber).padStart(4, '0')}` : 'Sin Consecutivo (Pendiente)'}
+                        </p>
                         <p className="text-2xl font-black text-indigo-600 mt-1">{formatMoney(Number(payment.amountPaid))}</p>
                     </div>
 

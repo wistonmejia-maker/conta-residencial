@@ -115,22 +115,28 @@ router.post('/', async (req, res) => {
         // Calculate net value
         const netValue = Number(amountPaid) - Number(retefuenteApplied || 0) - Number(reteicaApplied || 0)
 
+        // Determine if payment has pending invoice (no allocations)
+        const isPendingInvoice = hasPendingInvoice || !invoiceAllocations || invoiceAllocations.length === 0
+
         // Determine consecutive number
         let consecutiveNumber = null
         let finalManualConsecutive = null
 
         if (sourceType === 'INTERNAL' || (sourceType === 'EXTERNAL' && !req.body.manualConsecutive)) {
-            const unit = await prisma.unit.findUnique({ where: { id: unitId } })
-            if (!unit) {
-                return res.status(400).json({ error: 'Unit not found' })
-            }
-            consecutiveNumber = unit.consecutiveSeed
+            // ONLY assign consecutive if it's NOT a pending invoice (Falta Factura)
+            if (!isPendingInvoice) {
+                const unit = await prisma.unit.findUnique({ where: { id: unitId } })
+                if (!unit) {
+                    return res.status(400).json({ error: 'Unit not found' })
+                }
+                consecutiveNumber = unit.consecutiveSeed
 
-            // Update seed for next payment
-            await prisma.unit.update({
-                where: { id: unitId },
-                data: { consecutiveSeed: unit.consecutiveSeed + 1 }
-            })
+                // Update seed for next payment
+                await prisma.unit.update({
+                    where: { id: unitId },
+                    data: { consecutiveSeed: unit.consecutiveSeed + 1 }
+                })
+            }
         } else if (sourceType === 'EXTERNAL' && req.body.manualConsecutive) {
             // Check uniqueness
             const existing = await prisma.payment.findFirst({
@@ -147,9 +153,6 @@ router.post('/', async (req, res) => {
 
             finalManualConsecutive = req.body.manualConsecutive
         }
-
-        // Determine if payment has pending invoice (no allocations)
-        const isPendingInvoice = hasPendingInvoice || !invoiceAllocations || invoiceAllocations.length === 0
 
         // Create payment with invoice allocations
         if (isFutureDate(paymentDate)) {
@@ -390,8 +393,13 @@ router.put('/:id', async (req, res) => {
         if (reviewedBy !== undefined) updateData.reviewedBy = reviewedBy
         if (approvedBy !== undefined) updateData.approvedBy = approvedBy
 
-        // Handle manual consecutive update for EXTERNAL payments
+        // Handle manual vs automatic consecutive logic
         const targetSource = sourceType || existingPayment.sourceType
+        const finalStatus = status || existingPayment.status
+        const finalHasPendingInvoice = (invoiceAllocations !== undefined) 
+            ? (invoiceAllocations && invoiceAllocations.length === 0) 
+            : existingPayment.hasPendingInvoice
+
         if (targetSource === 'EXTERNAL') {
             if (manualConsecutive) {
                 // User provided a manual consecutive, treat as external with valid manual number
@@ -409,25 +417,24 @@ router.put('/:id', async (req, res) => {
                     }
                 }
                 updateData.manualConsecutive = manualConsecutive
-                // If it previously had a consecutiveNumber (auto), we must unset it
-                updateData.consecutiveNumber = null
-            } else if (!existingPayment.consecutiveNumber && !existingPayment.manualConsecutive) {
-                // It was DRAFT without any number and user decided not to add manual CE.
-                // We need to auto-generate a consecutive number since it's going to be saved.
-                const unit = await prisma.unit.findUnique({ where: { id: existingPayment.unitId } })
-                if (unit) {
-                    updateData.consecutiveNumber = unit.consecutiveSeed
-                    await prisma.unit.update({
-                        where: { id: existingPayment.unitId },
-                        data: { consecutiveSeed: unit.consecutiveSeed + 1 }
-                    })
-                }
-            } else if (existingPayment.consecutiveNumber) {
+                updateData.consecutiveNumber = null // Reset auto if manual is provided
+            } else {
                 updateData.manualConsecutive = null
             }
         } else if (targetSource === 'INTERNAL') {
-            // If changed to internal and didn't have auto-number, generate one.
-            if (!existingPayment.consecutiveNumber) {
+            updateData.manualConsecutive = null
+        }
+
+        // AUTO-ASSIGN CONSECUTIVE LOGIC (Postponed)
+        // Only assign if: 
+        // 1. Doesn't have any number yet (consecutive or manual)
+        // 2. Is NOT being assigned a manual number right now
+        // 3. The final state is NOT Draft and NOT Pending Invoice
+        if (!existingPayment.consecutiveNumber && !existingPayment.manualConsecutive && !updateData.manualConsecutive) {
+            const isInternal = targetSource === 'INTERNAL'
+            const isExternalWithoutManual = targetSource === 'EXTERNAL' && !manualConsecutive && !existingPayment.manualConsecutive
+
+            if ((isInternal || isExternalWithoutManual) && finalStatus !== 'DRAFT' && !finalHasPendingInvoice) {
                 const unit = await prisma.unit.findUnique({ where: { id: existingPayment.unitId } })
                 if (unit) {
                     updateData.consecutiveNumber = unit.consecutiveSeed
@@ -437,7 +444,6 @@ router.put('/:id', async (req, res) => {
                     })
                 }
             }
-            updateData.manualConsecutive = null
         }
         if (paymentDate) updateData.paymentDate = new Date(paymentDate)
         if (amountPaid !== undefined) {
@@ -545,22 +551,40 @@ router.post('/:id/link-invoice', async (req, res) => {
             return res.status(404).json({ error: 'Payment not found' })
         }
 
-        // Create the invoice allocation
-        await prisma.paymentInvoice.create({
-            data: {
-                paymentId,
-                invoiceId,
-                amountApplied: amount
-            }
-        })
+        // Create the invoice allocation and update payment in a transaction
+        await prisma.$transaction(async (tx) => {
+            // 1. Create Allocation
+            await tx.paymentInvoice.create({
+                data: {
+                    paymentId,
+                    invoiceId,
+                    amountApplied: amount
+                }
+            })
 
-        // Update payment to remove pending invoice flag and update status
-        await prisma.payment.update({
-            where: { id: paymentId },
-            data: {
-                hasPendingInvoice: false,
-                status: payment.sourceType === 'INTERNAL' ? 'COMPLETED' : 'PAID_NO_SUPPORT'
+            // 2. Determine if it needs a new consecutive number
+            let consecutiveNumber = payment.consecutiveNumber
+            if (!consecutiveNumber && (payment.sourceType === 'INTERNAL' || (payment.sourceType === 'EXTERNAL' && !payment.manualConsecutive))) {
+                const unit = await tx.unit.findUnique({ where: { id: payment.unitId } })
+                if (unit) {
+                    consecutiveNumber = unit.consecutiveSeed
+                    // Increment seed
+                    await tx.unit.update({
+                        where: { id: payment.unitId },
+                        data: { consecutiveSeed: unit.consecutiveSeed + 1 }
+                    })
+                }
             }
+
+            // 3. Update payment
+            await tx.payment.update({
+                where: { id: paymentId },
+                data: {
+                    hasPendingInvoice: false,
+                    status: payment.sourceType === 'INTERNAL' ? 'COMPLETED' : 'PAID_NO_SUPPORT',
+                    consecutiveNumber
+                }
+            })
         })
 
         // Resolve audit log if exists
