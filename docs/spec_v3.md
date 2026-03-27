@@ -1,4 +1,4 @@
-# Documento de Especificación Técnica (SDD) - v4.0
+# Documento de Especificación Técnica (SDD) - v4.5.0
 Proyecto: Conta Residencial / Copropiedad SaaS
 
 # 1. Definición del Stack Tecnológico (Estándar de Oro)
@@ -142,7 +142,43 @@ Utilidad única para formateo consistente de moneda colombiana (COP).
   - `pdfGenerator.ts`
 - **Componente Opcional**: `MoneyInput.tsx` para inputs con formateo onBlur
 
-# 9. Configuración de Etiquetado Gmail (Implementado)
+# 9. Lógica de Numeración y Auditoría (v4.3)
+> **Establecido**: Reglas para la asignación de números de Comprobante de Egreso (CE).
+
+### 9.1. Numeración Diferida
+Para garantizar una secuencia auditiva impecable y evitar "huecos" en la contabilidad, la asignación del `consecutiveNumber` (CE) sigue estas reglas:
+1.  **Borradores (DRAFT)**: Los pagos en estado borrador **NO** reciben número de CE.
+2.  **Falta Factura (`hasPendingInvoice`)**: Los pagos sin factura asociada **Pospone** la numeración hasta que se vincule el documento soporte.
+3.  **Pagos Externos**: Solo reciben número manual si el usuario lo especifica; de lo contrario, se consideran informativos y no consumen la semilla (seed) de la unidad.
+4.  **Asignación Definitiva**: El número se asigna automáticamente al momento de:
+    - Cargar el Soporte de Pago (PDF).
+    - Vincular una Factura a un pago previamente pendiente.
+    - Cambiar el estado a `COMPLETED` manualmente.
+
+### 9.2. Ordenamiento en Reportes y Cierres
+- Los egresos se presentan siempre en orden **ASCENDENTE** por su número de CE.
+- Los registros sin número (nulos) se desplazan al **final** de las listas para no romper la secuencia cronológica de los documentos oficiales.
+
+# 10. Dashboard y Analítica Proactiva (v4.5)
+> **Implementado**: Centro de control financiero con visualización avanzada y alertas de calidad.
+
+### 10.1. Balance de Flujo Mensual (Cash vs Accrual)
+Gráfico compuesto (`ComposedChart`) que compara:
+- **Pagado (Egresos)**: Flujo de caja real del periodo.
+- **Facturado (Pasivos)**: Compromisos adquiridos en el periodo.
+- **Línea de Balance**: Diferencia neta. Una línea positiva indica saneamiento de deuda anterior; una negativa indica acumulación de pasivos.
+
+### 10.2. Distribución Contable
+- **Categorías**: Los egresos se agrupan por la categoría definida en el perfil del **Proveedor**.
+- **Visualización**: Gráfico de donut con el Top 5 de categorías de gasto para identificar fugas de presupuesto.
+
+### 10.3. Panel de Control de Calidad
+Monitoreo en tiempo real de infracciones contables:
+- **Soportes Faltantes**: Pagos ejecutados sin archivo PDF adjunto.
+- **Facturas Vencidas**: Documentos pendientes de pago cuya fecha de vencimiento ha pasado.
+- **Ítems en Borrador**: Documentos importados por IA que requieren validación humana.
+
+# 11. Configuración de Etiquetado Gmail (Implementado)
 Sistema para marcar correos procesados y evitar reprocesamiento.
 
 - **Ubicación UI**: Unidades → Editar → Integraciones
