@@ -37,6 +37,7 @@ export default function PaymentsPage() {
     const [search, setSearch] = useState(searchParams.get('search') || '')
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo] = useState('')
+    const [statusFilter, setStatusFilter] = useState<string>('ALL')
     const [showModal, setShowModal] = useState(false)
     const [uploadPaymentId, setUploadPaymentId] = useState<string | null>(null)
     const [linkInvoicePayment, setLinkInvoicePayment] = useState<Payment | null>(null)
@@ -165,8 +166,12 @@ export default function PaymentsPage() {
             result = result.filter((p: Payment) => p.paymentDate <= dateTo)
         }
 
+        if (statusFilter !== 'ALL') {
+            result = result.filter((p: Payment) => p.status === statusFilter)
+        }
+
         return result
-    }, [payments, search, dateFrom, dateTo])
+    }, [payments, search, dateFrom, dateTo, statusFilter])
 
     // Calculate stats
     const internalCount = payments.filter((p: Payment) => p.sourceType === 'INTERNAL').length
@@ -341,6 +346,7 @@ export default function PaymentsPage() {
                                 className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
                                 title="Hasta la fecha"
                             />
+                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-brand-500 bg-white outline-none"><option value="ALL">Todos los Estados</option>{Object.entries(statusLabels).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}</select>
                         </div>
                     </div>
                 </div>
