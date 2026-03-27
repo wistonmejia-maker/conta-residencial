@@ -1,4 +1,4 @@
-# Documento de Especificación Técnica (SDD) - v3.0
+# Documento de Especificación Técnica (SDD) - v4.0
 Proyecto: Conta Residencial / Copropiedad SaaS
 
 # 1. Definición del Stack Tecnológico (Estándar de Oro)
@@ -404,6 +404,11 @@ const handleOpenFile = async (url: string) => {
 4.  **Confirmación de Usuario**: Resumen explícito del conteo de documentos antes de la ejecución definitiva.
 
 - **Apertura de Archivos**: Uso de la única función estándar `openFileUrl` (con fetch + blob para PDFs) para garantizar visualización sin errores de CORS.
+
+#### 11.4.1. Orden de Presentación (v4.0)
+- **Orden de Egresos**: En la tabla de "Detalle de Novedades" y en el Excel, los egresos **DEBEN** estar ordenados por número de CE de forma **ASCENDENTE**.
+- **Manejo de Pendientes**: Los pagos que no tienen número de CE (Borradores, Falta Factura, Externos) se agrupan automáticamente al final de la lista, ordenados por fecha.
+- **Objetivo**: Garantizar una secuencia lógica ininterrumpida (1, 2, 3...) para facilitar la auditoría contable.
 
 ---
 
@@ -1052,6 +1057,15 @@ Para garantizar la integridad contable y la flexibilidad operativa, la numeraci�
     *   Uso estricto de `unit.schema.ts` (Zod) para asegurar que la semilla sea siempre un entero válido.
     *   Eliminación de re-secuenciación automática en lectura (`GET`), evitando cambios "mágicos" al navegar.
 
+## 19.4. Numeración Diferida (v4.0)
+Para evitar "huecos" en la secuencia contable causados por el borrado de borradores o pagos erróneos, se ha implementado una política de **Asignación Post-Aprobación**.
+
+- **Regla**: El campo `consecutiveNumber` se inicializa como `null` en la creación (`POST`).
+- **Trigger de Asignación**: El número se genera y se incrementa en la semilla **SÓLO** cuando:
+    1. El pago alcanza un estado definitivo (`COMPLETED`, `PAID_NO_SUPPORT`).
+    2. Se vincula una factura exitosamente a un pago que estaba en `PENDING_INVOICE`.
+- **UI**: Los pagos sin número deben visualizarse claramente como **"Pendiente"** en la columna de CE.
+
 ---
 
 # 18. Comprobantes de Egreso Dinámicos (v3.6.0)
@@ -1159,6 +1173,24 @@ Si se migra a una nueva instancia de Neon (por ejemplo, upgrade de plan), se deb
  
  ## 21.2. Filtrado por Rango de Fechas (UX)
  - **Implementación**: Filtros `dateFrom` y `dateTo` en `InvoicesPage` y `PaymentsPage`.
+ 
+ # 22. Estándar de Filtros Horizontales (v4.0)
+ Para optimizar el espacio vertical y garantizar la consistencia visual, todas las páginas principales (`Invoices`, `Payments`, `Providers`) deben usar el componente `FilterBar` horizontal.
+ 
+ - **Estructura**: `Búsqueda (L) | Filtros de Selección y Fechas (C) | Acciones (R)`.
+ - **Botón "Limpiar"**: Obligatorio para resetear todos los filtros a su estado por defecto.
+ - **Etiquetas**: El uso de etiquetas tipo "Fechas:" o "Estado:" es mandatorio para facilitar la legibilidad rápida.
+ 
+ ---
+ 
+ ## [4.0.0] - 2026-03-27
+ 
+ ### ✨ Estandarización Contable (v4.0)
+ - **REFACTOR**: Numeración de CE diferida hasta aprobación definitiva (evita gaps).
+ - **UI/UX**: Refactorización horizontal de barras de filtros en toda la app.
+ - **REPORTES**: Ordenamiento ascendente por CE en Cierre Mensual y exportaciones.
+ - **REPORTES**: Inclusión automática de deuda histórica en el Cierre.
+ - **GLOBAL**: Cambio de branding a **"ContaResidencial"** y formato `DD/MM/YYYY`.
  
  ---
  
