@@ -13,6 +13,8 @@ import { formatMoney } from '../lib/format'
 import { formatRelativeTime, formatShortDate } from '../lib/dateUtils'
 
 import type { Invoice, Provider } from '../lib/api/index'
+import { generateInvoicePackage } from '../lib/invoicePackageGenerator'
+import { saveAs } from 'file-saver'
 
 
 const statusLabels: Record<string, string> = {
@@ -678,6 +680,7 @@ export default function InvoicesPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<Invoice & { provider?: { name: string } } | null>(null)
     // const [scanningGmail, setScanningGmail] = useState(false)
     const [editingInvoice, setEditingInvoice] = useState<(Invoice & { provider?: { name: string } }) | null>(null)
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
     // Data fetching
     const { data: invoicesData, isLoading } = useQuery({
@@ -756,6 +759,27 @@ export default function InvoicesPage() {
             alert(error instanceof Error ? error.message : 'Error al eliminar la factura. Por favor intente de nuevo.')
         } finally {
             setDeletingId(null)
+        }
+    }
+
+    const handleDownloadPackage = async () => {
+        if (filtered.length === 0) return
+        
+        setIsGeneratingPdf(true)
+        try {
+            const periodStr = (dateFrom && dateTo) ? `${formatShortDate(dateFrom)} a ${formatShortDate(dateTo)}` : 'Varios'
+                const pdfBytes = await generateInvoicePackage({
+                    unitName: selectedUnit?.name || 'Unidad',
+                    period: periodStr,
+                    invoices: filtered
+                })
+                const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
+                saveAs(blob, `Soportes_Facturas_${new Date().toISOString().split('T')[0]}.pdf`)
+        } catch (error) {
+            console.error('Error generating PDF package:', error)
+            alert('Error al generar el paquete de soportes.')
+        } finally {
+            setIsGeneratingPdf(false)
         }
     }
 
@@ -928,10 +952,23 @@ export default function InvoicesPage() {
                                     { key: 'documentType', header: 'Tipo Doc' }
                                 ], `facturas_${new Date().toISOString().split('T')[0]}`)
                             }}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2 transition-colors"
                         >
                             <Download className="w-4 h-4" />
-                            Exportar
+                            Exportar Excel
+                        </button>
+
+                        <button
+                            onClick={handleDownloadPackage}
+                            disabled={isGeneratingPdf || filtered.length === 0}
+                            className="px-4 py-2 border border-brand-200 bg-brand-50 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-100 shadow-sm flex items-center gap-2 disabled:opacity-50 transition-all"
+                        >
+                            {isGeneratingPdf ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <FileText className="w-4 h-4" />
+                            )}
+                            {isGeneratingPdf ? 'Generando...' : 'Descargar Soportes (PDF)'}
                         </button>
                         <button
                             onClick={() => setShowModal(true)}
