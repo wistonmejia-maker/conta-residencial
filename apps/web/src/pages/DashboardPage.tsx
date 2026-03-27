@@ -454,7 +454,7 @@ function GmailPreviewModal({ unitId, onClose }: { unitId: string; onClose: () =>
                                     <div className="flex justify-between items-start mb-1">
                                         <h3 className="font-medium text-gray-900 line-clamp-1">{email.subject || '(Sin asunto)'}</h3>
                                         <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
-                                            {email.date ? new Date(email.date).toLocaleDateString() : ''}
+                                            {email.date ? new Date(email.date).toLocaleDateString('es-CO') : ''}
                                         </span>
                                     </div>
                                     <div className="text-xs text-gray-600 mb-1 font-medium">{email.from}</div>

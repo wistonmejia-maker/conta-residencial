@@ -1277,7 +1277,7 @@ function PaymentModal({ unitId, onClose, onSuccess, payment }: {
                                                         />
                                                         <div>
                                                             <p className="text-sm font-bold text-gray-900">{inv.invoiceNumber}</p>
-                                                            <p className="text-xs text-gray-500">{new Date(inv.invoiceDate).toLocaleDateString()}</p>
+                                                            <p className="text-xs text-gray-500">{new Date(inv.invoiceDate).toLocaleDateString('es-CO')}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right flex flex-col items-end gap-1">

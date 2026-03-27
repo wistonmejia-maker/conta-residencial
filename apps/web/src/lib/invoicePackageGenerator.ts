@@ -47,7 +47,7 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
         coverPage.drawText(`Periodo: ${data.period}`, { x: 50, y: titleY - 65, size: 14, font: fontReg })
     }
     coverPage.drawText(`Documentos con Soporte: ${invoicesWithFiles.length}`, { x: 50, y: titleY - 90, size: 12, font: fontReg })
-    coverPage.drawText(`Generado: ${new Date().toLocaleDateString()}`, { x: 50, y: titleY - 110, size: 12, font: fontReg })
+    coverPage.drawText(`Generado: ${new Date().toLocaleDateString('es-CO')}`, { x: 50, y: titleY - 110, size: 12, font: fontReg })
 
     // 2. Index Page
     let indexPage = mergedPdf.addPage([letterWidth, letterHeight])
@@ -79,7 +79,7 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
             y -= 20
         }
 
-        const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
+        const dateStr = new Date(inv.invoiceDate).toLocaleDateString('es-CO')
         const providerName = inv.provider?.name || 'N/A'
         const amountDisplay = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(inv.totalAmount)
 

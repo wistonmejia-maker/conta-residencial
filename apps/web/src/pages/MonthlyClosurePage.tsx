@@ -236,7 +236,7 @@ export default function MonthlyClosurePage() {
             [],
             ['Período', `${report.month} ${report.year}`],
             ['Unidad', selectedUnit?.name || 'N/A'],
-            ['Fecha de Cierre', new Date(report.createdAt).toLocaleDateString()],
+            ['Fecha de Cierre', new Date(report.createdAt).toLocaleDateString('es-CO')],
             [],
             ['Total Pagos', report._count?.payments || report.payments?.length || 0],
             ['Total Facturas', report._count?.invoices || report.invoices?.length || 0],
@@ -255,7 +255,7 @@ export default function MonthlyClosurePage() {
                 const invoiceNums = (p as any).invoiceItems?.map((item: any) => item.invoice?.invoiceNumber).filter(Boolean).join(', ') || '-'
                 return {
                     'CE': p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXTERNO',
-                    'Fecha': new Date(p.paymentDate).toLocaleDateString(),
+                    'Fecha': new Date(p.paymentDate).toLocaleDateString('es-CO'),
                     'Beneficiario': provider?.name || 'N/A',
                     'NIT': (p.provider as any)?.nit || '',
                     'Factura(s)': invoiceNums,
@@ -290,8 +290,8 @@ export default function MonthlyClosurePage() {
 
                 return {
                     'Estado': inv.status === 'PAID' ? 'Pagada' : (inv.status === 'PARTIALLY_PAID' ? 'Parcial' : 'Pendiente'),
-                    'Fecha Factura': new Date(inv.invoiceDate).toLocaleDateString(),
-                    'Vencimiento': inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '-',
+                    'Fecha Factura': new Date(inv.invoiceDate).toLocaleDateString('es-CO'),
+                    'Vencimiento': inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-CO') : '-',
                     'Proveedor': (inv as any).provider?.name || 'N/A',
                     'NIT': (inv as any).provider?.nit || '-',
                     '# Factura': inv.invoiceNumber,
@@ -838,7 +838,7 @@ export default function MonthlyClosurePage() {
                             <tbody className="divide-y divide-gray-100">
                                 {(historyReports || []).map((report) => (
                                     <tr key={report.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4">{new Date(report.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4">{new Date(report.createdAt).toLocaleDateString('es-CO')}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900 capitalize">{report.month} {report.year}</td>
                                         <td className="px-6 py-4 text-center">{report._count?.invoices || 0}</td>
                                         <td className="px-6 py-4 text-center">{report._count?.payments || 0}</td>
@@ -1368,7 +1368,7 @@ export default function MonthlyClosurePage() {
                                     Cierre: {selectedReport.month} {selectedReport.year}
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    Cerrado el {new Date(selectedReport.createdAt).toLocaleDateString()}
+                                    Cerrado el {new Date(selectedReport.createdAt).toLocaleDateString('es-CO')}
                                 </p>
                             </div>
                             <button

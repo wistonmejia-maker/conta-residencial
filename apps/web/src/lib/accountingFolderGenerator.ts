@@ -110,7 +110,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
         const titleY = data.unitInfo.logoUrl ? height - 300 : height - 100
         coverPage.drawText(data.unitName, { x: 50, y: titleY, size: 24, font })
         coverPage.drawText(`Carpeta Contable${data.skipInternalCE ? ' (Solo Soportes)' : ''} - ${data.month} ${data.year}`, { x: 50, y: titleY - 50, size: 18, font: regularFont })
-        coverPage.drawText(`Generado: ${new Date().toLocaleDateString()}`, { x: 50, y: titleY - 80, size: 12, font: regularFont })
+        coverPage.drawText(`Generado: ${new Date().toLocaleDateString('es-CO')}`, { x: 50, y: titleY - 80, size: 12, font: regularFont })
     }
 
     // 2. Index Page(s)
@@ -181,7 +181,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
             }
 
             const ceNum = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXT'
-            const dateStr = new Date(p.paymentDate).toLocaleDateString()
+            const dateStr = new Date(p.paymentDate).toLocaleDateString('es-CO')
             const providerLines = splitTextIntoLines(p.provider?.name || 'N/A', 170, fontReg, fontSize)
             const invoicesLines = splitTextIntoLines(p.invoiceItems?.map(i => i.invoice.invoiceNumber).join(', ') || '-', 140, fontReg, fontSize)
 
@@ -276,7 +276,7 @@ export async function generateAccountingFolder(data: MonthlyReportData): Promise
                     y -= 20
                 }
 
-                const dateStr = new Date(inv.invoiceDate).toLocaleDateString()
+                const dateStr = new Date(inv.invoiceDate).toLocaleDateString('es-CO')
                 const providerLines = splitTextIntoLines(inv.provider?.name || 'N/A', 180, fontReg, fontSize)
                 const rawAmount = Number(inv.balance || inv.totalAmount)
                 totalPending += rawAmount
