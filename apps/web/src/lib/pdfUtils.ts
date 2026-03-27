@@ -66,11 +66,17 @@ export const splitTextIntoLines = (text: string, maxWidth: number, font: any, fo
  * Rescales a source page into a new Letter size page, leaving STAMP_MARGIN at the bottom.
  */
 export const rescaleAndPasteIntoLetter = async (mergedPdf: PDFDocument, sourcePdf: PDFDocument, sourcePageIndex: number) => {
+    // Embed the source page first to ensure it's valid
+    let embeddedPage;
+    try {
+        [embeddedPage] = await mergedPdf.embedPages([sourcePdf.getPage(sourcePageIndex)])
+    } catch (e) {
+        console.error('Error embedding PDF page:', e)
+        return null
+    }
+
     const [letterWidth, letterHeight] = PageSizes.Letter
     const newPage = mergedPdf.addPage([letterWidth, letterHeight])
-
-    // Embed the source page
-    const [embeddedPage] = await mergedPdf.embedPages([sourcePdf.getPage(sourcePageIndex)])
 
     // Calculate safe draw area
     const horizontalPadding = 40

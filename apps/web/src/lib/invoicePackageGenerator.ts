@@ -107,15 +107,28 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
         const watermarkText = `${inv.provider?.name || ''} - Factura ${inv.invoiceNumber}`
         
         try {
-            const fileBytes = await fetch(inv.fileUrl).then(res => res.arrayBuffer())
+            const res = await fetch(inv.fileUrl)
+            if (!res.ok) {
+                console.warn(`Skipping invoice ${inv.invoiceNumber}: fetch failed with status ${res.status}`)
+                continue
+            }
+            
+            const fileBytes = await res.arrayBuffer()
             const uint8Bytes = new Uint8Array(fileBytes)
+            
+            if (uint8Bytes.length === 0) {
+                console.warn(`Skipping invoice ${inv.invoiceNumber}: empty file content`)
+                continue
+            }
 
             if (isPdfFile(uint8Bytes)) {
                 const sourcePdf = await PDFDocument.load(fileBytes)
                 const pageIndices = sourcePdf.getPageIndices()
                 for (const idx of pageIndices) {
                     const newPage = await rescaleAndPasteIntoLetter(mergedPdf, sourcePdf, idx)
-                    drawBottomWatermark(newPage, watermarkText, fontBold, 8)
+                    if (newPage) {
+                        drawBottomWatermark(newPage, watermarkText, fontBold, 8)
+                    }
                 }
             } else {
                 // Image handling
