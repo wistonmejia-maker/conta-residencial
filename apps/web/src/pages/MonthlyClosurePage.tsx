@@ -447,12 +447,14 @@ export default function MonthlyClosurePage() {
 
     const pendingInvoices = allInvoices.filter(inv => {
         const invDate = inv.invoiceDate.split('T')[0]
-        const inRange = invDate >= dateFrom && invDate <= dateTo
+        // Se incluyen todas las facturas emitidas HASTA la fecha fin del periodo,
+        // sin importar qué tan viejas sean (ignoramos dateFrom).
+        const issuedBeforeOrDuringPeriod = invDate <= dateTo
         const isUnpaid = (inv.balance || 0) > 0
 
         const matchesProvider = !selectedProvider || inv.providerId === selectedProvider
 
-        return inRange && isUnpaid && matchesProvider
+        return issuedBeforeOrDuringPeriod && isUnpaid && matchesProvider
     })
 
 
