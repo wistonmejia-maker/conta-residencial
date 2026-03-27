@@ -170,6 +170,9 @@ export default function PaymentsPage() {
         if (statusFilter !== 'ALL') {
             if (statusFilter === 'PENDING_INVOICE') {
                 result = result.filter((p: Payment) => p.hasPendingInvoice)
+            } else if (statusFilter === 'DRAFT') {
+                // Show drafts that DON'T have pending invoice (to avoid overlap)
+                result = result.filter((p: Payment) => p.status === 'DRAFT' && !p.hasPendingInvoice)
             } else {
                 result = result.filter((p: Payment) => p.status === statusFilter)
             }
