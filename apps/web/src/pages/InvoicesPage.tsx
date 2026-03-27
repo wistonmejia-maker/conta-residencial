@@ -968,7 +968,7 @@ export default function InvoicesPage() {
                             ) : (
                                 <FileText className="w-4 h-4" />
                             )}
-                            {isGeneratingPdf ? 'Generando...' : 'Descargar Soportes (PDF)'}
+                            {isGeneratingPdf ? 'Generando...' : 'Descargar Facturas (PDF)'}
                         </button>
                         <button
                             onClick={() => setShowModal(true)}
