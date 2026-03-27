@@ -2,7 +2,7 @@ import { Plus, Search, Upload as UploadIcon, X, Calculator, Download, Loader2, F
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoices, createPayment, getProviders, updatePayment, voidPayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument } from '../lib/api/index'
+import { getPayments, getInvoices, createPayment, getProviders, updatePayment, voidPayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument, createBankMovement, conciliate } from '../lib/api/index'
 import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -83,6 +83,35 @@ export default function PaymentsPage() {
             alert(error instanceof Error ? error.message : 'Error al eliminar el pago. Por favor intente de nuevo.')
         } finally {
             setDeletingId(null)
+        }
+    }
+
+    const [isConciliating, setIsConciliating] = useState<string | null>(null)
+
+    const handleManualConciliate = async (payment: Payment) => {
+        if (!confirm(`¿Marcar este pago a ${payment.provider?.name} como conciliado manualmente?\nSe creará un movimiento bancario interno de respaldo.`)) return
+        
+        setIsConciliating(payment.id)
+        try {
+            // 1. Create Ghost Bank Movement
+            const newBankMov = await createBankMovement({
+                unitId,
+                transactionDate: payment.paymentDate,
+                description: `CONCILIACIÓN MANUAL (EGRESOS): ${payment.provider?.name || 'Prov'}`,
+                amount: -Math.abs(Number(payment.netValue)), // Negative for expense
+                referenceCode: payment.consecutiveNumber ? `MANUAL-CE-${payment.consecutiveNumber}` : 'MANUAL',
+            })
+            // 2. Conciliate
+            await conciliate(payment.id, newBankMov.id)
+            
+            // 3. Refresh
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['bank-movements'] })
+        } catch (error) {
+            console.error(error)
+            alert('Error en conciliación manual')
+        } finally {
+            setIsConciliating(null)
         }
     }
 
@@ -477,6 +506,16 @@ export default function PaymentsPage() {
                                                         title="Aprobar Borrador"
                                                     >
                                                         <Check className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {payment.status !== 'CONCILIATED' && payment.status !== 'VOIDED' && (
+                                                    <button
+                                                        onClick={() => handleManualConciliate(payment)}
+                                                        disabled={isConciliating === payment.id}
+                                                        className="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 disabled:opacity-50"
+                                                        title="Conciliación Manual (Crear respaldo)"
+                                                    >
+                                                        {isConciliating === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                                     </button>
                                                 )}
                                                 {payment.hasPendingInvoice && (
