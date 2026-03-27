@@ -668,6 +668,8 @@ export default function InvoicesPage() {
 
     const [search, setSearch] = useState(searchParams.get('search') || '')
     const [statusFilter, setStatusFilter] = useState<string>('ALL')
+    const [dateFrom, setDateFrom] = useState('')
+    const [dateTo, setDateTo] = useState('')
     const [showModal, setShowModal] = useState(false)
     const [showPreviewModal, setShowPreviewModal] = useState(false)
     const [uploadInvoiceId, setUploadInvoiceId] = useState<string | null>(null)
@@ -726,8 +728,16 @@ export default function InvoicesPage() {
             )
         }
 
+        // 3. Date Range Filter
+        if (dateFrom) {
+            result = result.filter((inv: any) => inv.invoiceDate >= dateFrom)
+        }
+        if (dateTo) {
+            result = result.filter((inv: any) => inv.invoiceDate <= dateTo)
+        }
+
         return result
-    }, [invoices, search, statusFilter])
+    }, [invoices, search, statusFilter, dateFrom, dateTo])
 
     const handleDeleteInvoice = (invoice: Invoice & { provider?: { name: string } }) => {
         setShowDeleteConfirm(invoice)
@@ -958,21 +968,40 @@ export default function InvoicesPage() {
 
                 {/* Filters */}
                 <div className="card p-4">
-                    <div className="flex flex-col md:flex-row items-center gap-4">
-                        <div className="relative flex-1 w-full md:max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar factura o proveedor..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                            />
+                    <div className="flex flex-col lg:flex-row items-center gap-4">
+                        <div className="flex flex-1 flex-col sm:flex-row gap-4 w-full">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar factura o proveedor..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                    title="Desde la fecha"
+                                />
+                                <span className="text-gray-400 font-medium">-</span>
+                                <input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                    className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                    title="Hasta la fecha"
+                                />
+                            </div>
                         </div>
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full md:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white cursor-pointer"
+                            className="w-full lg:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white cursor-pointer flex-shrink-0"
                         >
                             <option value="ALL">Todos los estados</option>
                             <option value="PENDING">Pendiente</option>

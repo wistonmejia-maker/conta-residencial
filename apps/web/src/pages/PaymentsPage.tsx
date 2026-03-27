@@ -35,6 +35,8 @@ export default function PaymentsPage() {
 
 
     const [search, setSearch] = useState(searchParams.get('search') || '')
+    const [dateFrom, setDateFrom] = useState('')
+    const [dateTo, setDateTo] = useState('')
     const [showModal, setShowModal] = useState(false)
     const [uploadPaymentId, setUploadPaymentId] = useState<string | null>(null)
     const [linkInvoicePayment, setLinkInvoicePayment] = useState<Payment | null>(null)
@@ -116,13 +118,26 @@ export default function PaymentsPage() {
     const payments = paymentsData?.payments || []
 
     const filtered = useMemo(() => {
-        const lowerSearch = search.toLowerCase()
-        return payments.filter((p: Payment & { provider?: { name: string } }) =>
-            p.provider?.name?.toLowerCase().includes(lowerSearch) ||
-            (p.consecutiveNumber && p.consecutiveNumber.toString().includes(search)) ||
-            statusLabels[p.status]?.toLowerCase().includes(lowerSearch)
-        )
-    }, [payments, search])
+        let result = payments
+        
+        if (search) {
+            const lowerSearch = search.toLowerCase()
+            result = result.filter((p: Payment & { provider?: { name: string } }) =>
+                p.provider?.name?.toLowerCase().includes(lowerSearch) ||
+                (p.consecutiveNumber && p.consecutiveNumber.toString().includes(search)) ||
+                statusLabels[p.status]?.toLowerCase().includes(lowerSearch)
+            )
+        }
+
+        if (dateFrom) {
+            result = result.filter((p: Payment) => p.paymentDate >= dateFrom)
+        }
+        if (dateTo) {
+            result = result.filter((p: Payment) => p.paymentDate <= dateTo)
+        }
+
+        return result
+    }, [payments, search, dateFrom, dateTo])
 
     // Calculate stats
     const internalCount = payments.filter((p: Payment) => p.sourceType === 'INTERNAL').length
@@ -254,11 +269,10 @@ export default function PaymentsPage() {
                         </div>
                     </div>
                 </div>
-
                 {/* Filters */}
                 <div className="card p-4">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-md">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="relative flex-1 w-full md:max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 type="text"
@@ -266,6 +280,23 @@ export default function PaymentsPage() {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <input
+                                type="date"
+                                value={dateFrom}
+                                onChange={(e) => setDateFrom(e.target.value)}
+                                className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                title="Desde la fecha"
+                            />
+                            <span className="text-gray-400 font-medium">-</span>
+                            <input
+                                type="date"
+                                value={dateTo}
+                                onChange={(e) => setDateTo(e.target.value)}
+                                className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
+                                title="Hasta la fecha"
                             />
                         </div>
                     </div>
