@@ -24,6 +24,13 @@ interface InvoicePackageData {
  * Includes a cover sheet and an index.
  */
 export async function generateInvoicePackage(data: InvoicePackageData): Promise<Uint8Array> {
+    // 0. Filter invoices that actually have a file support to avoid blank sections/entries
+    const invoicesWithFiles = data.invoices.filter(inv => !!inv.fileUrl)
+    
+    if (invoicesWithFiles.length === 0) {
+        throw new Error('No se encontraron facturas con archivos adjuntos en la selección actual.')
+    }
+
     const mergedPdf = await PDFDocument.create()
     const [letterWidth, letterHeight] = PageSizes.Letter
     const height = letterHeight
@@ -39,7 +46,7 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
     if (data.period) {
         coverPage.drawText(`Periodo: ${data.period}`, { x: 50, y: titleY - 65, size: 14, font: fontReg })
     }
-    coverPage.drawText(`Documentos: ${data.invoices.length}`, { x: 50, y: titleY - 90, size: 12, font: fontReg })
+    coverPage.drawText(`Documentos con Soporte: ${invoicesWithFiles.length}`, { x: 50, y: titleY - 90, size: 12, font: fontReg })
     coverPage.drawText(`Generado: ${new Date().toLocaleDateString()}`, { x: 50, y: titleY - 110, size: 12, font: fontReg })
 
     // 2. Index Page
@@ -63,8 +70,8 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
     drawTableHeaders(indexPage, y)
     y -= 20
 
-    for (let i = 0; i < data.invoices.length; i++) {
-        const inv = data.invoices[i]
+    for (let i = 0; i < invoicesWithFiles.length; i++) {
+        const inv = invoicesWithFiles[i]
         if (y < 60) {
             indexPage = mergedPdf.addPage([letterWidth, letterHeight])
             y = height - 60
@@ -94,7 +101,7 @@ export async function generateInvoicePackage(data: InvoicePackageData): Promise<
     }
 
     // 3. Attach Files
-    for (const inv of data.invoices) {
+    for (const inv of invoicesWithFiles) {
         if (!inv.fileUrl) continue;
 
         const watermarkText = `${inv.provider?.name || ''} - Factura ${inv.invoiceNumber}`
