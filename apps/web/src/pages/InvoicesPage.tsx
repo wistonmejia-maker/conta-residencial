@@ -891,24 +891,34 @@ export default function InvoicesPage() {
                                 const dataToExport = filtered.map((inv: any) => ({
                                     invoiceNumber: inv.invoiceNumber,
                                     provider: inv.provider?.name || '',
+                                    nit: inv.provider?.nit || '',
                                     invoiceDate: inv.invoiceDate,
                                     dueDate: inv.dueDate,
                                     description: inv.description,
                                     baseAmount: Number(inv.subtotal),
                                     ivaAmount: Number(inv.taxIva),
+                                    retefuente: Number(inv.retefuenteAmount || 0),
+                                    reteica: Number(inv.reteicaAmount || 0),
                                     totalAmount: Number(inv.totalAmount),
-                                    status: statusLabels[inv.status] || inv.status
+                                    netValue: Number(inv.totalAmount) - Number(inv.retefuenteAmount || 0) - Number(inv.reteicaAmount || 0),
+                                    status: statusLabels[inv.status] || inv.status,
+                                    documentType: inv.documentType || 'FACTURA'
                                 }))
                                 exportToExcel(dataToExport, [
                                     { key: 'invoiceNumber', header: '# Factura' },
                                     { key: 'provider', header: 'Proveedor' },
+                                    { key: 'nit', header: 'NIT' },
                                     { key: 'invoiceDate', header: 'Fecha', format: 'date' },
                                     { key: 'dueDate', header: 'Vencimiento', format: 'date' },
                                     { key: 'description', header: 'Descripción' },
                                     { key: 'baseAmount', header: 'Base', format: 'money' },
                                     { key: 'ivaAmount', header: 'IVA', format: 'money' },
-                                    { key: 'totalAmount', header: 'Total', format: 'money' },
-                                    { key: 'status', header: 'Estado' }
+                                    { key: 'retefuente', header: 'ReteFte', format: 'money' },
+                                    { key: 'reteica', header: 'ReteICA', format: 'money' },
+                                    { key: 'totalAmount', header: 'Total Bruto', format: 'money' },
+                                    { key: 'netValue', header: 'Neto a Pagar', format: 'money' },
+                                    { key: 'status', header: 'Estado' },
+                                    { key: 'documentType', header: 'Tipo Doc' }
                                 ], `facturas_${new Date().toISOString().split('T')[0]}`)
                             }}
                             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"

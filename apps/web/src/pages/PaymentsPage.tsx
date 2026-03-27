@@ -224,7 +224,10 @@ export default function PaymentsPage() {
                             onClick={() => {
                                 const dataToExport = filtered.map((p: any) => ({
                                     consecutiveNumber: p.consecutiveNumber ? `CE - ${String(p.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE',
+                                    provider: p.provider?.name || '',
+                                    nit: p.provider?.nit || '',
                                     paymentDate: p.paymentDate,
+                                    description: p.notes || p.description || '',
                                     invoices: p.invoiceItems?.length || 0,
                                     amountPaid: Number(p.amountPaid),
                                     retefuente: Number(p.retefuenteApplied),
@@ -234,7 +237,10 @@ export default function PaymentsPage() {
                                 }))
                                 exportToExcel(dataToExport, [
                                     { key: 'consecutiveNumber', header: 'CE #' },
+                                    { key: 'provider', header: 'Proveedor' },
+                                    { key: 'nit', header: 'NIT' },
                                     { key: 'paymentDate', header: 'Fecha', format: 'date' },
+                                    { key: 'description', header: 'Descripción' },
                                     { key: 'invoices', header: 'Facturas' },
                                     { key: 'amountPaid', header: 'Valor Bruto', format: 'money' },
                                     { key: 'retefuente', header: 'ReteFte', format: 'money' },
