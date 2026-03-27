@@ -311,7 +311,8 @@ export default function PaymentsPage() {
                                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                             />
                         </div>
-                        <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fechas:</span>
                             <input
                                 type="date"
                                 value={dateFrom}
@@ -513,7 +514,7 @@ export default function PaymentsPage() {
                                                         onClick={() => handleManualConciliate(payment)}
                                                         disabled={isConciliating === payment.id}
                                                         className="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 disabled:opacity-50"
-                                                        title="Conciliación Manual (Crear respaldo)"
+                                                        title="Conciliar Manulmente (con respaldo)"
                                                     >
                                                         {isConciliating === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                                     </button>

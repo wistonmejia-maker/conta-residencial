@@ -980,7 +980,8 @@ export default function InvoicesPage() {
                                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fechas:</span>
                                 <input
                                     type="date"
                                     value={dateFrom}
