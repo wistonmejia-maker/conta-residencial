@@ -25,6 +25,7 @@ const statusLabels: Record<string, string> = {
     COMPLETED: 'Completo',
     CONCILIATED: 'Conciliado',
     VOIDED: 'Anulado',
+    PENDING_INVOICE: 'Falta Factura',
 }
 
 export default function PaymentsPage() {
@@ -167,7 +168,11 @@ export default function PaymentsPage() {
         }
 
         if (statusFilter !== 'ALL') {
-            result = result.filter((p: Payment) => p.status === statusFilter)
+            if (statusFilter === 'PENDING_INVOICE') {
+                result = result.filter((p: Payment) => p.hasPendingInvoice)
+            } else {
+                result = result.filter((p: Payment) => p.status === statusFilter)
+            }
         }
 
         return result
