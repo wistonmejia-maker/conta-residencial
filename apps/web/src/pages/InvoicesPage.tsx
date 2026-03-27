@@ -888,27 +888,34 @@ export default function InvoicesPage() {
 
                         <button
                             onClick={() => {
-                                const dataToExport = filtered.map((inv: any) => ({
-                                    invoiceNumber: inv.invoiceNumber,
-                                    provider: inv.provider?.name || '',
-                                    nit: inv.provider?.nit || '',
-                                    invoiceDate: inv.invoiceDate,
-                                    dueDate: inv.dueDate,
-                                    description: inv.description,
-                                    baseAmount: Number(inv.subtotal),
-                                    ivaAmount: Number(inv.taxIva),
-                                    retefuente: Number(inv.retefuenteAmount || 0),
-                                    reteica: Number(inv.reteicaAmount || 0),
-                                    totalAmount: Number(inv.totalAmount),
-                                    netValue: Number(inv.totalAmount) - Number(inv.retefuenteAmount || 0) - Number(inv.reteicaAmount || 0),
-                                    status: statusLabels[inv.status] || inv.status,
-                                    documentType: inv.documentType || 'FACTURA'
-                                }))
+                                const dataToExport = filtered.map((inv: any) => {
+                                    const d = new Date(inv.invoiceDate);
+                                    const period = inv.invoiceDate ? `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${d.getUTCFullYear()}` : '';
+                                    
+                                    return {
+                                        invoiceNumber: inv.invoiceNumber,
+                                        provider: inv.provider?.name || '',
+                                        nit: inv.provider?.nit || '',
+                                        invoiceDate: inv.invoiceDate,
+                                        period,
+                                        dueDate: inv.dueDate,
+                                        description: inv.description,
+                                        baseAmount: Number(inv.subtotal),
+                                        ivaAmount: Number(inv.taxIva),
+                                        retefuente: Number(inv.retefuenteAmount || 0),
+                                        reteica: Number(inv.reteicaAmount || 0),
+                                        totalAmount: Number(inv.totalAmount),
+                                        netValue: Number(inv.totalAmount) - Number(inv.retefuenteAmount || 0) - Number(inv.reteicaAmount || 0),
+                                        status: statusLabels[inv.status] || inv.status,
+                                        documentType: inv.documentType || 'FACTURA'
+                                    }
+                                })
                                 exportToExcel(dataToExport, [
                                     { key: 'invoiceNumber', header: '# Factura' },
                                     { key: 'provider', header: 'Proveedor' },
                                     { key: 'nit', header: 'NIT' },
                                     { key: 'invoiceDate', header: 'Fecha', format: 'date' },
+                                    { key: 'period', header: 'Periodo' },
                                     { key: 'dueDate', header: 'Vencimiento', format: 'date' },
                                     { key: 'description', header: 'Descripción' },
                                     { key: 'baseAmount', header: 'Base', format: 'money' },

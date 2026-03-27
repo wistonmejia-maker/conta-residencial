@@ -1170,6 +1170,7 @@ Si se migra a una nueva instancia de Neon (por ejemplo, upgrade de plan), se deb
  ### 📊 Reportes & Cierre
  - **OPTIMIZADO**: El Cierre Mensual ahora incluye todas las facturas impagas históricas.
  - **FILTROS**: Implementación de rango de fechas con etiquetas "Fechas:" en UI.
+ - **EXPORTACIÓN**: Inclusión de **Periodo (MM-YYYY)**, NIT, Retenciones y Neto en Excel.
  
  ### 🎨 UI/UX & Global Branding
  - **MEJORA**: Etiquetas "Fechas:" para filtros y cambio del título global a **"ContaResidencial"**.

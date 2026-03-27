@@ -222,24 +222,31 @@ export default function PaymentsPage() {
 
                         <button
                             onClick={() => {
-                                const dataToExport = filtered.map((p: any) => ({
-                                    consecutiveNumber: p.consecutiveNumber ? `CE - ${String(p.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE',
-                                    provider: p.provider?.name || '',
-                                    nit: p.provider?.nit || '',
-                                    paymentDate: p.paymentDate,
-                                    description: p.notes || p.description || '',
-                                    invoices: p.invoiceItems?.length || 0,
-                                    amountPaid: Number(p.amountPaid),
-                                    retefuente: Number(p.retefuenteApplied),
-                                    reteica: Number(p.reteicaApplied),
-                                    netValue: Number(p.netValue),
-                                    status: statusLabels[p.status] || p.status
-                                }))
+                                const dataToExport = filtered.map((p: any) => {
+                                    const d = new Date(p.paymentDate);
+                                    const period = p.paymentDate ? `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${d.getUTCFullYear()}` : '';
+
+                                    return {
+                                        consecutiveNumber: p.consecutiveNumber ? `CE - ${String(p.consecutiveNumber).padStart(4, '0')} ` : 'Sin CE',
+                                        provider: p.provider?.name || '',
+                                        nit: p.provider?.nit || '',
+                                        paymentDate: p.paymentDate,
+                                        period,
+                                        description: p.notes || p.description || '',
+                                        invoices: p.invoiceItems?.length || 0,
+                                        amountPaid: Number(p.amountPaid),
+                                        retefuente: Number(p.retefuenteApplied),
+                                        reteica: Number(p.reteicaApplied),
+                                        netValue: Number(p.netValue),
+                                        status: statusLabels[p.status] || p.status
+                                    }
+                                })
                                 exportToExcel(dataToExport, [
                                     { key: 'consecutiveNumber', header: 'CE #' },
                                     { key: 'provider', header: 'Proveedor' },
                                     { key: 'nit', header: 'NIT' },
                                     { key: 'paymentDate', header: 'Fecha', format: 'date' },
+                                    { key: 'period', header: 'Periodo' },
                                     { key: 'description', header: 'Descripción' },
                                     { key: 'invoices', header: 'Facturas' },
                                     { key: 'amountPaid', header: 'Valor Bruto', format: 'money' },
