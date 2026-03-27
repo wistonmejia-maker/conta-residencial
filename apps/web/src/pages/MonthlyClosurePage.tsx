@@ -1,5 +1,5 @@
 // Force redeploy v3
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Download, FolderDown, Brain, AlertOctagon, CheckCircle, TrendingUp, Calendar, Filter, Eye, Trash2, Upload, FileSpreadsheet, CheckCircle2, Briefcase, X, Loader2, AlertTriangle, Edit3, CreditCard, FileDown } from 'lucide-react'
 // ... (existing imports)
@@ -112,19 +112,19 @@ export default function MonthlyClosurePage() {
 
     const handleCloseMonth = async () => {
         // Filter to only unreported payments
-        const unreportedPayments = filteredPayments.filter(p => !p.monthlyReportId)
+        const unreportedPayments = filteredPayments.filter((p: Payment) => !p.monthlyReportId)
 
         // Check for payments with pending invoices - block closure
-        const paymentsWithPendingInvoice = unreportedPayments.filter(p => p.hasPendingInvoice)
+        const paymentsWithPendingInvoice = unreportedPayments.filter((p: Payment) => p.hasPendingInvoice)
         if (paymentsWithPendingInvoice.length > 0) {
-            const ceList = paymentsWithPendingInvoice.map(p => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
+            const ceList = paymentsWithPendingInvoice.map((p: Payment) => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
             alert(`No se puede cerrar el mes. Hay ${paymentsWithPendingInvoice.length} pago(s) sin factura asociada:\n${ceList}\n\nDebe completar o eliminar estos pagos antes de cerrar.`)
             return
         }
 
         // Get invoice IDs from the payments' invoiceItems (paid invoices)
         const allInvoiceIds = new Set<string>()
-        unreportedPayments.forEach(p => {
+        unreportedPayments.forEach((p: Payment) => {
             if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
                 (p as any).invoiceItems.forEach((item: any) => {
                     if (!item.invoice?.monthlyReportId) {
@@ -135,8 +135,8 @@ export default function MonthlyClosurePage() {
         })
 
         // Also add pending invoices (same as folder generator)
-        const unreportedPendingInvoices = pendingInvoices.filter(inv => !inv.monthlyReportId)
-        unreportedPendingInvoices.forEach(inv => allInvoiceIds.add(inv.id))
+        const unreportedPendingInvoices = pendingInvoices.filter((inv: Invoice) => !inv.monthlyReportId)
+        unreportedPendingInvoices.forEach((inv: Invoice) => allInvoiceIds.add(inv.id))
 
         // Validate there's unreported data to close
         if (unreportedPayments.length === 0 && unreportedPendingInvoices.length === 0) {
@@ -187,7 +187,7 @@ export default function MonthlyClosurePage() {
                 unitId,
                 month: monthName,
                 year: yearVal,
-                paymentIds: unreportedPayments.map(p => p.id),
+                paymentIds: unreportedPayments.map((p: Payment) => p.id),
                 invoiceIds: Array.from(allInvoiceIds),
                 pdfUrl
             })
@@ -350,7 +350,7 @@ export default function MonthlyClosurePage() {
         // Validation: Ensure all payments have required documents
         const missingDocs: string[] = []
 
-        filteredPayments.forEach(p => {
+        filteredPayments.forEach((p: Payment) => {
             const ceRef = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : `Pago a ${p.provider?.name}`
 
             // 1. Check Payment Support (Bank Receipt)
@@ -425,14 +425,26 @@ export default function MonthlyClosurePage() {
     const payments = paymentsData?.payments || []
     const providers: Provider[] = providersData?.providers || []
 
-    const filteredPayments = (payments as Payment[]).filter(p => {
-        // Safe string comparison for dates YYYY-MM-DD
-        const pDate = p.paymentDate.split('T')[0]
-        const inDateRange = pDate >= dateFrom && pDate <= dateTo
+    const filteredPayments = useMemo(() => {
+        const result = (payments as Payment[]).filter(p => {
+            // Safe string comparison for dates YYYY-MM-DD
+            const pDate = p.paymentDate.split('T')[0]
+            const inDateRange = pDate >= dateFrom && pDate <= dateTo
 
-        if (selectedProvider && (p as any).providerId !== selectedProvider) return false
-        return inDateRange
-    })
+            if (selectedProvider && (p as any).providerId !== selectedProvider) return false
+            return inDateRange
+        })
+
+        // Sort by consecutiveNumber ASC, nulls (Pending/External) at the end
+        return result.sort((a, b) => {
+            const numA = a.consecutiveNumber ?? 9999999
+            const numB = b.consecutiveNumber ?? 9999999
+            if (numA !== numB) return numA - numB
+            
+            // Secondary sort by date
+            return new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
+        })
+    }, [payments, dateFrom, dateTo, selectedProvider])
 
     // Filter PENDING INVOICES (Accounts Payable)
     // 1. Issue Date in current month/range
@@ -459,7 +471,7 @@ export default function MonthlyClosurePage() {
 
 
     // Calculate totals
-    const totals = filteredPayments.reduce((acc, p) => ({
+    const totals = filteredPayments.reduce((acc: any, p: Payment) => ({
         gross: acc.gross + Number(p.amountPaid),
         retefuente: acc.retefuente + Number(p.retefuenteApplied),
         reteica: acc.reteica + Number(p.reteicaApplied),
@@ -468,7 +480,7 @@ export default function MonthlyClosurePage() {
 
     // Export to Excel
     const exportToExcel = () => {
-        const data = filteredPayments.map(p => ({
+        const data = filteredPayments.map((p: Payment) => ({
             'CE': p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : 'EXTERNO',
             'Fecha': formatDate(p.paymentDate),
             'Beneficiario': p.provider?.name || 'N/A',
@@ -544,7 +556,7 @@ export default function MonthlyClosurePage() {
         // Validation: Ensure all payments have required documents
         const missingDocs: string[] = []
 
-        filteredPayments.forEach(p => {
+        filteredPayments.forEach((p: Payment) => {
             const ceRef = p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : `Pago a ${p.provider?.name}`
             if (!p.supportFileUrl) missingDocs.push(`${ceRef}: Falta Soporte de Pago (Nube)`)
             if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
@@ -571,7 +583,7 @@ export default function MonthlyClosurePage() {
             // 1. Generate Excel (Construct fake report to reuse existing function)
             // Deduplicate invoices: pending + paid
             const allInvoicesMap = new Map();
-            filteredPayments.forEach(p => {
+            filteredPayments.forEach((p: Payment) => {
                 (p as any).invoiceItems?.forEach((item: any) => {
                     if (item.invoice) allInvoicesMap.set(item.invoice.id, item.invoice);
                 });
@@ -1081,7 +1093,7 @@ export default function MonthlyClosurePage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                            {filteredPayments.map(payment => (
+                                            {filteredPayments.map((payment: Payment) => (
                                                 <tr key={payment.id} className="hover:bg-gray-50">
                                                     <td className="px-4 py-3">
                                                         {payment.consecutiveNumber ? (
@@ -1398,7 +1410,7 @@ export default function MonthlyClosurePage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
-                                                {selectedReport.payments.map((p) => (
+                                                {selectedReport.payments.map((p: any) => (
                                                     <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="px-4 py-3">
                                                             <span className="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
@@ -1440,7 +1452,7 @@ export default function MonthlyClosurePage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50">
-                                                {selectedReport.invoices.map((inv) => (
+                                                {selectedReport.invoices.map((inv: any) => (
                                                     <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="px-4 py-3 font-medium text-indigo-600">{inv.invoiceNumber}</td>
                                                         <td className="px-4 py-3 text-gray-900">{inv.provider?.name || 'N/A'}</td>
@@ -1607,7 +1619,7 @@ export default function MonthlyClosurePage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
-                                            {filteredPayments.map((p) => (
+                                            {filteredPayments.map((p: any) => (
                                                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                                                     <td className="px-4 py-3">
                                                         <span className="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
