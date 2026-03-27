@@ -1,9 +1,9 @@
-import { Upload, CheckCircle, XCircle, ArrowRight, X, FileSpreadsheet, AlertCircle, Filter, Wand2, Eye, EyeOff, Sparkles, Loader2, FileText } from 'lucide-react'
+import { Upload, CheckCircle, XCircle, ArrowRight, X, FileSpreadsheet, AlertCircle, Filter, Wand2, Eye, EyeOff, Sparkles, Loader2, FileText, CheckCircle2 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getBankMovements, getPayments, importBankMovements, conciliate, getConciliationSummary, autoConciliate, aiConciliate, aiExtractBankMovements } from '../lib/api'
+import { getBankMovements, getPayments, importBankMovements, conciliate, getConciliationSummary, autoConciliate, aiConciliate, aiExtractBankMovements, createBankMovement } from '../lib/api'
 import type { BankMovement, Payment } from '../lib/api'
 import { useUnit } from '../lib/UnitContext'
 import { useAIHistory } from '../lib/AIContext'
@@ -131,6 +131,33 @@ export default function ConciliationPage() {
     const handleConciliate = (paymentId: string) => {
         if (!selectedBank) return
         conciliateMutation.mutate({ paymentId, bankMovementId: selectedBank })
+    }
+
+    const manualConciliateMutation = useMutation({
+        mutationFn: async (payment: Payment) => {
+            // 1. Create Ghost Bank Movement
+            const newBankMov = await createBankMovement({
+                unitId,
+                transactionDate: payment.paymentDate,
+                description: `CONCILIACIÓN MANUAL: ${payment.provider?.name || 'Prov'}`,
+                amount: -Math.abs(Number(payment.netValue)), // Negative for expense
+                referenceCode: payment.consecutiveNumber ? `MANUAL-CE-${payment.consecutiveNumber}` : 'MANUAL',
+            })
+            // 2. Conciliate
+            return conciliate(payment.id, newBankMov.id)
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bank-movements'] })
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['conciliation-summary'] })
+            setSelectedBank(null)
+        },
+        onError: () => alert('Error en conciliación manual')
+    })
+
+    const handleManualConciliate = (payment: Payment) => {
+        if (!confirm(`¿Marcar este pago a ${payment.provider?.name} como conciliado manualmente?\nSe creará un movimiento bancario interno de respaldo.`)) return
+        manualConciliateMutation.mutate(payment)
     }
 
     const selectedBankAmount = selectedBank
@@ -342,10 +369,21 @@ export default function ConciliationPage() {
                                                 {selectedBank && pay.status !== 'CONCILIATED' && (
                                                     <button
                                                         onClick={() => handleConciliate(pay.id)}
-                                                        disabled={conciliateMutation.isPending}
+                                                        disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
                                                         className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-600 disabled:opacity-50"
+                                                        title="Conciliar con movimiento seleccionado"
                                                     >
                                                         <ArrowRight className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {!selectedBank && pay.status !== 'CONCILIATED' && (
+                                                    <button
+                                                        onClick={() => handleManualConciliate(pay as any)}
+                                                        disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
+                                                        className="p-1.5 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-600 disabled:opacity-50"
+                                                        title="Conciliación Manual (Crear respaldo)"
+                                                    >
+                                                        <CheckCircle2 className="w-4 h-4" />
                                                     </button>
                                                 )}
                                                 {pay.status === 'CONCILIATED' && <span className="text-xs text-emerald-600">✓</span>}
