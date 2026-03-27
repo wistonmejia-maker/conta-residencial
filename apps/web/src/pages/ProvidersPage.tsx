@@ -1,4 +1,4 @@
-import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye, Trash2 } from 'lucide-react'
+import { Plus, Search, X, Check, Edit2, FileText, FileSpreadsheet, Eye, Trash2, RefreshCw } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -110,35 +110,53 @@ export default function ProvidersPage() {
 
                 {/* Filters */}
                 <div className="card p-4">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por nombre o NIT..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                            />
+                    <div className="flex flex-col lg:flex-row items-end gap-4">
+                        <div className="flex-1 w-full lg:max-w-md">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1">Búsqueda</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Nombre o NIT..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
                         </div>
-                        <select
-                            value={selectedCategory}
-                            onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        >
-                            <option value="">Todas las categorías</option>
-                            <option value="servicios_publicos">Servicios Públicos</option>
-                            <option value="seguridad">Seguridad</option>
-                            <option value="aseo">Aseo</option>
-                            <option value="mantenimiento">Mantenimiento</option>
-                            <option value="seguros">Seguros</option>
-                            <option value="legales">Legales</option>
-                            <option value="insumos">Insumos</option>
-                            <option value="otro">Otro</option>
-                        </select>
 
-                        <div className="text-sm text-gray-500">
-                            {filtered.length} de {providers.length} proveedores
+                        <div className="w-full lg:w-48">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1">Categoría</span>
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white cursor-pointer font-medium text-gray-700"
+                            >
+                                <option value="">Todas las categorías</option>
+                                <option value="servicios_publicos">Servicios Públicos</option>
+                                <option value="seguridad">Seguridad</option>
+                                <option value="aseo">Aseo</option>
+                                <option value="mantenimiento">Mantenimiento</option>
+                                <option value="seguros">Seguros</option>
+                                <option value="legales">Legales</option>
+                                <option value="insumos">Insumos</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setSearch('')
+                                setSelectedCategory('')
+                            }}
+                            className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+                            title="Limpiar filtros"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
+
+                        <div className="flex-1 text-right text-xs text-gray-400 italic lg:pb-2.5">
+                            Mostrando {filtered.length} de {providers.length} terceros
                         </div>
                     </div>
                 </div>

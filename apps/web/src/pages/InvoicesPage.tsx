@@ -1,4 +1,4 @@
-import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, MessageSquare } from 'lucide-react'
+import { Plus, Search, X, FileText, Upload, Loader2, Download, Trash2, Pencil, Check, AlertTriangle, CheckCircle2, Mail, Sparkles, MessageSquare, RefreshCw } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -1022,50 +1022,69 @@ export default function InvoicesPage() {
 
                 {/* Filters */}
                 <div className="card p-4">
-                    <div className="flex flex-col lg:flex-row items-center gap-4">
-                        <div className="flex flex-1 flex-col sm:flex-row gap-4 w-full">
-                            <div className="relative flex-1">
+                    <div className="flex flex-col lg:flex-row items-end gap-4">
+                        <div className="flex-1 w-full">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1">Búsqueda</span>
+                            <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Buscar factura o proveedor..."
+                                    placeholder="Factura o proveedor..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fechas:</span>
+                        </div>
+
+                        <div className="w-full lg:w-auto">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1">Rango de Fechas</span>
+                            <div className="flex items-center gap-2">
                                 <input
                                     type="date"
                                     value={dateFrom}
                                     onChange={(e) => setDateFrom(e.target.value)}
-                                    className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                                    title="Desde la fecha"
+                                    className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
-                                <span className="text-gray-400 font-medium">-</span>
+                                <span className="text-gray-300">-</span>
                                 <input
                                     type="date"
                                     value={dateTo}
                                     onChange={(e) => setDateTo(e.target.value)}
-                                    className="w-full sm:w-auto px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"
-                                    title="Hasta la fecha"
+                                    className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
                             </div>
                         </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full lg:w-48 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white cursor-pointer flex-shrink-0"
+
+                        <div className="w-full lg:w-48">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block ml-1">Estado</span>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white cursor-pointer focus:ring-2 focus:ring-indigo-500 outline-none"
+                            >
+                                <option value="ALL">Todos los estados</option>
+                                <option value="PENDING">Pendiente</option>
+                                <option value="PAID">Pagado</option>
+                                <option value="PARTIALLY_PAID">Pago Parcial</option>
+                                <option value="OVERDUE">Vencida</option>
+                                <option value="DRAFT">Borrador</option>
+                                <option value="VOID">Anulada</option>
+                            </select>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setSearch('')
+                                setStatusFilter('ALL')
+                                setDateFrom('')
+                                setDateTo('')
+                            }}
+                            className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+                            title="Limpiar filtros"
                         >
-                            <option value="ALL">Todos los estados</option>
-                            <option value="PENDING">Pendiente</option>
-                            <option value="PAID">Pagado</option>
-                            <option value="PARTIALLY_PAID">Pago Parcial</option>
-                            <option value="OVERDUE">Vencida</option>
-                            <option value="DRAFT">Borrador</option>
-                            <option value="VOID">Anulada</option>
-                        </select>
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
 
