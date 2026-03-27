@@ -10,7 +10,7 @@ import { useUnit } from '../lib/UnitContext'
 import { useAI } from '../lib/AIContext'
 import { AIButton, AIProcessingOverlay, AIConfidenceIndicator, FeedbackModal, SmartFileUploader } from '../components/ui'
 import { formatMoney } from '../lib/format'
-import { formatRelativeTime } from '../lib/dateUtils'
+import { formatRelativeTime, formatShortDate } from '../lib/dateUtils'
 
 import type { Invoice, Provider } from '../lib/api/index'
 
@@ -1058,8 +1058,8 @@ export default function InvoicesPage() {
                                                 </p>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{new Date(inv.invoiceDate).toLocaleDateString('es-CO')}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('es-CO') : '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{formatShortDate(inv.invoiceDate)}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{formatShortDate(inv.dueDate)}</td>
                                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatMoney(Number(inv.totalAmount))}</td>
                                         <td className="px-4 py-3 text-right font-semibold text-amber-600">{formatMoney(inv.balance ?? Number(inv.totalAmount))}</td>
                                         <td className="px-4 py-3 text-center">
