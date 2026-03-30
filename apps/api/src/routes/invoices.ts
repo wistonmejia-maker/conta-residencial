@@ -287,7 +287,8 @@ router.put('/:id', async (req, res) => {
         const {
             invoiceNumber, invoiceDate, dueDate,
             subtotal, taxIva, retefuenteAmount, reteicaAmount,
-            description, pdfUrl, fileUrl, status
+            description, pdfUrl, fileUrl, status,
+            documentType, relatedInvoiceId, adjustmentReason
         } = req.body
 
         const updateData: any = {}
@@ -305,6 +306,9 @@ router.put('/:id', async (req, res) => {
         if (pdfUrl !== undefined) updateData.pdfUrl = pdfUrl
         if (fileUrl !== undefined) updateData.fileUrl = fileUrl
         if (status) updateData.status = status
+        if (documentType) updateData.documentType = documentType
+        if (relatedInvoiceId !== undefined) updateData.relatedInvoiceId = relatedInvoiceId || null
+        if (adjustmentReason !== undefined) updateData.adjustmentReason = adjustmentReason || null
 
         const invoice = await prisma.$transaction(async (tx) => {
             const updatedInvoice = await tx.invoice.update({

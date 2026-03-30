@@ -351,7 +351,9 @@ function InvoiceModal({ unitId, initialData, onClose, onSuccess }: { unitId: str
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white">
                     <h2 className="text-lg font-bold text-gray-900">
-                        {isEditMode ? 'Editar Factura' : 'Registrar Factura'}
+                        {isEditMode
+                            ? `Editar ${form.documentType === 'NOTA_CREDITO' ? 'Nota Crédito' : form.documentType === 'CUENTA_COBRO' ? 'Cuenta de Cobro' : 'Factura'}`
+                            : 'Registrar Factura'}
                     </h2>
                     <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="w-5 h-5" />
