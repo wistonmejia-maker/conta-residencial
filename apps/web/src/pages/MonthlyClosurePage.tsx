@@ -111,43 +111,55 @@ export default function MonthlyClosurePage() {
     })
 
     const handleCloseMonth = async () => {
-        // Filter to only unreported payments
-        const unreportedPayments = filteredPayments.filter((p: Payment) => !p.monthlyReportId)
-
-        // Check for payments with pending invoices - block closure
-        const paymentsWithPendingInvoice = unreportedPayments.filter((p: Payment) => p.hasPendingInvoice)
-        if (paymentsWithPendingInvoice.length > 0) {
-            const ceList = paymentsWithPendingInvoice.map((p: Payment) => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
-            alert(`No se puede cerrar el mes. Hay ${paymentsWithPendingInvoice.length} pago(s) sin factura asociada:\n${ceList}\n\nDebe completar o eliminar estos pagos antes de cerrar.`)
-            return
-        }
-
-        // Get invoice IDs from the payments' invoiceItems (paid invoices)
-        const allInvoiceIds = new Set<string>()
-        unreportedPayments.forEach((p: Payment) => {
-            if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
-                (p as any).invoiceItems.forEach((item: any) => {
-                    if (!item.invoice?.monthlyReportId) {
-                        allInvoiceIds.add(item.invoice.id)
-                    }
-                })
-            }
-        })
-
-        // Also add pending invoices (same as folder generator)
-        const unreportedPendingInvoices = pendingInvoices.filter((inv: Invoice) => !inv.monthlyReportId)
-        unreportedPendingInvoices.forEach((inv: Invoice) => allInvoiceIds.add(inv.id))
-
-        // Validate there's unreported data to close
-        if (unreportedPayments.length === 0 && unreportedPendingInvoices.length === 0) {
-            alert('No hay pagos ni facturas pendientes SIN REPORTAR para cerrar en este período.')
-            return
-        }
-
-        if (!confirm(`¿Estás seguro de cerrar este mes? Se incluirán ${unreportedPayments.length} pago(s) y ${allInvoiceIds.size} factura(s) (pagadas + pendientes).`)) return
-
         setGenerating(true)
         try {
+            console.log('Iniciando cierre de mes...')
+            // Filter to only unreported payments
+            const unreportedPayments = filteredPayments.filter((p: Payment) => !p.monthlyReportId)
+            console.log('Pagos sin reportar:', unreportedPayments.length)
+
+            // Check for payments with pending invoices - block closure
+            const paymentsWithPendingInvoice = unreportedPayments.filter((p: Payment) => p.hasPendingInvoice)
+            if (paymentsWithPendingInvoice.length > 0) {
+                const ceList = paymentsWithPendingInvoice.map((p: Payment) => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
+                alert(`No se puede cerrar el mes. Hay ${paymentsWithPendingInvoice.length} pago(s) sin factura asociada:\n${ceList}\n\nDebe completar o eliminar estos pagos antes de cerrar.`)
+                setGenerating(false)
+                return
+            }
+
+            // Get invoice IDs from the payments' invoiceItems (paid invoices)
+            const allInvoiceIds = new Set<string>()
+            unreportedPayments.forEach((p: Payment) => {
+                if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
+                    (p as any).invoiceItems.forEach((item: any) => {
+                        // FIX: Added safe check for invoice object
+                        if (item.invoice && !item.invoice.monthlyReportId) {
+                            allInvoiceIds.add(item.invoice.id)
+                        }
+                    })
+                }
+            })
+
+            // Also add pending invoices (same as folder generator)
+            const unreportedPendingInvoices = pendingInvoices.filter((inv: Invoice) => !inv.monthlyReportId)
+            unreportedPendingInvoices.forEach((inv: Invoice) => {
+                if (inv.id) allInvoiceIds.add(inv.id)
+            })
+
+            console.log('Facturas a incluir:', allInvoiceIds.size)
+
+            // Validate there's unreported data to close
+            if (unreportedPayments.length === 0 && unreportedPendingInvoices.length === 0) {
+                alert('No hay pagos ni facturas pendientes SIN REPORTAR para cerrar en este período.')
+                setGenerating(false)
+                return
+            }
+
+            if (!confirm(`¿Estás seguro de cerrar este mes? Se incluirán ${unreportedPayments.length} pago(s) y ${allInvoiceIds.size} factura(s) (pagadas + pendientes).`)) {
+                setGenerating(false)
+                return
+            }
+
             // Use 12:00 to avoid timezone issues
             const reportDate = new Date(dateFrom + 'T12:00:00')
             const monthName = reportDate.toLocaleString('es-CO', { month: 'long' })
@@ -196,8 +208,8 @@ export default function MonthlyClosurePage() {
             refetchHistory()
             setActiveTab('history')
         } catch (error) {
-            console.error(error)
-            alert('Error al cerrar el mes')
+            console.error('ERROR AL CERRAR MES:', error)
+            alert('Error al cerrar el mes. Revise la consola para más detalles.')
         } finally {
             setGenerating(false)
         }
