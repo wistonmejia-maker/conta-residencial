@@ -57,7 +57,7 @@ export default function PaymentsPage() {
 
         try {
             // Upload to Storage
-            const { url } = await uploadFileToStorage(file, `units / ${unitId} /payments/${uploadPaymentId} `)
+            const { url } = await uploadFileToStorage(file, `units/${unitId}/payments/${uploadPaymentId}`)
 
             // Update Payment in DB
             await updatePayment(uploadPaymentId, { supportFileUrl: url })
@@ -548,7 +548,7 @@ export default function PaymentsPage() {
                                                         setUploadPaymentId(payment.id)
                                                         document.getElementById('payment-upload-input')?.click()
                                                     }}
-                                                    className={`p - 1 rounded ${payment.supportFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'} `}
+                                                    className={`p-1 rounded ${payment.supportFileUrl ? 'text-gray-400 hover:bg-gray-100' : 'text-amber-600 hover:bg-amber-50'}`}
                                                     title={payment.supportFileUrl ? "Reemplazar Soporte" : "Subir Soporte Firmado"}
                                                 >
                                                     <UploadIcon className="w-4 h-4" />
@@ -587,9 +587,8 @@ export default function PaymentsPage() {
                                                 )}
                                                 <button
                                                     onClick={() => setEditPayment(payment)}
-                                                    disabled={!!payment.monthlyReportId}
-                                                    className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                    title={payment.monthlyReportId ? 'No se puede editar (incluido en cierre)' : 'Editar Pago'}
+                                                    className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
+                                                    title={payment.monthlyReportId ? 'Edición limitada (incluido en cierre)' : 'Editar Pago'}
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </button>

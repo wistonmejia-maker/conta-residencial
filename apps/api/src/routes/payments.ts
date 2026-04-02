@@ -122,7 +122,7 @@ router.post('/', async (req, res) => {
         let consecutiveNumber = null
         let finalManualConsecutive = null
 
-        if (sourceType === 'INTERNAL' || (sourceType === 'EXTERNAL' && !req.body.manualConsecutive)) {
+        if (sourceType === 'INTERNAL' || ((sourceType === 'EXTERNAL' || sourceType === 'BANCO') && !req.body.manualConsecutive)) {
             // ONLY assign consecutive if it's NOT a pending invoice (Falta Factura)
             if (!isPendingInvoice) {
                 const unit = await prisma.unit.findUnique({ where: { id: unitId } })
@@ -432,9 +432,9 @@ router.put('/:id', async (req, res) => {
         // 3. The final state is NOT Draft and NOT Pending Invoice
         if (!existingPayment.consecutiveNumber && !existingPayment.manualConsecutive && !updateData.manualConsecutive) {
             const isInternal = targetSource === 'INTERNAL'
-            const isExternalWithoutManual = targetSource === 'EXTERNAL' && !manualConsecutive && !existingPayment.manualConsecutive
+            const isExternalOrBancoWithoutManual = (targetSource === 'EXTERNAL' || targetSource === 'BANCO') && !manualConsecutive && !existingPayment.manualConsecutive
 
-            if ((isInternal || isExternalWithoutManual) && finalStatus !== 'DRAFT' && !finalHasPendingInvoice) {
+            if ((isInternal || isExternalOrBancoWithoutManual) && finalStatus !== 'DRAFT' && !finalHasPendingInvoice) {
                 const unit = await prisma.unit.findUnique({ where: { id: existingPayment.unitId } })
                 if (unit) {
                     updateData.consecutiveNumber = unit.consecutiveSeed
