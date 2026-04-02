@@ -154,4 +154,33 @@ router.delete('/:folder/:filename', async (req, res) => {
     }
 })
 
+// GET /api/files/signature - Get signature for direct upload to Cloudinary
+router.get('/signature', (req, res) => {
+    try {
+        if (!useCloudinary) {
+            return res.status(400).json({ error: 'Cloudinary is not configured' })
+        }
+
+        const timestamp = Math.round((new Date()).getTime() / 1000)
+        const folder = 'conta-residencial/' + (req.query.folder || 'general')
+        
+        // Generate signature
+        const signature = cloudinary.utils.api_sign_request({
+            timestamp: timestamp,
+            folder: folder
+        }, process.env.CLOUDINARY_API_SECRET)
+
+        res.json({
+            signature,
+            timestamp,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            folder
+        })
+    } catch (error) {
+        console.error('Error generating signature:', error)
+        res.status(500).json({ error: 'Error generating upload signature' })
+    }
+})
+
 export default router
