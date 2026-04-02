@@ -136,6 +136,15 @@
   animation: aiPulse 3s infinite;
 }
 
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.92; transform: scale(1.015); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Chat Markdown Styles */
 .chat-markdown {
   @apply overflow-x-auto max-w-full pb-2;

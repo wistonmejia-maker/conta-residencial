@@ -919,7 +919,7 @@ export default function MonthlyClosurePage() {
                                 <button
                                     onClick={handleDownloadAccountantPackage}
                                     disabled={(filteredPayments.length === 0 && pendingInvoices.length === 0) || generating}
-                                    className="px-4 py-2 bg-brand-100 text-brand-700 hover:bg-brand-200 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
                                     title="Descargar Excel + PDF de Soportes (para Contador)"
                                 >
                                     <Briefcase className="w-4 h-4" />
@@ -928,7 +928,7 @@ export default function MonthlyClosurePage() {
                                 <button
                                     onClick={() => setShowVoucherModal(true)}
                                     disabled={filteredPayments.length === 0 || generating}
-                                    className="px-4 py-2 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+                                    className="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
                                     title="Descargar Comprobantes de Egreso (PDF consolidado o individual)"
                                 >
                                     <FileDown className="w-4 h-4" />
@@ -937,7 +937,7 @@ export default function MonthlyClosurePage() {
                                 <button
                                     onClick={handleGenerateFolder}
                                     disabled={(filteredPayments.length === 0 && pendingInvoices.length === 0) || generating}
-                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-sm flex items-center gap-2 disabled:opacity-50"
+                                    className="px-4 py-2 bg-brand-50 border border-brand-100 text-brand-700 hover:bg-brand-100 rounded-button text-sm font-medium shadow-sm flex items-center gap-2 transition-colors disabled:opacity-50"
                                 >
                                     <FolderDown className="w-4 h-4" />
                                     {generating ? 'Generando...' : 'Carpeta Mensual'}
@@ -945,7 +945,7 @@ export default function MonthlyClosurePage() {
                                 <button
                                     onClick={handleCloseMonth}
                                     disabled={generating || (filteredPayments.length === 0 && pendingInvoices.length === 0)}
-                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-lg shadow-brand-200 flex items-center gap-2 transition-all disabled:opacity-50"
+                                    className="px-4 py-2 bg-brand-primary text-white rounded-button text-sm font-medium hover:bg-brand-700 shadow-lg shadow-brand-100 animate-pulse-subtle flex items-center gap-2 transition-all disabled:opacity-50"
                                 >
                                     <FileText className="w-4 h-4" />
                                     Cerrar Mes
