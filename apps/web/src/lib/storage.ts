@@ -33,7 +33,8 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
         formData.append('folder', secureFolder)
         formData.append('public_id', publicId)
 
-        const resType = isPdf ? 'raw' : 'auto'
+        // Use 'auto' to let Cloudinary decide and often allow larger limits than 'raw' (10MB)
+        const resType = 'auto'
 
         // 3. Upload directly to Cloudinary
         const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resType}/upload`

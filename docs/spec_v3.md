@@ -426,16 +426,24 @@ Se proscribe el uso de `window.confirm()` y `window.alert()` para acciones crít
 
 ---
 
-## [4.8.0] - 2026-04-02 (Sesión Actual)
+# 27. Optimización de PDF (Pendiente v4.8+)
+Para resolver el límite de 10MB de Cloudinary en cierres mensuales masivos, se debe implementar una capa de compresión de imágenes.
+
+- **Requerimiento**: El generador de PDF (`accountingFolderGenerator.ts`) debe comprimir todas las imágenes a un máximo de 1200px (width) y una calidad JPEG de 0.7 antes de incrustarlas.
+- **Objetivo**: Reducir el tamaño de los reportes en un ~70% sin perder legibilidad corporativa.
+
+---
+
+## [4.8.1] - 2026-04-02 (Sesión Actual)
+
+### 🛡️ Estabilidad de Carga
+- **FIX**: Sincronización de firma Cloudinary con `public_id` para evitar errores 401.
+- **MOD**: Cambio de `resource_type` a `auto` para permitir archivos detectados de forma dinámica.
 
 ### 🚀 Arquitectura de Carga (v4.8)
 - **AÑADIDO**: Sistema de **Carga Directa a la Nube** (Bypass de Vercel) para archivos pesados.
 - **API**: Nuevo endpoint `/api/files/signature` para firmas seguras de Cloudinary.
 - **FIX**: Resolución del Error 500 al cerrar meses con gran volumen de documentos.
-
-### ✨ Modales de Confirmación (v4.7)
-- **REFACTOR**: Eliminación de `confirm()` nativo en el Cierre Mensual.
-- **UI/UX**: Nuevo modal de confirmación con resumen de pagos y facturas integrado.
 
 ---
 
