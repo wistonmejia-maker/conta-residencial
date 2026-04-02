@@ -50,7 +50,8 @@ router.get('/', async (req, res) => {
                 ...inv,
                 paidAmount: totalSettled,
                 // Balance is what's left to pay from the net amount
-                balance: Math.max(0, netThreshold - totalSettled)
+                // Business rule: Credit Notes ALWAYS have zero balance to pay (they are reductions).
+                balance: inv.documentType === 'NOTA_CREDITO' ? 0 : Math.max(0, netThreshold - totalSettled)
             }
         })
 
@@ -436,7 +437,8 @@ router.get('/:id', async (req, res) => {
         res.json({
             ...invoice,
             paidAmount: totalSettled,
-            balance: Math.max(0, netThreshold - totalSettled)
+            // Business rule: Credit Notes ALWAYS have zero balance to pay (they are reductions).
+            balance: invoice.documentType === 'NOTA_CREDITO' ? 0 : Math.max(0, netThreshold - totalSettled)
         })
     } catch (error) {
         console.error('Error fetching invoice:', error)

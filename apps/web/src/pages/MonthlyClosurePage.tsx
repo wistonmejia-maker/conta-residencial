@@ -459,14 +459,14 @@ export default function MonthlyClosurePage() {
 
     const pendingInvoices = allInvoices.filter(inv => {
         const invDate = inv.invoiceDate.split('T')[0]
-        // Se incluyen todas las facturas emitidas HASTA la fecha fin del periodo,
-        // sin importar qué tan viejas sean (ignoramos dateFrom).
         const issuedBeforeOrDuringPeriod = invDate <= dateTo
         const isUnpaid = (inv.balance || 0) > 0
+        const isNC = (inv as any).documentType === 'NOTA_CREDITO'
 
         const matchesProvider = !selectedProvider || inv.providerId === selectedProvider
 
-        return issuedBeforeOrDuringPeriod && isUnpaid && matchesProvider
+        // Una NC no es una "factura pendiente de pago" (es un crédito ya emitido)
+        return issuedBeforeOrDuringPeriod && isUnpaid && matchesProvider && !isNC
     })
 
 

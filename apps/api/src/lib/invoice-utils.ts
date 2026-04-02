@@ -51,10 +51,16 @@ export async function calculateInvoiceStatus(invoiceId: string, tx?: any) {
     const totalSettled = totalPaid + totalAdjusted
 
     // Current Balance for the user (Gross - Paid - Adjusted - Retentions)
-    const balance = Math.max(0, netThreshold - totalPaid - totalAdjusted)
+    // Business rule: Credit Notes ALWAYS have zero balance to pay (they are reductions).
+    let balance = Math.max(0, netThreshold - totalPaid - totalAdjusted)
+    if (invoice.documentType === 'NOTA_CREDITO') {
+        balance = 0
+    }
 
     let status = 'PENDING'
-    if (totalSettled >= netThreshold) {
+    if (invoice.documentType === 'NOTA_CREDITO') {
+        status = 'PAID'
+    } else if (totalSettled >= netThreshold) {
         status = 'PAID'
     } else if (totalSettled > 0) {
         status = 'PARTIALLY_PAID'
