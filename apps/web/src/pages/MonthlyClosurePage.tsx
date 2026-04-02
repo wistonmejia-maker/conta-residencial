@@ -93,6 +93,8 @@ export default function MonthlyClosurePage() {
     const [activeTab, setActiveTab] = useState<'generate' | 'history' | 'audit'>('generate')
     const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
     const [showVoucherModal, setShowVoucherModal] = useState(false)
+    const [showConfirmCloseModal, setShowConfirmCloseModal] = useState(false)
+    const [closureStats, setClosureStats] = useState({ payments: 0, invoices: 0 })
 
     // AI Audit State
     const { data: auditData, isLoading: isLoadingAudit } = useQuery({
@@ -110,55 +112,69 @@ export default function MonthlyClosurePage() {
         enabled: !!unitId
     })
 
-    const handleCloseMonth = async () => {
+    const handleCloseMonth = () => {
+        // Filter to only unreported payments
+        const unreportedPayments = filteredPayments.filter((p: Payment) => !p.monthlyReportId)
+
+        // Check for payments with pending invoices - block closure
+        const paymentsWithPendingInvoice = unreportedPayments.filter((p: Payment) => p.hasPendingInvoice)
+        if (paymentsWithPendingInvoice.length > 0) {
+            const ceList = paymentsWithPendingInvoice.map((p: Payment) => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
+            setValidationErrors([
+                `Hay ${paymentsWithPendingInvoice.length} pago(s) sin factura asociada: ${ceList}`,
+                'Debe completar o eliminar estos pagos antes de cerrar.'
+            ])
+            setShowValidationModal(true)
+            return
+        }
+
+        // Get invoice IDs and calculate stats
+        const allInvoiceIds = new Set<string>()
+        unreportedPayments.forEach((p: Payment) => {
+            if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
+                (p as any).invoiceItems.forEach((item: any) => {
+                    if (item.invoice && !item.invoice.monthlyReportId) {
+                        allInvoiceIds.add(item.invoice.id)
+                    }
+                })
+            }
+        })
+
+        const unreportedPendingInvoices = pendingInvoices.filter((inv: Invoice) => !inv.monthlyReportId)
+        unreportedPendingInvoices.forEach((inv: Invoice) => {
+            if (inv.id) allInvoiceIds.add(inv.id)
+        })
+
+        if (unreportedPayments.length === 0 && unreportedPendingInvoices.length === 0) {
+            setValidationErrors(['No hay pagos ni facturas pendientes SIN REPORTAR para cerrar en este período.'])
+            setShowValidationModal(true)
+            return
+        }
+
+        // Open custom modal instead of window.confirm
+        setClosureStats({
+            payments: unreportedPayments.length,
+            invoices: allInvoiceIds.size
+        })
+        setShowConfirmCloseModal(true)
+    }
+
+    const onConfirmClosure = async () => {
+        setShowConfirmCloseModal(false)
         setGenerating(true)
         try {
-            console.log('Iniciando cierre de mes...')
-            // Filter to only unreported payments
+            console.log('Iniciando ejecución de cierre...')
             const unreportedPayments = filteredPayments.filter((p: Payment) => !p.monthlyReportId)
-            console.log('Pagos sin reportar:', unreportedPayments.length)
-
-            // Check for payments with pending invoices - block closure
-            const paymentsWithPendingInvoice = unreportedPayments.filter((p: Payment) => p.hasPendingInvoice)
-            if (paymentsWithPendingInvoice.length > 0) {
-                const ceList = paymentsWithPendingInvoice.map((p: Payment) => p.consecutiveNumber ? `CE-${p.consecutiveNumber}` : p.id).join(', ')
-                alert(`No se puede cerrar el mes. Hay ${paymentsWithPendingInvoice.length} pago(s) sin factura asociada:\n${ceList}\n\nDebe completar o eliminar estos pagos antes de cerrar.`)
-                setGenerating(false)
-                return
-            }
-
-            // Get invoice IDs from the payments' invoiceItems (paid invoices)
             const allInvoiceIds = new Set<string>()
             unreportedPayments.forEach((p: Payment) => {
-                if ((p as any).invoiceItems && (p as any).invoiceItems.length > 0) {
+                if ((p as any).invoiceItems) {
                     (p as any).invoiceItems.forEach((item: any) => {
-                        // FIX: Added safe check for invoice object
-                        if (item.invoice && !item.invoice.monthlyReportId) {
-                            allInvoiceIds.add(item.invoice.id)
-                        }
+                        if (item.invoice && !item.invoice.monthlyReportId) allInvoiceIds.add(item.invoice.id)
                     })
                 }
             })
-
-            // Also add pending invoices (same as folder generator)
             const unreportedPendingInvoices = pendingInvoices.filter((inv: Invoice) => !inv.monthlyReportId)
-            unreportedPendingInvoices.forEach((inv: Invoice) => {
-                if (inv.id) allInvoiceIds.add(inv.id)
-            })
-
-            console.log('Facturas a incluir:', allInvoiceIds.size)
-
-            // Validate there's unreported data to close
-            if (unreportedPayments.length === 0 && unreportedPendingInvoices.length === 0) {
-                alert('No hay pagos ni facturas pendientes SIN REPORTAR para cerrar en este período.')
-                setGenerating(false)
-                return
-            }
-
-            if (!confirm(`¿Estás seguro de cerrar este mes? Se incluirán ${unreportedPayments.length} pago(s) y ${allInvoiceIds.size} factura(s) (pagadas + pendientes).`)) {
-                setGenerating(false)
-                return
-            }
+            unreportedPendingInvoices.forEach((inv: Invoice) => { if (inv.id) allInvoiceIds.add(inv.id) })
 
             // Use 12:00 to avoid timezone issues
             const reportDate = new Date(dateFrom + 'T12:00:00')
@@ -1669,6 +1685,50 @@ export default function MonthlyClosurePage() {
                             >
                                 Cerrar
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Custom Confirmation Modal for Closure */}
+            {showConfirmCloseModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center">
+                                <FileText className="w-8 h-8 text-brand-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Confirmar Cierre de Mes</h3>
+                                <p className="text-sm text-gray-500 mt-2">
+                                    ¿Estás seguro de cerrar este período? Se generará la carpeta de contabilidad maestra y se archivarán los movimientos.
+                                </p>
+                            </div>
+
+                            <div className="w-full bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Pagos a reportar</p>
+                                    <p className="text-2xl font-bold text-brand-600">{closureStats.payments}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Facturas incluidas</p>
+                                    <p className="text-2xl font-bold text-brand-600">{closureStats.invoices}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col w-full gap-3">
+                                <button
+                                    onClick={onConfirmClosure}
+                                    className="w-full py-3 bg-brand-primary text-white rounded-button font-bold hover:bg-brand-700 shadow-lg shadow-brand-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Confirmar y Cerrar Mes
+                                </button>
+                                <button
+                                    onClick={() => setShowConfirmCloseModal(false)}
+                                    className="w-full py-3 bg-white border border-gray-200 text-gray-600 rounded-button font-bold hover:bg-gray-50 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
