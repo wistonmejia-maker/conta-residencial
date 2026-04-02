@@ -440,7 +440,7 @@ export default function PaymentsPage() {
                                     <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Neto</th>
                                     <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Estado</th>
                                     <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Soporte</th>
-                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Acciones</th>
+                                    <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 min-w-[200px]">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -580,7 +580,7 @@ export default function PaymentsPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-center gap-3 min-w-[200px]">
                                                 {payment.status === 'DRAFT' && (
                                                     <button
                                                         onClick={() => handleApprovePayment(payment)}
@@ -590,15 +590,29 @@ export default function PaymentsPage() {
                                                         <Check className="w-4 h-4" />
                                                     </button>
                                                 )}
-                                                {payment.status !== 'CONCILIATED' && payment.status !== 'VOIDED' && (
+                                                {payment.status === 'CONCILIATED' ? (
                                                     <button
-                                                        onClick={() => handleManualConciliate(payment)}
-                                                        disabled={isConciliating === payment.id}
-                                                        className="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 disabled:opacity-50"
-                                                        title="Conciliar Manulmente (con respaldo)"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleReverseConciliation(payment)
+                                                        }}
+                                                        disabled={isReversing === payment.id}
+                                                        className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors"
+                                                        title="Reversar Conciliación"
                                                     >
-                                                        {isConciliating === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                        {isReversing === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                                                     </button>
+                                                ) : (
+                                                    payment.status !== 'VOIDED' && (
+                                                        <button
+                                                            onClick={() => handleManualConciliate(payment)}
+                                                            disabled={isConciliating === payment.id}
+                                                            className="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 disabled:opacity-50"
+                                                            title="Conciliar Manulmente (con respaldo)"
+                                                        >
+                                                            {isConciliating === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                        </button>
+                                                    )
                                                 )}
                                                 {payment.hasPendingInvoice && (
                                                     <button
@@ -649,19 +663,6 @@ export default function PaymentsPage() {
                                                 >
                                                     <MessageSquare className="w-4 h-4" />
                                                 </button>
-                                                {payment.status === 'CONCILIATED' && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleReverseConciliation(payment)
-                                                        }}
-                                                        disabled={isReversing === payment.id}
-                                                        className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors"
-                                                        title="Reversar Conciliación"
-                                                    >
-                                                        {isReversing === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                                                    </button>
-                                                )}
                                                 <button
                                                     onClick={() => {
                                                         // Map keys to preview struct

@@ -394,29 +394,8 @@ export default function ConciliationPage() {
                                                     <p className="font-semibold text-gray-900">{formatMoney(Number(pay.netValue))}</p>
                                                     {isMatch && <span className="text-xs text-green-600">✓ Coincide</span>}
                                                 </div>
-                                                {selectedBank && pay.status !== 'CONCILIATED' && (
-                                                    <button
-                                                        onClick={() => handleConciliate(pay.id)}
-                                                        disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
-                                                        className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-600 disabled:opacity-50"
-                                                        title="Conciliar con movimiento seleccionado"
-                                                    >
-                                                        <ArrowRight className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                                {!selectedBank && pay.status !== 'CONCILIATED' && (
-                                                    <button
-                                                        onClick={() => handleManualConciliate(pay as any)}
-                                                        disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
-                                                        className="p-1.5 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-600 disabled:opacity-50"
-                                                        title="Conciliación Manual (Crear respaldo)"
-                                                    >
-                                                        <CheckCircle2 className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                                {pay.status === 'CONCILIATED' && (
+                                                {pay.status === 'CONCILIATED' ? (
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-xs text-emerald-600">✓</span>
                                                         <button
                                                             onClick={() => {
                                                                 if (confirm('¿Deseas reversar esta conciliación?')) {
@@ -424,11 +403,33 @@ export default function ConciliationPage() {
                                                                     if (concId) unconciliateMutation.mutate(concId);
                                                                 }
                                                             }}
-                                                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors"
                                                             title="Reversar Conciliación"
                                                         >
-                                                            <RotateCcw className="w-3.5 h-3.5" />
+                                                            <RotateCcw className="w-4 h-4" />
                                                         </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        {selectedBank ? (
+                                                            <button
+                                                                onClick={() => handleConciliate(pay.id)}
+                                                                disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
+                                                                className="p-1.5 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-600 disabled:opacity-50"
+                                                                title="Conciliar con movimiento seleccionado"
+                                                            >
+                                                                <ArrowRight className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleManualConciliate(pay as any)}
+                                                                disabled={conciliateMutation.isPending || manualConciliateMutation.isPending}
+                                                                className="p-1.5 bg-emerald-100 hover:bg-emerald-200 rounded-lg text-emerald-600 disabled:opacity-50"
+                                                                title="Conciliación Manual (Crear respaldo)"
+                                                            >
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
