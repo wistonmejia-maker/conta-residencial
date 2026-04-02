@@ -12,8 +12,15 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
     console.log('Uploading file:', file.name, 'to folder:', folder, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB')
 
     try {
-        // 1. Get Signature from backend
-        const sigResponse = await fetch(`${API_BASE}/files/signature?folder=${encodeURIComponent(folder)}`)
+        // 0. Pre-calculate identity (matching backend files.ts / cloudinary logic)
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
+        const publicId = isPdf 
+            ? safeName + '_secure' // Required to bypass .pdf extension block
+            : safeName.replace(/\.[^/.]+$/, "")
+
+        // 1. Get Signature from backend (Sign folder AND public_id)
+        const sigResponse = await fetch(`${API_BASE}/files/signature?folder=${encodeURIComponent(folder)}&public_id=${encodeURIComponent(publicId)}`)
         if (!sigResponse.ok) throw new Error('Error al obtener firma de seguridad de carga')
         const { signature, timestamp, apiKey, cloudName, folder: secureFolder } = await sigResponse.json()
 
@@ -24,16 +31,9 @@ export async function uploadFileToStorage(file: File, folder: string): Promise<{
         formData.append('timestamp', timestamp.toString())
         formData.append('api_key', apiKey)
         formData.append('folder', secureFolder)
-
-        // Specialized logic for PDFs (matching backend files.ts for consistency)
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-        const resType = isPdf ? 'raw' : 'auto'
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-        const publicId = isPdf 
-            ? safeName + '_secure' // Critical to avoid .pdf filename block
-            : safeName.replace(/\.[^/.]+$/, "")
-        
         formData.append('public_id', publicId)
+
+        const resType = isPdf ? 'raw' : 'auto'
 
         // 3. Upload directly to Cloudinary
         const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resType}/upload`

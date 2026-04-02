@@ -163,12 +163,20 @@ router.get('/signature', (req, res) => {
 
         const timestamp = Math.round((new Date()).getTime() / 1000)
         const folder = 'conta-residencial/' + (req.query.folder || 'general')
-        
-        // Generate signature
-        const signature = cloudinary.utils.api_sign_request({
+        const public_id = req.query.public_id as string | undefined
+
+        // Cloudinary requires all parameters to be signed (except file and api_key)
+        const paramsToSign: any = {
             timestamp: timestamp,
             folder: folder
-        }, process.env.CLOUDINARY_API_SECRET)
+        }
+        
+        if (public_id) {
+            paramsToSign.public_id = public_id
+        }
+        
+        // Generate signature
+        const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET)
 
         res.json({
             signature,
