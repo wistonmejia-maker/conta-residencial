@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { fetchNewEmails, getAttachment, markAsRead, fetchRecentEmails, ensureLabel, markAsProcessed } from '../services/gmail.service';
 import { classifyAndExtractDocument } from '../services/ai.service';
 import { AccountingService } from '../services/accounting.service';
+import { ProviderService } from '../services/provider.service';
 import cloudinary from '../lib/cloudinary';
 import path from 'path';
 import fs from 'fs';
@@ -242,7 +243,7 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                         const analysis = await classifyAndExtractDocument(buffer, finalMimeType, unitId);
 
                         if (analysis.type === 'INVOICE' && analysis.data) {
-                            const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept } = analysis.data;
+                            const { nit, providerName, clientNit, invoiceNumber, totalAmount, date, concept, documentType } = analysis.data;
 
                             // Robust check for required fields from Gemini
                             if (!nit && !providerName) {
@@ -261,12 +262,12 @@ async function runBackgroundScan(jobId: string, unitId: string) {
 
                             const fileUrl = await uploadBuffer(buffer, filename, `units/${unitId}/invoices`);
 
-                            let provider = await prisma.provider.findUnique({ where: { nit: nit! } });
-                            if (!provider) {
-                                provider = await prisma.provider.create({
-                                    data: { name: providerName!, nit: nit!, taxType: 'NIT', dv: '0', email: email.from }
-                                });
-                            }
+                            // UNIFIED LOGIC: Use ProviderService
+                            const provider = await ProviderService.findOrCreateProvider({
+                                nit: nit!,
+                                name: providerName!,
+                                email: email.from
+                            });
 
                             const existing = await prisma.invoice.findFirst({
                                 where: { providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF' }
@@ -280,14 +281,16 @@ async function runBackgroundScan(jobId: string, unitId: string) {
 
                                 const invDate = parseRobusDate(date);
                                 const total = parseRobustAmount(totalAmount);
+                                const isCreditNote = documentType === 'NOTA_CREDITO';
 
                                 // Calculate Taxes (Retefuente & ReteICA)
-                                const retefuente = AccountingService.calculateRetefuente(total, {
+                                // Only for Invoices, usually not suggested for Credit Notes unless specific
+                                const retefuente = isCreditNote ? 0 : AccountingService.calculateRetefuente(total, {
                                     defaultRetefuentePerc: provider.defaultRetefuentePerc,
                                     taxType: provider.taxType
                                 });
 
-                                const reteica = AccountingService.calculateReteica(total, {
+                                const reteica = isCreditNote ? 0 : AccountingService.calculateReteica(total, {
                                     defaultReteicaPerc: provider.defaultReteicaPerc
                                 });
 
@@ -295,8 +298,9 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                     data: {
                                         unitId, providerId: provider.id, invoiceNumber: invoiceNumber || 'SIN-REF',
                                         invoiceDate: invDate,
-                                        totalAmount: total,
-                                        subtotal: total, // Assuming total is subtotal for now as AI doesn't split IVA yet
+                                        documentType: isCreditNote ? 'NOTA_CREDITO' : 'FACTURA',
+                                        totalAmount: isCreditNote ? -total : total,
+                                        subtotal: isCreditNote ? -total : total,
                                         taxIva: 0,
                                         retefuenteAmount: retefuente,
                                         reteicaAmount: reteica,
@@ -309,7 +313,7 @@ async function runBackgroundScan(jobId: string, unitId: string) {
                                         emailDate: email.date ? new Date(email.date) : new Date()
                                     }
                                 });
-                                results.push({ status: 'created', type: 'invoice', id: inv.id, file: filename });
+                                results.push({ status: 'created', type: isCreditNote ? 'credit_note' : 'invoice', id: inv.id, file: filename });
                                 emailProcessed = true;
                             }
                         } else if (analysis.type === 'PAYMENT_RECEIPT' && analysis.data) {

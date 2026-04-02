@@ -1,9 +1,9 @@
-import { Upload, CheckCircle, XCircle, ArrowRight, X, FileSpreadsheet, AlertCircle, Filter, Wand2, Eye, EyeOff, Sparkles, Loader2, FileText, CheckCircle2 } from 'lucide-react'
+import { Upload, CheckCircle, XCircle, ArrowRight, X, FileSpreadsheet, AlertCircle, Filter, Wand2, Eye, EyeOff, Sparkles, Loader2, FileText, CheckCircle2, RotateCcw } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getBankMovements, getPayments, importBankMovements, conciliate, getConciliationSummary, autoConciliate, aiConciliate, aiExtractBankMovements, createBankMovement } from '../lib/api'
+import { getBankMovements, getPayments, importBankMovements, conciliate, getConciliationSummary, autoConciliate, aiConciliate, aiExtractBankMovements, createBankMovement, unconciliate } from '../lib/api'
 import type { BankMovement, Payment } from '../lib/api'
 import { useUnit } from '../lib/UnitContext'
 import { useAIHistory } from '../lib/AIContext'
@@ -70,6 +70,17 @@ export default function ConciliationPage() {
             queryClient.invalidateQueries({ queryKey: ['conciliation-summary'] })
             setSelectedBank(null)
         }
+    })
+    
+    const unconciliateMutation = useMutation({
+        mutationFn: (conciliationId: string) => unconciliate(conciliationId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bank-movements'] })
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['conciliation-summary'] })
+            alert('Conciliación reversada correctamente')
+        },
+        onError: () => alert('Error al reversar conciliación')
     })
 
     const autoConciliateMutation = useMutation({
@@ -308,7 +319,24 @@ export default function ConciliationPage() {
                                             <p className={`font-semibold ${Number(mov.amount) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                                                 {formatMoney(Number(mov.amount))}
                                             </p>
-                                            {mov.isConciliated && <span className="text-xs text-emerald-600">✓ Conciliado</span>}
+                                            {mov.isConciliated && (
+                                                <div className="flex items-center gap-2 justify-end">
+                                                    <span className="text-xs text-emerald-600">✓ Conciliado</span>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm('¿Deseas reversar esta conciliación?')) {
+                                                                const concId = (mov as any).conciliation?.id;
+                                                                if (concId) unconciliateMutation.mutate(concId);
+                                                            }
+                                                        }}
+                                                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                                        title="Reversar Conciliación"
+                                                    >
+                                                        <RotateCcw className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -386,7 +414,23 @@ export default function ConciliationPage() {
                                                         <CheckCircle2 className="w-4 h-4" />
                                                     </button>
                                                 )}
-                                                {pay.status === 'CONCILIATED' && <span className="text-xs text-emerald-600">✓</span>}
+                                                {pay.status === 'CONCILIATED' && (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-emerald-600">✓</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm('¿Deseas reversar esta conciliación?')) {
+                                                                    const concId = (pay as any).conciliation?.id;
+                                                                    if (concId) unconciliateMutation.mutate(concId);
+                                                                }
+                                                            }}
+                                                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                                            title="Reversar Conciliación"
+                                                        >
+                                                            <RotateCcw className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

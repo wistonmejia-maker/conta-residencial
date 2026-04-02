@@ -55,24 +55,27 @@ export async function classifyAndExtractDocument(
         ${dynamicRules}
 
         FORMATO DE RESPUESTA (JSON):
-        Si es INVOICE:
+        Si es INVOICE o CREDIT_NOTE:
         {
             "type": "INVOICE",
             "data": {
-                "nit": "NIT del emisor",
+                "documentType": "FACTURA" | "NOTA_CREDITO",
+                "nit": "NIT del emisor (solo números)",
                 "providerName": "Nombre del emisor",
                 "clientNit": "NIT del receptor/cliente",
-                "invoiceNumber": "Número de factura",
+                "invoiceNumber": "Número de factura o nota",
                 "totalAmount": 1000,
                 "date": "YYYY-MM-DD",
-                "concept": "Resumen corto (max 10 palabras) EXACTO de los servicios o trabajos facturados (ej: 'Mantenimiento ascensores', 'Vigilancia Enero', 'Insumos Aseo'). NO uses 'Pago factura' ni cosas genéricas."
+                "concept": "Resumen corto (max 10 palabras) EXACTO de los servicios o trabajos facturados. NO uses 'Pago factura' ni cosas genéricas."
             }
         }
 
-        NOTAS SOBRE FECHAS:
-        - Los documentos son de Colombia, por lo que las fechas impresas suelen ser DD/MM/YYYY. 
-        - Por ejemplo, "02/01/2026" es el 2 de ENERO de 2026. 
-        - DEBES retornar la fecha siempre en formato ISO YYYY-MM-DD.
+        REGLAS PARA NOTAS CRÉDITO:
+        - Si el documento dice explícitamente "Nota Crédito" o el valor total es negativo, usa "documentType": "NOTA_CREDITO".
+        - En "totalAmount" para Nota Crédito, devuelve el valor en POSITIVO (el backend se encargará de la lógica contable según el tipo).
+
+        NOTAS SOBRE NITs:
+        - Extrae el NIT del emisor SIN puntos, guiones ni el dígito de verificación final (ej: de '830.122.566-1' extrae '830122566').
 
         Si es PAYMENT_RECEIPT (Solo Egresos):
         {

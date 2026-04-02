@@ -1,23 +1,11 @@
-import { Router } from 'express'
+import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { createProviderSchema } from '../schemas/provider.schema'
+import { ProviderService } from '../services/provider.service'
 
 const router = Router()
 
-// Algoritmo Módulo 11 para calcular DV del NIT colombiano
-function calcularDV(nit: string): string {
-    const nitLimpio = nit.replace(/[^0-9]/g, '')
-    const primos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
-    let suma = 0
-
-    for (let i = 0; i < nitLimpio.length; i++) {
-        suma += parseInt(nitLimpio[nitLimpio.length - 1 - i]) * primos[i]
-    }
-
-    const residuo = suma % 11
-    if (residuo === 0 || residuo === 1) return residuo.toString()
-    return (11 - residuo).toString()
-}
+// Remove the local calcularDV as it's now in ProviderService
 
 // GET all providers (GLOBAL - no unitId filter needed)
 router.get('/', async (req, res) => {
@@ -152,7 +140,8 @@ router.post('/', async (req, res) => {
         } = validation.data
 
         // Validar DV si se proporcionó
-        const calculatedDV = calcularDV(nit)
+        const cleanNit = ProviderService.normalizeNit(nit)
+        const calculatedDV = ProviderService.calculateDV(cleanNit)
         if (dv && dv !== calculatedDV) {
             return res.status(400).json({
                 error: `DV incorrecto. El DV calculado para ${nit} es ${calculatedDV}`,
@@ -164,9 +153,9 @@ router.post('/', async (req, res) => {
             data: {
                 name,
                 taxType,
-                nit: nit.replace(/[^0-9]/g, ''),
+                nit: cleanNit,
                 dv: dv || calculatedDV,
-                email,
+                email: ProviderService.cleanEmail(email),
                 phone,
                 address,
                 city,
@@ -205,10 +194,12 @@ router.put('/:id', async (req, res) => {
         let cleanNit = undefined
         let finalDv = dv
         if (nit) {
-            cleanNit = nit.replace(/[^0-9]/g, '')
-            const calculatedDV = calcularDV(cleanNit)
+            cleanNit = ProviderService.normalizeNit(nit)
+            const calculatedDV = ProviderService.calculateDV(cleanNit)
             if (!dv) finalDv = calculatedDV
         }
+
+        const cleanEmail = ProviderService.cleanEmail(email)
 
         const provider = await prisma.provider.update({
             where: { id: req.params.id },
@@ -218,7 +209,7 @@ router.put('/:id', async (req, res) => {
                 nit: cleanNit,
                 dv: finalDv,
                 status,
-                email,
+                email: cleanEmail,
                 phone,
                 address,
                 city,
@@ -269,13 +260,13 @@ router.delete('/:id', async (req, res) => {
 })
 
 // POST validate NIT (utility endpoint)
-router.post('/validate-nit', async (req, res) => {
+router.post('/validate-nit', async (req: Request, res: Response) => {
     const { nit } = req.body
     if (!nit) {
         return res.status(400).json({ error: 'NIT is required' })
     }
-    const cleanNit = nit.replace(/[^0-9]/g, '')
-    const dv = calcularDV(cleanNit)
+    const cleanNit = ProviderService.normalizeNit(nit)
+    const dv = ProviderService.calculateDV(cleanNit)
 
     // Check if NIT already exists
     const existing = await prisma.provider.findUnique({ where: { nit: cleanNit } })
@@ -314,8 +305,8 @@ router.post('/bulk', async (req, res) => {
                     continue
                 }
 
-                const cleanNit = p.nit.toString().replace(/[^0-9]/g, '')
-                const calculatedDV = calcularDV(cleanNit)
+                const cleanNit = ProviderService.normalizeNit(p.nit.toString())
+                const calculatedDV = ProviderService.calculateDV(cleanNit)
 
                 const provider = await prisma.provider.create({
                     data: {

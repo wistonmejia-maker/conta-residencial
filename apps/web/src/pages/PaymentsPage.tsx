@@ -1,8 +1,8 @@
-import { Plus, Search, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check, MessageSquare, RefreshCw } from 'lucide-react'
+import { Plus, Search, Upload as UploadIcon, X, Calculator, Download, Loader2, FileText, CheckCircle2, AlertTriangle, Clock, Edit, Trash2, Mail, Sparkles, Check, MessageSquare, RefreshCw, RotateCcw } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPayments, getInvoices, createPayment, getProviders, updatePayment, voidPayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument, createBankMovement, conciliate } from '../lib/api/index'
+import { getPayments, getInvoices, createPayment, getProviders, updatePayment, voidPayment, linkInvoiceToPayment, deletePayment, connectGmail, getGmailStatus, analyzeDocument, createBankMovement, conciliate, unconciliate } from '../lib/api/index'
 import type { Payment, Invoice, Provider } from '../lib/api/index'
 import { uploadFileToStorage } from '../lib/storage'
 import { exportToExcel } from '../lib/exportExcel'
@@ -114,6 +114,30 @@ export default function PaymentsPage() {
             alert('Error en conciliación manual')
         } finally {
             setIsConciliating(null)
+        }
+    }
+
+    const [isReversing, setIsReversing] = useState<string | null>(null)
+    const handleReverseConciliation = async (payment: any) => {
+        const concId = payment.conciliation?.id
+        if (!concId) {
+            alert('No se encontró el ID de la conciliación para este pago.')
+            return
+        }
+
+        if (!confirm('¿Deseas reversar esta conciliación? El movimiento bancario y el pago volverán a estar pendientes.')) return
+
+        setIsReversing(payment.id)
+        try {
+            await unconciliate(concId)
+            queryClient.invalidateQueries({ queryKey: ['payments'] })
+            queryClient.invalidateQueries({ queryKey: ['bank-movements'] })
+            alert('Conciliación reversada correctamente')
+        } catch (error) {
+            console.error('Error reversing conciliation:', error)
+            alert('Error al reversar la conciliación')
+        } finally {
+            setIsReversing(null)
         }
     }
 
@@ -625,6 +649,19 @@ export default function PaymentsPage() {
                                                 >
                                                     <MessageSquare className="w-4 h-4" />
                                                 </button>
+                                                {payment.status === 'CONCILIATED' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleReverseConciliation(payment)
+                                                        }}
+                                                        disabled={isReversing === payment.id}
+                                                        className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-indigo-600 transition-colors"
+                                                        title="Reversar Conciliación"
+                                                    >
+                                                        {isReversing === payment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         // Map keys to preview struct
