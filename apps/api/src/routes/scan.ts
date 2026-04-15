@@ -438,6 +438,16 @@ router.all('/cron/scan-all', async (req, res) => {
 
     console.log('[Cron] Starting auto-scan for all enabled units...');
 
+    // GLOBAL KILL-SWITCH: Allow disabling via environment variable without code change
+    if (process.env.DISABLE_AUTO_SCAN === 'true') {
+        console.log('[Cron] Auto-scan is GLOBALLY DISABLED via environment variable.');
+        return res.json({ 
+            success: true, 
+            message: 'Auto-scan is globally disabled via DISABLE_AUTO_SCAN env var.', 
+            scanned: 0 
+        });
+    }
+
     try {
         // Find all units with auto-scan enabled and Gmail connected
         const units = await prisma.unit.findMany({

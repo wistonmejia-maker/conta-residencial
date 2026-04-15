@@ -20,6 +20,12 @@ const CRON_SECRET = process.env.CRON_SECRET || '';
 const MASKED_SECRET = CRON_SECRET ? `${CRON_SECRET.substring(0, 3)}...${CRON_SECRET.substring(CRON_SECRET.length - 3)}` : '(empty)';
 
 async function triggerAutoScan() {
+    if (process.env.DISABLE_AUTO_SCAN === 'true') {
+        console.log(`[Cron] Auto-scan is GLOBALLY DISABLED via environment variable.`);
+        console.log(`[Cron] Exiting gracefully without calling the API.`);
+        process.exit(0);
+    }
+
     console.log(`[Cron] Starting auto-scan trigger at ${new Date().toISOString()}`);
     console.log(`[Cron] Target API URL: ${API_URL}`);
     console.log(`[Cron] Secret provided: ${MASKED_SECRET}`);

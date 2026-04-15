@@ -1,25 +1,30 @@
 import { PrismaClient } from '@prisma/client'
 
-// Initialize PrismaClient with explicit datasource URL
-// This overrides the schema.prisma env("DATABASE_URL") and uses runtime environment variable
 const databaseUrl = process.env.DATABASE_URL
 
 console.log('=== Prisma Initialization ===')
-console.log('DATABASE_URL exists:', !!databaseUrl)
-console.log('DATABASE_URL starts with postgresql:', databaseUrl?.startsWith('postgresql://'))
-console.log('DATABASE_URL length:', databaseUrl?.length || 0)
-
 if (!databaseUrl) {
-    console.error('WARNING: DATABASE_URL is not set!')
+    console.error('❌ CRITICAL: DATABASE_URL is not set!')
+} else {
+    // Sanitize URL for logging (hide password)
+    const sanitizedUrl = databaseUrl.replace(/:([^:@]+)@/, ':****@')
+    console.log(`📡 Prisma connecting to: ${sanitizedUrl}`)
+    
+    if (!databaseUrl.includes('pgbouncer=true')) {
+        console.warn('⚠️ WARNING: Using Neon pooler without pgbouncer=true might cause connection issues with Prisma.')
+    }
 }
 
 const prisma = new PrismaClient({
-    datasources: databaseUrl ? {
+    datasources: {
         db: {
             url: databaseUrl
         }
-    } : undefined,
-    log: ['error', 'warn']
+    },
+    log: [
+        { level: 'error', emit: 'stdout' },
+        { level: 'warn', emit: 'stdout' }
+    ]
 })
 
 export default prisma
